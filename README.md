@@ -5,8 +5,8 @@
 Open a table, drop the link in Slack, Discord, or a text thread, and everyone lands in
 the same live room: no accounts, no install. People and AI agents share one chat and one
 canvas. The agents think on a brain the host lends from their own machine (a Codex
-subscription today), so the server holds no credentials and nobody's key leaves their
-laptop.
+subscription today), so model-provider credentials stay on the host’s machine in
+bridge-only mode.
 
 ![A table in progress: people and agents in the chat, a diff, a table and a diagram on the canvas](docs/room.png)
 
@@ -43,10 +43,11 @@ Open <http://localhost:3131>. You're redirected into a fresh table; the arrival 
 asks for a name and seats you as host. Then, in a second terminal, lend the table a brain:
 
 ```bash
-node bridge/codex.js http://localhost:3131
+node bridge/codex.js http://localhost:3131/s/<room>
 ```
 
-The topbar dot turns green, and the first agent (a generalist named Agent) will answer
+Replace `<room>` with the ID in your browser’s URL. The topbar dot turns green,
+and the first agent (a generalist named Agent) will answer
 when you talk. Copy the link into another browser or send it to someone on your network
 to see presence, chat, canvas edits and agent turns sync live.
 
@@ -66,7 +67,8 @@ to rename yourself later.
 in when the conversation warrants it; `@name` tasks one directly. Agents can hand to
 each other by `@mention`, with a hop budget per human message so they can't loop.
 `/agent Name: brief` (or the `+` button) invites another agent; agents can do the same
-themselves through a `create_agent` action. Click an agent's face, or right-click one of
+themselves through a `create_agent` action. Explicit follow-ups sent while an agent
+is busy remain queued in order; automatic replies coalesce around the latest chat. Click an agent's face, or right-click one of
 its messages, for settings: brief, soul, model, effort, and which brain it thinks on.
 
 **The canvas.** Agents author it as structured output. Block types:
@@ -114,11 +116,11 @@ dials out to the room server over a websocket, so it works from behind NAT, and 
 agent tasks with a note for the chat plus canvas blocks and actions.
 
 ```bash
-# serve every table on the server
-node bridge/codex.js https://your-roundtable.example
-
-# serve one table only (a room-scoped bridge wins over the server-wide one)
+# serve one table only (recommended)
 node bridge/codex.js https://your-roundtable.example/s/<room>
+
+# optionally serve the operator-approved rooms listed in ROUNDTABLE_SHARED_ROOMS
+node bridge/codex.js https://your-roundtable.example
 
 # flags
 #   --name Ada        how the brain appears in the room (default: codex)
@@ -132,12 +134,18 @@ Its models are advertised to the room so agents can pin one. Set
 `ROUNDTABLE_CODEX_MODEL` to change the default, `ROUNDTABLE_BRIDGE_RUNS` to cap turns
 per hour, and `ROUNDTABLE_BRIDGE_SECRET` to match the server's secret when it has one.
 
-Several brains can be attached at once (one server-wide, plus one per room). Agents
+Several brains can be attached at once. Room-scoped bridges serve only their selected room.
+Server-wide bridges and the house API key serve only room IDs explicitly listed in the
+server’s `ROUNDTABLE_SHARED_ROOMS` environment variable (comma-separated, empty by
+default). Creating a room or becoming its host does not grant shared compute access.
+Authorize only rooms whose host you trust; sit down and claim the room before adding
+it to the allowlist. Branches need their own room-scoped bridge or allowlist entry.
+Diff application is available only through a room-scoped bridge. Agents
 spread across the pool, and an agent's settings can pin it to a specific brain. The
 topbar shows which brains are attached, and agent messages carry a `via` suffix.
 
-**House key fallback.** If no bridge is attached and the server was started with
-`ANTHROPIC_API_KEY`, runs fall back to the Anthropic API (`ROUNDTABLE_MODEL` picks the
+**House key fallback.** For rooms listed in `ROUNDTABLE_SHARED_ROOMS`, starting the server with
+`ANTHROPIC_API_KEY` adds the Anthropic API to the compute pool (`ROUNDTABLE_MODEL` picks the
 model). Use this only on a private server; see Security below.
 
 **Other bridges.** The contract is three messages (`bridge_join`, `task`, `result`)
@@ -156,21 +164,30 @@ it as a container, never serverless. On [Railway](https://railway.com):
 3. Keep **1 replica**. Room state lives in process memory.
 4. Set variables: `ROUNDTABLE_PROXY_HOPS=1`, a `ROUNDTABLE_BRIDGE_SECRET`,
    `ROUNDTABLE_DEFAULT_ACCESS=managed`, `ROUNDTABLE_DEFAULT_HOST_ONLY_SPEND=1`.
-5. Generate a public domain, open it, and attach your brain from your own machine with
-   the same secret in the bridge's environment.
+5. Generate a public domain, open it, claim your table, and attach a bridge to its full
+   room URL (`https://your-domain/s/<room>`) from your own machine with the same secret
+   in the bridge’s environment. Leave `ROUNDTABLE_SHARED_ROOMS` empty unless you
+   deliberately want to authorize specific rooms to use shared compute.
 
 Every variable is documented in [`.env.example`](.env.example).
 
 ## Security posture
 
-The deployed server holds **no credentials**. Brains, and therefore spending, live on the
-machines running bridges. Guards in place:
+In bridge-only mode the server holds no **model-provider credentials**. It still holds
+the bridge authentication secret and room host keys. The optional house adapter stores
+a model-provider API key on the server. Bridge inference runs on the bridge machine.
+Guards in place:
 
-- **Agent turns run in an empty workspace** (`~/.roundtable-bridge/workspace`), never in
-  the bridge's real directory, so a prompt-injected "read my ~/.ssh" finds nothing.
-  `--allow-apply` is opt-in and targets the bridge's cwd; pair it with
-  `--confirm-apply` to approve each diff by hand. Diffs are checked with
-  `git apply --check` first.
+- **Agent turns use a separate working directory** (`~/.roundtable-bridge/workspace`)
+  with Codex’s `read-only` sandbox and approvals disabled. This prevents workspace
+  writes; **an empty cwd is not filesystem read isolation** and does not establish
+  that home-directory files, local configuration, or connected tools are inaccessible.
+  Use only trusted participants with this local bridge. For untrusted room content,
+  use a separately isolated OS account/container with no unrelated files or tools,
+  and verify its read restrictions before connecting. `--allow-apply` separately opts
+  into writes to the bridge’s cwd; pair it with `--confirm-apply` for terminal review.
+  Diffs are checked with `git apply --check` first and can only arrive via a
+  room-scoped bridge.
 - **Run budgets** on both sides: the server caps runs per room and per hour, and the
   bridge caps what it will execute regardless of what a server asks.
 - **Bridge authentication.** With `ROUNDTABLE_BRIDGE_SECRET` set, a bridge that doesn't
@@ -179,13 +196,16 @@ machines running bridges. Guards in place:
   both enforced at the handshake; heartbeat reaping, a 64KB frame cap, per-connection
   flood limits. The client IP is read from the proxy-added `X-Forwarded-For` position
   (`ROUNDTABLE_PROXY_HOPS`) so it can't be spoofed.
-- **Governance defaults** of `managed` plus host-only spend mean a stranger who finds
-  the URL can chat but can't spend your subscription.
+- **Governance:** `managed` plus host-only spend restrict guests inside a room.
+  The code defaults are `open` with shared room spending; use the deployment settings
+  above on a public server. Separately, shared compute is denied to all rooms unless
+  the operator authorizes their IDs in `ROUNDTABLE_SHARED_ROOMS`.
 - Room caps with idle garbage collection, model settings validated against attached
   brains, `frame-ancestors 'none'` and `nosniff` headers, mermaid pinned to
   `securityLevel: 'strict'`.
-- **Never set `ANTHROPIC_API_KEY` on a public server.** That makes the server itself
-  spendable by anyone, with no bridge in the loop to unplug.
+- **Never set `ANTHROPIC_API_KEY` on a public server.** That places provider credentials
+  on the server. Even with the room allowlist,
+  there is no local bridge to unplug when stopping house-agent spending.
 
 ## How it's built
 
@@ -209,6 +229,14 @@ tools/simulate.js  three scripted participants for local testing
 - Bridges send `bridge_join` and `result` (and `apply_result`); the server sends `task`
   (a full room snapshot for one agent) and `apply`.
 
+Canvas blocks carry server-issued IDs. `edit_block` sends `blockId`, `baseContent`,
+and `content`; `apply_diff` sends `blockId`. Successful text edits broadcast `block`
+with `blockId`, `content`, and `revision`, including to the sender. Stale edits return
+`canvas_conflict` with the current `blocks`, `revision`, and rejected `draft`. Full
+`canvas` messages include `revision`; initial state includes `canvasRevision`. Reload
+existing browser tabs when upgrading so they use this protocol. Agent output still
+uses the same schema; the server assigns IDs after accepting an update.
+
 **Agent output** is a strict JSON object: `note` (one chat message), `canvas` (the
 full block list), and `actions` (`create_agent`, `update_soul`). The prompt builder puts
 the agent's soul first, then its brief, then the table: title, problem, other agents,
@@ -216,12 +244,20 @@ canvas and recent chat.
 
 ## Known limits
 
-- Canvas text edits are last-write-wins with a debounce. There is no CRDT.
+- Canvas text edits use stable block IDs and compare the original text before saving.
+  Conflicting edits are rejected, with a recoverable draft in the browser tab’s chat
+  and session storage (the ten most recent distinct drafts, retained across reloads
+  in that tab). Agent updates and branch merges are accepted only if the target canvas
+  has not changed since the turn began; otherwise the room explains why you need to retry.
+  There is no CRDT or automatic merge of conflicting edits.
 - Room state lives in one process; scaling means a bigger box, not more replicas.
-- One server-wide bridge plus one per room; a new bridge at the same scope replaces the
-  old one.
+- Room-scoped bridges and shared bridges can coexist. Shared bridges require the
+  operator’s room allowlist, and branches do not automatically inherit compute access.
 - Guessable room names (`/s/demo`) can be walked into. Use generated links for anything
   private.
+
+Run `npm test` for local protocol regression tests; they use simulated bridges and
+do not consume model usage.
 
 See [PRODUCT.md](PRODUCT.md) for the product thesis.
 

@@ -54,6 +54,10 @@ const PROXY_HOPS = Number(process.env.ROUNDTABLE_PROXY_HOPS || 0);
 const DEFAULT_ACCESS = ['open', 'managed', 'view'].includes(process.env.ROUNDTABLE_DEFAULT_ACCESS)
   ? process.env.ROUNDTABLE_DEFAULT_ACCESS : 'open';
 const DEFAULT_HOST_ONLY_SPEND = process.env.ROUNDTABLE_DEFAULT_HOST_ONLY_SPEND === '1';
+// Only the server operator can authorize use of shared compute. Creating a
+// table and claiming its host role never grants access to an existing bridge.
+const SHARED_ROOMS = new Set((process.env.ROUNDTABLE_SHARED_ROOMS || '')
+  .split(',').map((id) => id.trim()).filter(Boolean));
 
 const DEFAULT_AGENT = {
   name: 'Agent',
@@ -97,6 +101,7 @@ function makeRoom(id = randomBytes(6).toString('base64url')) {
     title: 'Untitled table',
     problem: '',
     canvas: [],          // typed blocks: {type: text|code|diff, title, content, lang?}
+    canvasRevision: 0,
     chat: [],            // {author, kind, text, color}
     agents: [],          // personas: {name, brief, color}
     hostKey: randomBytes(9).toString('base64url'),
@@ -186,8 +191,11 @@ const nextColor = (room) => COLORS[room.colorIdx++ % COLORS.length];
 function brainsFor(room) {
   const pool = [];
   for (const [ws, b] of room.bridges) pool.push({ ...b, ws });
-  for (const [ws, b] of defaultBridges) pool.push({ ...b, ws });
-  if (houseAvailable()) pool.push({ name: 'house', provider: 'anthropic api', ws: null });
+  if (SHARED_ROOMS.has(room.id)) {
+    // Applying files requires a bridge explicitly attached to this room.
+    for (const [ws, b] of defaultBridges) pool.push({ ...b, ws, canApply: false });
+    if (houseAvailable()) pool.push({ name: 'house', provider: 'anthropic api', ws: null });
+  }
   return pool;
 }
 
@@ -224,6 +232,7 @@ function publicState(room) {
     branches: branchesOf(room),
     problem: room.problem,
     canvas: room.canvas,
+    canvasRevision: room.canvasRevision,
     chat: room.chat.slice(-100),
     auto: room.auto,
     access: room.access,
@@ -269,6 +278,27 @@ function say(room, entry) {
 const announceAgents = (room) => broadcast(room, { t: 'agents', agents: publicAgents(room) });
 const announceBrains = (room) => broadcast(room, { t: 'brains', brains: publicBrains(room) });
 
+const identifyCanvas = (blocks) => blocks.map((block) => ({
+  ...block, id: randomBytes(12).toString('base64url'),
+}));
+const canvasMessage = (room, animate = false) => ({
+  t: 'canvas', blocks: room.canvas, revision: room.canvasRevision, animate,
+});
+
+// Agent turns and branch merges use optimistic concurrency. A late result
+// cannot replace work accepted since its snapshot was taken.
+function commitCanvas(room, blocks, baseRevision) {
+  if (room.canvasRevision !== baseRevision) return false;
+  const withoutIds = (canvas) => canvas.map(({ id, ...block }) => block);
+  if (JSON.stringify(withoutIds(room.canvas)) !== JSON.stringify(withoutIds(blocks))) {
+    room.canvas = identifyCanvas(blocks);
+    room.canvasRevision++;
+    broadcast(room, canvasMessage(room, true));
+    schedulePersist();
+  }
+  return true;
+}
+
 /* ---------------- Persistence ----------------
 Rooms with any real content are saved to DATA_FILE (debounced) and loaded on
 boot, so chat, doc, problem, and the agent roster survive restarts. People
@@ -284,7 +314,7 @@ function schedulePersist() {
   persistT = setTimeout(() => {
     persistT = null;
     const data = [...rooms.values()].filter(roomHasContent).map((r) => ({
-      id: r.id, title: r.title, problem: r.problem, canvas: r.canvas, auto: r.auto,
+      id: r.id, title: r.title, problem: r.problem, canvas: r.canvas, canvasRevision: r.canvasRevision, auto: r.auto,
       hostKey: r.hostKey, hostClaimed: r.hostClaimed,
       access: r.access, hostOnlySpend: r.hostOnlySpend,
       parent: r.parent || null,
@@ -312,8 +342,9 @@ function loadRooms() {
     rooms.set(r.id, {
       id: r.id, title: r.title, problem: r.problem,
       // Migrate pre-canvas rooms: the old doc string becomes one text block.
-      canvas: Array.isArray(r.canvas) ? r.canvas
-        : r.doc ? [{ type: 'text', title: 'Notes', content: r.doc }] : [],
+      canvas: identifyCanvas(Array.isArray(r.canvas) ? r.canvas
+        : r.doc ? [{ type: 'text', title: 'Notes', content: r.doc }] : []),
+      canvasRevision: Number.isSafeInteger(r.canvasRevision) ? r.canvasRevision : 0,
       auto: r.auto !== false,
       hostKey: r.hostKey || randomBytes(9).toString('base64url'),
       hostClaimed: !!r.hostClaimed,
@@ -344,7 +375,7 @@ function snapshotFor(room, agent, directTask) {
     otherAgents: room.agents.filter((a) => a.name !== agent.name).map((a) => a.name),
     title: room.title,
     problem: room.problem,
-    canvas: room.canvas,
+    canvas: structuredClone(room.canvas),
     chat: room.chat.slice(-14),
     directTask,
   };
@@ -370,10 +401,8 @@ function bridgeTask(bridgeWs, room, snapshot) {
 // One agent holds the floor at a time; everything else queues. Keeps chat
 // turn-based and the doc free of concurrent rewrites.
 function enqueueAgentRun(room, name, directTask) {
-  if (room.running === name || room.queue.some((q) => q.name === name)) {
-    vlog(room.id, `run for ${name} skipped (already queued or running)`);
-    return;
-  }
+  // Coalesce automatic replies; explicit follow-ups each keep their task.
+  if (!directTask && room.queue.some((q) => q.name === name)) return;
   if (!allowRun(room)) return;
   room.queue.push({ name, directTask });
   pumpQueue(room);
@@ -402,7 +431,7 @@ async function runAgent(room, name, directTask) {
   // brain's context; stable per-agent while the pool is unchanged.
   const pool = brainsFor(room);
   if (!pool.length) {
-    say(room, { kind: 'system', text: `${name} has no brain to think with — the host should run: node bridge/codex.js <server url>` });
+    say(room, { kind: 'system', text: `${name} has no brain to think with — attach a bridge to this room: node bridge/codex.js <server url>/s/${room.id}` });
     return;
   }
   // A pinned brain wins; otherwise spread personas across the pool.
@@ -416,6 +445,7 @@ async function runAgent(room, name, directTask) {
   const opts = [agent.model && `model=${agent.model}`, agent.effort && `effort=${agent.effort}`].filter(Boolean).join(' ');
   log(room.id, `run ${agent.name} on ${brain.name} (${brain.provider})${opts ? ` ${opts}` : ''}${directTask ? ' (direct)' : ''} [hops ${room.hops}/${MAX_HOPS}]`);
   try {
+    const baseRevision = room.canvasRevision;
     const snapshot = snapshotFor(room, agent, directTask);
     const result = brain.ws
       ? await bridgeTask(brain.ws, room, snapshot)
@@ -423,10 +453,8 @@ async function runAgent(room, name, directTask) {
 
     log(room.id, `run ${agent.name} done in ${((Date.now() - started) / 1000).toFixed(1)}s (note ${result.note.length}ch, ${result.canvas.length} block(s))`);
     say(room, { author: agent.name, kind: 'agent', text: result.note, color: agent.color, via: brain.name });
-    if (JSON.stringify(result.canvas) !== JSON.stringify(room.canvas)) {
-      room.canvas = result.canvas;
-      broadcast(room, { t: 'canvas', blocks: room.canvas, animate: true });
-      schedulePersist();
+    if (!commitCanvas(room, result.canvas, baseRevision)) {
+      say(room, { kind: 'system', text: `${agent.name}'s canvas update was not applied because the canvas changed during its turn. Your newer work is preserved; ask the agent to try again.` });
     }
 
     // Real room actions the agent asked for.
@@ -476,6 +504,10 @@ async function runMerge(room, you) {
   const parent = room.parent && rooms.get(room.parent.id);
   if (!parent) { say(room, { kind: 'system', text: 'This table has no parent to merge into.' }); return; }
   if (!canManage(room, you)) { say(room, { kind: 'system', text: 'Only the host can merge at this table.' }); return; }
+  if (!canSpend(room, you) || !canSpeak(parent, you) || !canManage(parent, you) || !canSpend(parent, you)) {
+    say(room, { kind: 'system', text: 'You do not have permission to spend compute and merge into the parent table.' });
+    return;
+  }
   if (room.running || room.queue.length) { say(room, { kind: 'system', text: 'Agents are mid-run — try /merge again in a moment.' }); return; }
   if (!allowRun(room)) return;
   const agent = room.agents[0];
@@ -488,6 +520,7 @@ async function runMerge(room, you) {
   const started = Date.now();
   log(room.id, `merge into ${parent.id} by ${you.name}, via ${agent.name} on ${brain.name}`);
   try {
+    const baseRevision = parent.canvasRevision;
     const snapshot = {
       agentName: agent.name,
       brief: agent.brief,
@@ -497,7 +530,7 @@ async function runMerge(room, you) {
       otherAgents: [],
       title: parent.title,
       problem: parent.problem,
-      canvas: parent.canvas, // the canvas being edited is the PARENT's
+      canvas: structuredClone(parent.canvas), // the canvas being edited is the PARENT's
       chat: room.chat.slice(-14),
       directTask: `Fold this branch's work back into the parent table's canvas. The canvas above is the PARENT's — rewrite it to integrate what branch "${room.title}" concluded. Branch canvas:\n\n${serializeCanvas(room.canvas)}\n\nKeep whatever in the parent canvas is still current, integrate the branch's conclusions, drop duplicates. Your chat note will be posted to the parent table — one or two sentences on what came back.`,
     };
@@ -506,10 +539,12 @@ async function runMerge(room, you) {
       : await runHouseAgent(snapshot);
 
     log(room.id, `merge done in ${((Date.now() - started) / 1000).toFixed(1)}s (parent canvas ${result.canvas.length} block(s))`);
+    if (!commitCanvas(parent, result.canvas, baseRevision)) {
+      say(room, { kind: 'system', text: 'Merge was not applied because the parent canvas changed. Its newer work is preserved; try merging again.' });
+      return;
+    }
     say(parent, { kind: 'system', text: `${you.name} merged branch "${room.title}" back`, room: room.id });
     say(parent, { author: agent.name, kind: 'agent', text: result.note, color: agent.color, via: brain.name });
-    parent.canvas = result.canvas;
-    broadcast(parent, { t: 'canvas', blocks: parent.canvas, animate: true });
     say(room, { kind: 'system', text: `Merged into "${parent.title}"`, room: parent.id });
     schedulePersist();
   } catch (err) {
@@ -661,13 +696,15 @@ function handleCommand(room, you, text) {
     let id = slug, i = 2;
     while (rooms.has(id) && roomHasContent(rooms.get(id))) id = `${slug}-${i++}`;
     const b = getOrCreateRoom(id);
+    if (!b) { say(room, { kind: 'system', text: 'The server is at its room limit; the branch was not created.' }); return true; }
     // The branch starts warm: same problem, canvas snapshot, and agent roster
     // (souls and settings included) — but a fresh chat. Governance is inherited
     // too: same lock state and the same host key, so the parent's host is the
     // branch's host (their browser re-presents the parent key on arrival).
     b.title = topic;
     b.problem = room.problem;
-    b.canvas = room.canvas.map((blk) => ({ ...blk }));
+    b.canvas = identifyCanvas(room.canvas);
+    b.canvasRevision = 0;
     b.agents = room.agents.map((a) => ({ ...a }));
     b.auto = room.auto;
     b.access = room.access;
@@ -724,9 +761,9 @@ function attachBridge(ws, { room, name, provider, models, canApply }) {
     announceAgents(room); // brain assignments may have shifted
   } else {
     defaultBridges.set(ws, entry);
-    log('*', `default brain attached: ${name} (${provider}) — serves every room`);
+    log('*', `default brain attached: ${name} (${provider}) — serves operator-approved rooms`);
     for (const r of rooms.values()) {
-      if (r.people.size > 0) {
+      if (r.people.size > 0 && SHARED_ROOMS.has(r.id)) {
         say(r, { kind: 'system', text: `A ${provider} brain ("${name}") plugged in — agents can think now.` });
         announceBrains(r);
         announceAgents(r);
@@ -744,7 +781,7 @@ function detachBridgeWs(ws) {
   const wasDefault = defaultBridges.delete(ws);
   const affected = [];
   for (const room of rooms.values()) {
-    if (room.bridges.delete(ws) || (wasDefault && room.people.size > 0)) affected.push(room);
+    if (room.bridges.delete(ws) || (wasDefault && SHARED_ROOMS.has(room.id) && room.people.size > 0)) affected.push(room);
   }
   if (!entry) return;
   log('*', `brain detached: ${entry.name} (${dropped} pending task(s) dropped)`);
@@ -803,6 +840,7 @@ function ipOf(req) {
 }
 const wss = new WebSocketServer({
   server,
+  maxPayload: MAX_FRAME_BYTES,
   verifyClient: (info) => {
     if (!originAllowed(info.req)) {
       log('-', `ws upgrade rejected: cross-site origin ${info.req.headers.origin}`);
@@ -848,6 +886,7 @@ wss.on('connection', (ws, req) => {
   connsPerIp.set(ip, (connsPerIp.get(ip) || 0) + 1);
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
+  ws.on('error', (err) => vlog(null, `websocket error: ${err.message}`));
 
   let room = null;
   let isBridge = false;
@@ -876,6 +915,7 @@ wss.on('connection', (ws, req) => {
       vlog(room?.id, `ignored unparseable ws frame (${raw.length}b)`);
       return;
     }
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
     vlog(room?.id, `<- ${isBridge ? 'bridge ' : ''}${msg.t} (${raw.length}b)`);
 
     if (msg.t === 'peek') {
@@ -899,6 +939,10 @@ wss.on('connection', (ws, req) => {
     }
 
     if (msg.t === 'join') {
+      if (isBridge || room) { tell(ws, 'Already joined; open a new connection to join another table.'); return; }
+      if (typeof msg.room !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(msg.room)) {
+        tell(ws, 'Invalid room name.'); return;
+      }
       room = getOrCreateRoom(msg.room);
       if (!room) {
         tell(ws, 'This server is at its room limit — try again later.');
@@ -944,6 +988,7 @@ wss.on('connection', (ws, req) => {
     }
 
     if (msg.t === 'bridge_join') {
+      if (isBridge || room) { ws.close(1008, 'already joined'); return; }
       if (BRIDGE_SECRET && msg.secret !== BRIDGE_SECRET) {
         log('-', 'bridge_join rejected: bad or missing secret');
         ws.close(1008, 'bridge auth failed');
@@ -1001,6 +1046,12 @@ wss.on('connection', (ws, req) => {
     if (!room) return;
 
     const you = room.people.get(ws);
+    if (!you) return;
+    if (['edit_title', 'edit_problem', 'edit_block', 'merge'].includes(msg.t) && !canSpeak(room, you)) {
+      tell(ws, 'This table is view-only — only the host can change it.');
+      if (msg.t === 'edit_block') ws.send(JSON.stringify({ ...canvasMessage(room), t: 'canvas_conflict', draft: String(msg.content || '').slice(0, 6000) }));
+      return;
+    }
 
     switch (msg.t) {
       case 'chat': {
@@ -1087,7 +1138,7 @@ wss.on('connection', (ws, req) => {
       case 'apply_diff': {
         // Host-only, and only to a bridge whose owner opted in with --allow-apply.
         if (!you?.isHost) { tell(ws, 'Only the host can apply a diff to their machine.'); break; }
-        const block = room.canvas[Number(msg.index)];
+        const block = room.canvas.find((b) => b.id === msg.blockId);
         if (!block || block.type !== 'diff') { tell(ws, 'That block is not a diff.'); break; }
         const brain = brainsFor(room).find((b) => b.ws && b.canApply);
         if (!brain) { tell(ws, 'No attached bridge allows applying — restart one with --allow-apply.'); break; }
@@ -1105,11 +1156,14 @@ wss.on('connection', (ws, req) => {
       }
       case 'edit_block': {
         // Humans can edit text blocks in place; code/diff blocks are agent-authored.
-        const idx = Number(msg.index);
-        const block = room.canvas[idx];
-        if (!block || block.type !== 'text') break;
+        const block = room.canvas.find((b) => b.id === msg.blockId);
+        if (!block || block.type !== 'text' || typeof msg.baseContent !== 'string' || block.content !== msg.baseContent) {
+          ws.send(JSON.stringify({ ...canvasMessage(room), t: 'canvas_conflict', draft: String(msg.content || '').slice(0, 6000) }));
+          break;
+        }
         block.content = String(msg.content || '').slice(0, 6000);
-        broadcast(room, { t: 'block', index: idx, content: block.content }, ws);
+        room.canvasRevision++;
+        broadcast(room, { t: 'block', blockId: block.id, content: block.content, revision: room.canvasRevision });
         schedulePersist();
         break;
       }
@@ -1160,11 +1214,11 @@ wss.on('connection', (ws, req) => {
 loadRooms();
 
 server.listen(PORT, () => {
-  console.log(`Roundtable listening on http://localhost:${PORT}`);
-  console.log(`Attach a brain to every room:  node bridge/codex.js http://localhost:${PORT} [--name ada]`);
-  console.log(`...or to a single room:        node bridge/codex.js http://localhost:${PORT}/s/<room>`);
+  console.log(`Roundtable listening on http://localhost:${server.address().port}`);
+  console.log(`Attach a brain to a room: node bridge/codex.js http://localhost:${server.address().port}/s/<room>`);
+  console.log(`Rooms authorized for shared compute: ${[...SHARED_ROOMS].join(', ') || 'none'}`);
   if (houseAvailable()) {
-    console.log('ANTHROPIC_API_KEY detected: the house brain serves every table.');
+    console.log('ANTHROPIC_API_KEY detected: the house brain serves only ROUNDTABLE_SHARED_ROOMS.');
   } else {
     console.log('No ANTHROPIC_API_KEY: brains come from bridges only.');
   }

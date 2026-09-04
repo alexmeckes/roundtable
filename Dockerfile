@@ -7,6 +7,7 @@ RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev
 
 COPY server.js ./
 COPY agents ./agents
+COPY workspace ./workspace
 COPY public ./public
 
 # Rooms persist here — mount a volume at /data and keep this env var.

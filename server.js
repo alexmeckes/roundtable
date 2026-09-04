@@ -19,6 +19,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 import { runHouseAgent, houseAvailable } from './agents/house.js';
 import { sanitizeCanvas, sanitizeActions, serializeCanvas } from './agents/prompt.js';
+import { createWorkspaces } from './workspace/server.js';
 
 const PORT = process.env.PORT || 3131;
 const BRIDGE_TASK_TIMEOUT_MS = 3.5 * 60 * 1000;
@@ -125,6 +126,7 @@ function makeRoom(id = randomBytes(6).toString('base64url')) {
     runWindow: { start: 0, count: 0, notified: false },
   };
   room.agents.push(makeAgent(room, DEFAULT_AGENT.name, DEFAULT_AGENT.brief));
+  workspace.init(room);
   rooms.set(id, room);
   log(id, `room created (${rooms.size} total)`);
   return room;
@@ -150,7 +152,7 @@ function gcRooms() {
   const now = Date.now();
   let dropped = 0;
   for (const [id, r] of rooms) {
-    if (r.people.size > 0 || r.bridges.size > 0) continue;
+    if (r.people.size > 0 || r.bridges.size > 0 || r.personalBridges?.size > 0) continue;
     if (!roomHasContent(r) || now - (r.lastActivity || r.createdAt) > IDLE_EVICT_MS) {
       rooms.delete(id);
       dropped++;
@@ -228,6 +230,8 @@ const branchesOf = (room) =>
 function publicState(room) {
   return {
     id: room.id,
+    work: workspace.publicWork(room),
+    connections: workspace.connections(room),
     title: room.title,
     branches: branchesOf(room),
     problem: room.problem,
@@ -305,7 +309,7 @@ boot, so chat, doc, problem, and the agent roster survive restarts. People
 and bridges are live connections and never persist. */
 
 const roomHasContent = (r) =>
-  r.chat.length > 0 || r.canvas.length > 0 || r.problem || r.title !== 'Untitled table' ||
+  r.work?.length > 0 || r.members?.length > 0 || r.chat.length > 0 || r.canvas.length > 0 || r.problem || r.title !== 'Untitled table' ||
   r.agents.length !== 1 || r.agents[0].name !== DEFAULT_AGENT.name;
 
 let persistT = null;
@@ -318,7 +322,7 @@ function schedulePersist() {
       hostKey: r.hostKey, hostClaimed: r.hostClaimed,
       access: r.access, hostOnlySpend: r.hostOnlySpend,
       parent: r.parent || null,
-      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP),
+      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,
       colorIdx: r.colorIdx, createdAt: r.createdAt, lastActivity: r.lastActivity,
     }));
     try {
@@ -353,6 +357,7 @@ function loadRooms() {
       hostOnlySpend: !!r.hostOnlySpend,
       parent: r.parent || null,
       agents: Array.isArray(r.agents) && r.agents.length ? r.agents : [{ ...DEFAULT_AGENT, color: AGENT_COLORS[0] }],
+      members:r.members || [], work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',message:'Server restarted. Local work is retained on its branch.'}:w), personalBridges:new Map(),
       chat: r.chat || [], autoT: null, queue: [], running: null, hops: 0,
       people: new Map(), bridges: new Map(),
       colorIdx: r.colorIdx || 0, createdAt: r.createdAt || Date.now(),
@@ -794,6 +799,7 @@ function detachBridgeWs(ws) {
 
 /* ---------------- HTTP ---------------- */
 
+const workspace = createWorkspaces({rooms,broadcast,persist:schedulePersist,tell,canSpeak,allowRun,dataDir:dirname(DATA_FILE)});
 const app = express();
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -801,6 +807,7 @@ app.use((_req, res, next) => {
   res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
   next();
 });
+workspace.mount(app);
 app.use(express.static('public'));
 
 // Rooms are only ever created by a ws join — HTTP handlers mint nothing, so
@@ -963,6 +970,10 @@ wss.on('connection', (ws, req) => {
         name: (wanted && !clash) ? wanted : `${pick(ADJ)} ${pick(CRITTER)}`,
         color: nextColor(room),
       };
+      let membership;
+      try { membership=workspace.joinMember(room,msg.memberKey,you.name); }
+      catch(error) { tell(ws,error.message); ws.close(); return; }
+      you.id=membership.member.id;
       // Host: returning key wins; otherwise the first person to sit down
       // claims the table and their browser keeps the key.
       let hostKeyToSend = null;
@@ -978,13 +989,21 @@ wss.on('connection', (ws, req) => {
       log(room.id, `join: ${you.name}${you.isHost ? ' (host)' : ''} (${room.people.size} people)`);
       ws.send(JSON.stringify({
         t: 'welcome',
-        you: { name: you.name, color: you.color, isHost: !!you.isHost },
+        you: { id:you.id, name: you.name, color: you.color, isHost: !!you.isHost },
+        memberKey:membership.memberKey,
         hostKey: hostKeyToSend,
         state: publicState(room),
       }));
       broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ name, color }) => ({ name, color })) }, ws);
       say(room, { kind: 'system', text: `${you.name} pulled up a chair.` });
       return;
+    }
+
+    if (msg.t === 'workspace_bridge_join') {
+      if (isBridge || room) { ws.close(1008,'already joined'); return; }
+      const target=rooms.get(msg.room);
+      if (!target || !workspace.attach(ws,target,msg.token,msg)) { ws.close(1008,'invalid pairing token'); return; }
+      room=target; isBridge=true; return;
     }
 
     if (msg.t === 'bridge_join') {
@@ -1015,6 +1034,10 @@ wss.on('connection', (ws, req) => {
     }
 
     if (isBridge) {
+      if (ws.workspaceRoom) {
+        if (msg.t === 'workspace_progress') workspace.progress(ws,room,msg);
+        return;
+      }
       if (msg.t === 'apply_result') {
         const pending = pendingApplies.get(msg.id);
         if (!pending || pending.ws !== ws) return;
@@ -1047,6 +1070,7 @@ wss.on('connection', (ws, req) => {
 
     const you = room.people.get(ws);
     if (!you) return;
+    if (workspace.handle(ws,room,you,msg)) return;
     if (['edit_title', 'edit_problem', 'edit_block', 'merge'].includes(msg.t) && !canSpeak(room, you)) {
       tell(ws, 'This table is view-only — only the host can change it.');
       if (msg.t === 'edit_block') ws.send(JSON.stringify({ ...canvasMessage(room), t: 'canvas_conflict', draft: String(msg.content || '').slice(0, 6000) }));
@@ -1104,8 +1128,10 @@ wss.on('connection', (ws, req) => {
         if (taken) { tell(ws, `Someone at this table is already called "${nm}".`); break; }
         const was = you.name;
         you.name = nm;
+        const member=room.members.find(m=>m.id===you.id);
+        if(member) member.name=nm;
         log(room.id, `rename: ${was} -> ${nm}`);
-        ws.send(JSON.stringify({ t: 'you', you: { name: you.name, color: you.color, isHost: !!you.isHost } }));
+        ws.send(JSON.stringify({ t: 'you', you: { id:you.id, name: you.name, color: you.color, isHost: !!you.isHost } }));
         broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ name, color }) => ({ name, color })) });
         say(room, { kind: 'system', text: `${was} is now ${nm}.` });
         break;
@@ -1197,7 +1223,8 @@ wss.on('connection', (ws, req) => {
     const n = (connsPerIp.get(ip) || 1) - 1;
     if (n <= 0) connsPerIp.delete(ip); else connsPerIp.set(ip, n);
     if (isBridge) {
-      detachBridgeWs(ws);
+      if (ws.workspaceRoom) workspace.detach(ws);
+      else detachBridgeWs(ws);
       return;
     }
     if (!room) return;

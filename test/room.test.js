@@ -53,9 +53,9 @@ async function fixture(t, env = {}) {
     };
     return {ws, wait, send:msg => ws.send(JSON.stringify(msg))};
   }
-  async function person(room='room', name='Host', hostKey) {
+  async function person(room='room', name='Host', hostKey, memberKey) {
     const client = await connect();
-    client.send({t:'join', room, name, hostKey});
+    client.send({t:'join', room, name, hostKey, memberKey});
     client.welcome = await client.wait(m=>m.t==='welcome');
     return client;
   }
@@ -75,7 +75,7 @@ async function fixture(t, env = {}) {
     bridge.reply(await bridge.task(), blocks);
     return (await host.wait(m=>m.t==='canvas')).blocks;
   }
-  return {connect, person, brain, inspect, seed};
+  return {connect, person, brain, inspect, seed, origin: `http://127.0.0.1:${port}`};
 }
 
 test('new room hosts cannot use shared compute; operator-approved rooms can', async t => {
@@ -263,4 +263,93 @@ test('room creation limits reject branching without terminating the server', asy
   host.send({t:'edit_title',text:'Still running'});
   host.send({t:'peek',room:'room'});
   assert.equal((await host.wait(m=>m.t==='preview')).title,'Still running');
+});
+
+async function personalBridge(f,person,room='room') {
+  person.send({t:'workspace_pair'});
+  const {token}=await person.wait(m=>m.t==='workspace_pair');
+  const bridge=await f.connect();
+  bridge.send({t:'workspace_bridge_join',room,token,project:'game',approach:'My own approach'});
+  const connected=await bridge.wait(m=>m.t==='workspace_connected');
+  return {...bridge,token,ownerId:connected.ownerId,task:()=>bridge.wait(m=>['workspace_task','workspace_integrate'].includes(m.t))};
+}
+async function upload(f,bridge,job,body,room='room') {
+  return fetch(f.origin+'/api/rooms/'+room+'/work/'+job.id+'/result',{method:'POST',headers:{Authorization:'Bearer '+bridge.token,'X-Run-Token':job.runToken,'Content-Type':'application/json'},body:JSON.stringify(body)});
+}
+
+test('friends run their own Codex concurrently even when host-only shared spending is enabled',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  assert.notEqual(a.ownerId,b.ownerId);
+  alice.send({t:'workspace_start',instructions:'Improve player movement',ownerId:b.ownerId});
+  bob.send({t:'workspace_start',instructions:'Build enemies'});
+  const [at,bt]=await Promise.all([a.task(),b.task()]);
+  assert.equal(at.instructions,'Improve player movement');assert.equal(bt.instructions,'Build enemies');
+  const state=await f.inspect();assert.equal(state.work.filter(w=>w.status==='running').length,2);
+  assert.ok(state.work.every(w=>!w.runToken));assert.deepEqual(state.brains,[]);
+  assert.equal((await upload(f,b,at,{status:'ready'})).status,403);
+  bob.send({t:'workspace_cancel',id:at.id});
+  await bob.wait(m=>m.t==='chat' && m.entry.text.includes('only manage your own'));
+  assert.equal((await upload(f,a,at,{status:'ready',summary:'Movement improved',patch:'diff example',baseCommit:'a'.repeat(40)})).status,200);
+  assert.equal((await upload(f,b,bt,{status:'ready',summary:'Enemies ready'})).status,200);
+  const finished=await f.inspect();assert.equal(finished.work.filter(w=>w.status==='ready').length,2);
+});
+
+test('member identity survives reconnection and a matching display name grants no ownership',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice');
+  const bridge=await personalBridge(f,alice);
+  const returned=await f.person('room','Alice',undefined,alice.welcome.memberKey);
+  assert.equal(returned.welcome.you.id,alice.welcome.you.id);
+  assert.equal(returned.welcome.state.connections[0].ownerId,returned.welcome.you.id);
+  const impostor=await f.person('room','Alice');
+  assert.notEqual(impostor.welcome.you.id,returned.welcome.you.id);
+  impostor.send({t:'workspace_start',instructions:'Spend Alice compute',ownerId:bridge.ownerId});
+  await impostor.wait(m=>m.t==='chat' && m.entry.text.includes('Connect your Codex'));
+  assert.equal(bridge.ws.messages.some(m=>m.t==='workspace_task'),false);
+});
+
+test('pairing tokens are room-scoped and rotation revokes old connections and late results',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bridge=await personalBridge(f,alice);
+  await f.person('other','Other');const wrong=await f.connect();
+  const closed=once(wrong.ws,'close');wrong.send({t:'workspace_bridge_join',room:'other',token:bridge.token,project:'game'});
+  assert.equal((await closed)[0],1008);
+  alice.send({t:'workspace_start',instructions:'Work'});const task=await bridge.task();
+  alice.send({t:'workspace_pair'});await alice.wait(m=>m.t==='workspace_pair');
+  assert.equal((await upload(f,bridge,task,{status:'ready'})).status,403);
+  assert.equal((await f.inspect()).work[0].status,'interrupted');
+});
+
+test('preview files are bounded and sandboxed; traversal is rejected',async t=>{
+  const f=await fixture(t),owner=await f.person(),bridge=await personalBridge(f,owner);
+  owner.send({t:'workspace_start',instructions:'Build a playable game'});const job=await bridge.task();
+  assert.equal((await upload(f,bridge,job,{status:'ready',preview:[{path:'../escape.html',data:'eA=='}]})).status,400);
+  const body={status:'ready',patch:'example diff',preview:[{path:'index.html',data:Buffer.from('<canvas>Game</canvas>').toString('base64')}]};
+  assert.equal((await upload(f,bridge,job,body)).status,200);
+  const response=await fetch(f.origin+'/api/rooms/room/work/'+job.id+'/preview/index.html');
+  assert.equal(response.status,200);assert.equal(await response.text(),'<canvas>Game</canvas>');
+  assert.match(response.headers.get('content-security-policy'),/sandbox allow-scripts/);
+  assert.ok(response.headers.get('content-security-policy').includes('/work/'+job.id+'/preview/'));
+  assert.ok(!response.headers.get('content-security-policy').includes("connect-src 'self'"));
+  assert.ok(!response.headers.get('content-security-policy').includes('allow-same-origin'));
+  assert.equal((await upload(f,bridge,job,body)).status,403);
+});
+
+test('integration is dispatched to the receiving person, not the author or room host',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  alice.send({t:'workspace_start',instructions:'Create movement'});const task=await a.task();
+  await upload(f,a,task,{status:'ready',patch:'example',baseCommit:'b'.repeat(40)});
+  bob.send({t:'workspace_integrate',id:task.id});const integration=await b.task();
+  assert.equal(integration.t,'workspace_integrate');assert.equal(integration.sourceId,task.id);assert.equal(integration.baseCommit,'b'.repeat(40));
+  assert.equal(a.ws.messages.some(m=>m.t==='workspace_integrate'),false);
+  assert.equal((await upload(f,b,integration,{status:'conflict',message:'Conflict; checkout unchanged'})).status,200);
+});
+
+test('view-only owners can still stop their own active Codex and revoke its connection',async t=>{
+  const f=await fixture(t),host=await f.person(),guest=await f.person('room','Guest'),bridge=await personalBridge(f,guest);
+  guest.send({t:'workspace_start',instructions:'Work'});const job=await bridge.task();
+  host.send({t:'set_access',tier:'view',hostOnlySpend:true});await host.wait(m=>m.t==='access');
+  guest.send({t:'workspace_cancel',id:job.id});await bridge.wait(m=>m.t==='workspace_cancel');
+  guest.send({t:'workspace_start',instructions:'More work'});await guest.wait(m=>m.t==='chat' && m.entry.text.includes('view-only'));
+  guest.send({t:'workspace_disconnect'});await guest.wait(m=>m.t==='workspaces' && m.connections.length===0);
 });

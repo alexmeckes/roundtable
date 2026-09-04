@@ -452,9 +452,33 @@ body.offline .hint{color:#C25E5E}
   .doc{position:fixed;top:48px;right:0;bottom:0;width:min(380px,92vw);z-index:30;box-shadow:-8px 0 24px rgba(0,0,0,.08)}
   #h-link{display:none}
 }
+
+.work-mode #brain-panel{display:none!important}
+.work-mode #brain,.work-mode #btn-auto,.work-mode #btn-new-agent{display:none}
+.doc{width:52%;min-width:360px}
+#workspace-panel h2{margin:0 0 8px;font-size:22px}
+#workspace-panel p{font-size:13px;line-height:1.5}
+#workspace-panel button,.work-dialog button{border:1px solid #dededb;border-radius:7px;background:#fff;padding:8px 11px;cursor:pointer;color:#37352f}
+#workspace-panel button:disabled,.work-dialog button:disabled{opacity:.45;cursor:default}
+#workspace-start{background:#37352f!important;color:white!important}
+#workspace-form{display:grid;gap:8px;margin:22px 0}
+#workspace-form label,.work-dialog label{font-size:13px;font-weight:600}
+#workspace-task{min-height:90px;resize:vertical;border:1px solid #dededb;border-radius:8px;padding:12px;font:inherit;font-size:14px}
+.work-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.workspace-person{display:inline-block;padding:5px 9px;margin:10px 5px 0 0;background:#eef4ed;border-radius:20px;font-size:12px}
+.work-card{padding:16px;border:1px solid #e2e2df;border-radius:10px;margin:12px 0;background:white}
+.work-card h3{margin:0;font-size:16px}.work-card code{font-size:11px;overflow-wrap:anywhere}
+.work-meta{color:#777;font-size:12px!important}.work-message{color:#367b57}
+.work-dialog{margin:auto;width:min(850px,92vw);max-height:88vh;overflow:auto;border:1px solid #ddd;border-radius:14px;padding:24px;color:#37352f}
+.work-dialog::backdrop{background:#0006}.work-dialog h2{font-size:22px;margin:8px 0 16px}
+.work-dialog>label{display:block;margin:12px 0 5px}.work-dialog>input{width:100%;padding:9px;border:1px solid #ddd;border-radius:6px}
+.work-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#f5f5f3;border-radius:8px;font-size:12px;max-height:40vh;overflow:auto}
+.work-close{float:right}.work-play{width:95vw}#workspace-preview{width:100%;height:65vh;border:0;background:#111}
+@media(max-width:860px){.doc{width:100%;min-width:0}}
+[hidden]{display:none!important}
 </style>
 </head>
-<body>
+<body class="work-mode">
 
 <div class="app">
   <header>
@@ -468,6 +492,7 @@ body.offline .hint{color:#C25E5E}
     <div class="faces" id="faces"></div>
     <button class="icon-btn" id="btn-new-agent" title="Invite a new agent">+</button>
     <button class="icon-btn" id="btn-auto" title="Auto-reply: agents chime in without being @mentioned">Auto</button>
+    <button class="icon-btn" id="btn-workspaces">Workspaces</button>
     <button class="icon-btn" id="btn-doc" title="Toggle the canvas">Canvas</button>
   </header>
 
@@ -494,14 +519,29 @@ body.offline .hint{color:#C25E5E}
 
     <aside class="doc" id="doc">
       <div class="doc-head">
-        <span>Canvas</span>
+        <span id="panel-heading">Workspaces</span>
         <span class="writing">agent writing…</span>
       </div>
       <div class="doc-scroll">
+<section id="workspace-panel">
+  <h2>Build together</h2>
+  <p id="my-workspace">Bring your Codex and a local clone of the game.</p>
+  <div class="work-actions"><button id="workspace-connect">Connect my Codex</button><button id="workspace-disconnect" hidden>Disconnect mine</button></div>
+  <div id="workspace-connections"></div>
+  <form id="workspace-form">
+    <label for="workspace-task">What are you working on?</label>
+    <textarea id="workspace-task" maxlength="4000" placeholder="Add a dash to the player. Follow our movement conventions and test it."></textarea>
+    <button id="workspace-start" disabled>Start with my Codex</button>
+  </form>
+  <p id="workspace-empty">Everyone can work on a different part of the game. Contributions, checks, and playable builds appear here.</p>
+  <div id="workspace-cards"></div>
+</section>
+
+<div id="canvas-panel" hidden>
         <div id="d-problem" contenteditable="true" data-empty="What's the problem? Optional — the agents also read the chat."></div>
         <div id="canvas"></div>
         <div id="canvas-empty">Agents lay out notes, code, and diffs here. Text blocks are editable when your table permissions allow it.</div>
-      </div>
+      </div></div>
     </aside>
   </main>
 </div>
@@ -581,6 +621,31 @@ body.offline .hint{color:#C25E5E}
   </div>
 </div>
 
+<dialog id="workspace-pair" class="work-dialog">
+  <button data-close-workspace class="work-close">Close</button>
+  <h2>Connect your Codex</h2>
+  <p>Use your own Codex login, instructions, skills, and tools. Run the command from your Roundtable checkout on your machine. Each task gets its own Git worktree.</p>
+  <label for="pair-project">Local game repository</label><input id="pair-project" placeholder="/path/to/game">
+  <label for="pair-check">Your setup, tests, and build command (optional)</label><input id="pair-check" placeholder="npm ci && npm test && npm run build">
+  <label for="pair-preview">Build folder to share (optional)</label><input id="pair-preview" placeholder="dist">
+  <p class="work-meta">Worktrees start from your committed HEAD. Build folders must contain a self-contained index.html. The room receives code changes, check output, and published preview files. Keep this connection command private.</p>
+  <pre id="pair-command"></pre><button id="pair-copy">Copy command</button>
+</dialog>
+<dialog id="workspace-review" class="work-dialog">
+  <button data-close-workspace class="work-close">Close</button>
+  <h2 id="review-title"></h2><p id="review-summary"></p>
+  <h3>Checks</h3><pre id="review-checks"></pre>
+  <h3>Changes</h3><pre id="review-diff"></pre>
+  <p id="review-explanation"></p>
+  <label><input type="checkbox" id="review-accept"> I reviewed these changes and want them integrated into my local checkout.</label>
+  <button id="review-integrate" disabled>Integrate into my checkout</button>
+</dialog>
+<dialog id="workspace-play" class="work-dialog work-play">
+  <button data-close-workspace class="work-close">Close</button><h2 id="play-title"></h2>
+  <iframe id="workspace-preview" title="Playable game build" sandbox="allow-scripts allow-pointer-lock" allow="gamepad" referrerpolicy="no-referrer"></iframe>
+</dialog>
+<script src="/workspace.js"></script>
+
 <script>
 /* ---------------- Roundtable client: server-authoritative, ws-synced ---------------- */
 const $ = id => document.getElementById(id);
@@ -626,6 +691,7 @@ const roomId = location.pathname.split('/').pop();
 const state = { you:null, people:[], agents:[], brains:[], branches:[], busy:new Set(),
   canvas:[], auto:true, access:'open', hostOnlySpend:false, isHost:false, joined:false };
 const HOST_KEY_STORE = 'rt-host-' + roomId;
+const MEMBER_STORE = 'rt-member-' + roomId;
 const NAME_STORE = 'rt-name'; // one chosen name per device, across tables
 const canManage = () => state.access === 'open' || state.isHost;
 const canSpeak = () => state.access !== 'view' || state.isHost;
@@ -669,7 +735,7 @@ function connect(){
     const hostKey = localStorage.getItem(HOST_KEY_STORE) || undefined;
     if(state.joined){
       clog('socket open, rejoining room');           // reconnect: no arrival screen
-      ws.send(JSON.stringify({t:'join', room:roomId, name: state.you?.name, hostKey}));
+      ws.send(JSON.stringify({t:'join', room:roomId, name: state.you?.name, hostKey, memberKey:localStorage.getItem(MEMBER_STORE)}));
     } else {
       clog('socket open, peeking at room');          // first arrival: look before sitting down
       ws.send(JSON.stringify({t:'peek', room:roomId, hostKey}));
@@ -678,6 +744,7 @@ function connect(){
   ws.addEventListener('message', onMessage);
   ws.addEventListener('close', () => {
     preservePendingCanvasEdits();
+    workspaceUI.update(undefined,[]);
     clog('socket closed; retrying in', retryDelay/1000 + 's');
     setConnected(false);
     setTimeout(connect, retryDelay);
@@ -693,7 +760,9 @@ const send = m => {
   clog('send dropped (socket not open):', m.t);
   return false;
 };
+const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak});
 function hintText(){
+  if(document.body.classList.contains('work-mode')) return canSpeak()?'Talk with the group here. Start project work with your own Codex in Workspaces.':'View-only — follow the group’s work and play their published builds.';
   if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
   if(state.hostOnlySpend && !state.isHost) return 'Only the host can put agents to work here.';
   if(!state.agents.length) return 'No agents at the table — /agent Name: brief invites one.';
@@ -711,8 +780,7 @@ function showArrival(p){
   $('a-title').textContent = p.title || 'Untitled table';
   $('a-sub').textContent = host && !p.exists
     ? "Nobody's here yet — you'll be the host."
-    : `${n} ${n === 1 ? 'person' : 'people'} here · ${a} ${a === 1 ? 'agent' : 'agents'} at the table` +
-      (p.brains.length ? ` · powered by ${p.brains.join(', ')}` : ' · no brain attached yet');
+    : `${n} ${n === 1 ? 'person' : 'people'} here · bring your Codex and build together`;
 
   const f = $('a-faces'); f.innerHTML = '';
   for(const x of [...p.people, ...p.agents.map(g => ({...g, agent:true}))].slice(0, 8)){
@@ -724,10 +792,9 @@ function showArrival(p){
 
   $('a-name').value = localStorage.getItem(NAME_STORE) || '';
   const notes = [];
-  if(host) notes.push('You <b>host</b> this table: you set what guests can do, and agents think with the brain you attach.');
+  if(host) notes.push('You <b>host</b> this table and set what guests can do. Each person connects and controls their own Codex.');
   if(p.access === 'view' && !host) notes.push('This table is <b>view-only</b> — you can watch, but only the host can speak.');
-  else if(p.access === 'managed' && !host) notes.push('You can talk and put agents to work; the host configures them.');
-  if(p.hostOnlySpend && !host) notes.push('Only the host can put agents to work here.');
+  else if(!host) notes.push('Join the discussion, connect your Codex, and work alongside the group. Your tools and approach stay yours.');
   $('a-note').innerHTML = notes.join('<br>');
   $('a-note').style.display = notes.length ? '' : 'none';
   $('a-join').textContent = (p.access === 'view' && !host) ? 'Watch the table' : 'Join the table';
@@ -742,7 +809,7 @@ function doJoin(){
   state.joined = true;
   $('arrival').classList.remove('open');
   send({t:'join', room:roomId, name: name || undefined,
-        hostKey: localStorage.getItem(HOST_KEY_STORE) || undefined});
+        hostKey: localStorage.getItem(HOST_KEY_STORE) || undefined, memberKey:localStorage.getItem(MEMBER_STORE)});
 }
 $('a-join').addEventListener('click', doJoin);
 $('a-name').addEventListener('keydown', e => { if(e.key === 'Enter') doJoin(); });
@@ -803,6 +870,7 @@ function setAccess(tier, hostOnlySpend){
   $('d-problem').contentEditable = String(!mute);
   document.querySelectorAll('#canvas .btext').forEach(n => { n.contentEditable = String(!mute); });
   $('btn-auto').disabled = !canManage();
+  workspaceUI.update();
   $('chat-text').disabled = mute;
   $('btn-send').style.display = mute ? 'none' : '';
   $('chat-text').placeholder = mute ? 'View-only — the host is speaking' : 'Message the table…';
@@ -839,6 +907,8 @@ function onMessage(ev){
       localStorage.setItem(NAME_STORE, m.you.name);
       $('arrival').classList.remove('open');
       if(m.hostKey) localStorage.setItem(HOST_KEY_STORE, m.hostKey);
+      if(m.memberKey) localStorage.setItem(MEMBER_STORE,m.memberKey);
+      workspaceUI.update(m.state.work || [],m.state.connections || []);
       state.people = m.state.people;
       if(m.state.parent){
         $('h-parent').style.display = '';
@@ -874,6 +944,9 @@ function onMessage(ev){
       readCanvasDrafts().forEach(draft => renderChat({kind:'system', text:'Unsaved canvas draft (copy to recover):\n' + draft}));
       break;
     }
+    case 'workspaces': workspaceUI.update(m.work,m.connections); break;
+    case 'workspace_progress': workspaceUI.progress(m.id,m.message); break;
+    case 'workspace_pair': workspaceUI.pair(m.token); break;
     case 'auto': setAuto(m.on); break;
     case 'access': setAccess(m.access, m.hostOnlySpend); break;
     case 'preview': showArrival(m); break;
@@ -1168,11 +1241,22 @@ $('chat-text').addEventListener('input', () => {
 /* ---------------- Doc panel ---------------- */
 const docOpenDefault = matchMedia('(min-width: 861px)').matches;
 $('doc').classList.toggle('closed', !docOpenDefault);
-$('btn-doc').classList.toggle('open', docOpenDefault);
-$('btn-doc').addEventListener('click', () => {
-  const closed = $('doc').classList.toggle('closed');
-  $('btn-doc').classList.toggle('open', !closed);
-});
+$('btn-workspaces').classList.toggle('open', docOpenDefault);
+function showWorkPanel(work){
+  if(document.body.classList.contains('work-mode')===work && !$('doc').classList.contains('closed')){
+    $('doc').classList.add('closed');
+    $('btn-workspaces').classList.remove('open'); $('btn-doc').classList.remove('open');
+    return;
+  }
+  document.body.classList.toggle('work-mode',work);
+  $('hint').textContent=hintText();
+  $('panel-heading').textContent=work?'Workspaces':'Canvas';
+  $('workspace-panel').hidden=!work; $('canvas-panel').hidden=work;
+  $('doc').classList.remove('closed');
+  $('btn-workspaces').classList.toggle('open',work); $('btn-doc').classList.toggle('open',!work);
+}
+$('btn-doc').addEventListener('click',()=>showWorkPanel(false));
+$('btn-workspaces').addEventListener('click',()=>showWorkPanel(true));
 
 let probT;
 $('d-problem').addEventListener('input', () => {

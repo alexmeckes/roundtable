@@ -1,0 +1,39 @@
+
+> roundtable@0.1.0 test
+> node --test
+
+✔ cancellation waits for its delayed turn ID and stops background terminals without cancelling a sibling turn (388.411834ms)
+✔ new room hosts cannot use shared compute; operator-approved rooms can (140.458125ms)
+✔ room-scoped bridge works without shared authorization and cannot leak to another room (116.681416ms)
+✔ house compute is also denied to new rooms by default (70.958833ms)
+✔ view-only guests cannot mutate canvas, title, problem, agents, auto or access (169.697625ms)
+✔ late agent results cannot overwrite human edits, and snapshots stay immutable (147.441083ms)
+✔ stale human edits retain drafts and cannot target replacement blocks by index (168.291125ms)
+✔ busy and queued agents retain every explicit follow-up in order (139.244417ms)
+✔ auto replies received during a turn queue a follow-up with the latest conversation (1453.084375ms)
+✔ branch merge cannot overwrite newer parent work; retry succeeds (212.803083ms)
+✔ host-only spend also blocks merge for guests in open rooms (128.0975ms)
+✔ malformed messages and repeated joins cannot corrupt room membership (113.938459ms)
+✔ diff application requires current block identity and a room-scoped bridge (171.218375ms)
+✔ branches do not inherit shared compute authorization (126.292167ms)
+✔ room creation limits reject branching without terminating the server (92.479542ms)
+✔ friends run their own Codex concurrently even when host-only shared spending is enabled (196.235542ms)
+✔ member identity survives reconnection and a matching display name grants no ownership (125.019167ms)
+✔ pairing tokens are room-scoped and rotation revokes old connections and late results (145.949167ms)
+✔ preview files are bounded and sandboxed; traversal is rejected (116.571542ms)
+✔ integration is dispatched to the receiving person, not the author or room host (155.783959ms)
+✔ view-only owners can still stop their own active Codex and revoke its connection (149.610917ms)
+✔ two independent Codex workspaces contribute different features into one game (855.929292ms)
+✔ conflicting contributions retain an integration branch without modifying the receiving checkout (671.996541ms)
+✔ failed checks and dirty target checkouts prevent integration (360.347083ms)
+✔ new files and self-contained preview assets travel with a contribution (436.619833ms)
+✔ preview collection refuses symlinks and task failure retains local work (283.799583ms)
+✔ owner cancellation just before integration leaves the target checkout unchanged (489.907875ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4190.298833

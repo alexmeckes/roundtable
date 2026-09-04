@@ -1,0 +1,11 @@
+{
+  "pass": true,
+  "jobId": "PP_Fb2nY3y278WqZKeP09b2CHAf9WFfH",
+  "startedAt": "2026-09-04T23:22:15.585Z",
+  "checkedAt": "2026-09-04T23:23:28.047Z",
+  "delaySeconds": 45,
+  "completionFileAbsent": true,
+  "siblingJobId": "mjCFjQg--pne_urlGQviK8pg3eDYVyLb",
+  "siblingStatus": "ready",
+  "spurious403": false
+}

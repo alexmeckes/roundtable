@@ -1,0 +1,3 @@
+Browser tab: 7, Title: "Untitled table — Roundtable", URL: "http://localhost:43141/s/evidence".
+There has been no change in the accessibility tree.
+The focused UI element is 0 AXWebArea Untitled table — Roundtable, URL: localhost:43141/s/evidence

@@ -50,6 +50,9 @@ function connect(){
         const patch=await response.text();if(Buffer.byteLength(patch)>1024*1024)throw new Error('Patch too large');
         result=await project.integrate(msg,patch,{signal:controller.signal,progress});
       } else result=await project.run(msg,{signal:controller.signal,progress});
+      // The room has already revoked this run's upload capability on Stop.
+      // Cleanup still completes locally; publishing again only produces a 403.
+      if(controller.signal.aborted){console.log(msg.id+': '+result.status+' '+result.message);return;}
       await post(msg,result);
       console.log(msg.id+': '+result.status+' '+(result.branch || ''));
     } catch(error) {

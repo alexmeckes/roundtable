@@ -1,0 +1,85 @@
+Browser tab: 7, Title: "Untitled table — Roundtable", URL: "http://localhost:43141/s/evidence".
+0 AXWebArea Untitled table — Roundtable, URL: localhost:43141/s/evidence
+	1 container
+		2 container Value: Untitled table, ID: h-title
+			3 text Untitled table
+		4 button Share, Help: Share this table, ID: h-link
+		5 container faces
+			6 text A
+			7 text B
+			8 text A
+		9 button Workspaces, ID: btn-workspaces
+		10 button Canvas, Help: Toggle the canvas, ID: btn-doc
+	11 container
+		12 text Alice, Bob came and went.
+		13 text entry area (settable) chat-text
+		14 button Send, ID: btn-send
+		15 text Talk with the group here. Start project work with your own Codex in Workspaces.
+		16 container doc
+			17 text Workspaces
+			18 container workspace-panel
+				19 heading Build together, Value: 2
+					20 text Build together
+				21 text alice · Your Codex is connected
+				22 button Reconnect my Codex, ID: workspace-connect
+				23 button Disconnect mine, ID: workspace-disconnect
+				24 container workspace-connections
+					25 text Bob · bob
+					26 text Alice · alice
+				27 container workspace-form
+					28 text What are you working on?
+					29 text entry area (settable) What are you working on?, ID: workspace-task
+					30 button Start with my Codex, ID: workspace-start
+				31 container workspace-cards
+					32 container
+						33 heading Dash feature: change only movement.js so step(position, action) adds SPEED * 5 f, Value: 3
+							34 text Dash feature: change only movement.js so step(position, action) adds SPEED * 5 f
+						35 text Alice · ready Contribution ready for review. Updated only `movement.js`: `dash` adds `SPEED * 5`; all other actions add `SPEED`. `SPEED` remains `10`. Validation: `npm test` and `npm run build` both passed. codex/roundtable-22y-knrKfx23Lk0ZWtbOKkEintSKXN5Y 1 file(s) changed
+						36 button Review changes
+						37 button Play build
+						38 button Archive
+					39 container
+						40 heading Coin feature: change only coins.js so coinScore(position, alreadyCollected) retu, Value: 3
+							41 text Coin feature: change only coins.js so coinScore(position, alreadyCollected) retu
+						42 text Bob · ready Contribution ready for review. Changed only `coins.js`: `coinScore` returns `1` when `position >= 100` and `alreadyCollected === false`; otherwise `0`. Validation passed: `npm test` (2 tests) and `npm run build`. codex/roundtable-qYPkSddZF5krO7dSNzEjOzCfbwUWPojg 1 file(s) changed
+						43 button Review changes
+						44 button Play build
+					45 container
+						46 heading Integrate Dash feature: change only movement.js so step(position, action) adds S, Value: 3
+							47 text Integrate Dash feature: change only movement.js so step(position, action) adds S
+						48 text Alice · integrated Integrated into your local main. Push through your usual Git workflow to share repository history. Integrated 22y-knrKfx23Lk0ZWtbOKkEintSKXN5Y into main codex/roundtable-YqRPP8yE_Kt3LIIryOiGR-21NxEiuaCJ 1 file(s) changed
+						49 button Review changes
+						50 button Play build
+						51 button Archive
+					52 container
+						53 heading Integrate Coin feature: change only coins.js so coinScore(position, alreadyColle, Value: 3
+							54 text Integrate Coin feature: change only coins.js so coinScore(position, alreadyColle
+						55 text Alice · integrated Integrated into your local main. Push through your usual Git workflow to share repository history. Integrated qYPkSddZF5krO7dSNzEjOzCfbwUWPojg into main codex/roundtable-V2etmLo-6uf5nwZf8oOLJFiWPJmVgCFC 1 file(s) changed
+						56 button Review changes
+						57 button Play build
+						58 button Archive
+					59 container
+						60 heading Conflict Alice: change only SPEED in movement.js from 10 to 20. Preserve everyth, Value: 3
+							61 text Conflict Alice: change only SPEED in movement.js from 10 to 20. Preserve everyth
+						62 text Alice · ready Contribution ready for review. Changed only `SPEED` in `movement.js` from `10` to `20`. Everything else is preserved. Validation: `npm test` passed (2 tests), and `npm run build` passed. codex/roundtable-ortoa2EAhwNkRGbpby3lgwhcB1HpWf7P 1 file(s) changed
+						63 button Review changes
+						64 button Play build
+						65 button Archive
+					66 container
+						67 heading Conflict Bob: change only SPEED in movement.js from 10 to 30. Preserve everythin, Value: 3
+							68 text Conflict Bob: change only SPEED in movement.js from 10 to 30. Preserve everythin
+						69 text Bob · ready Contribution ready for review. Changed only `SPEED` in `movement.js` from `10` to `30`. Everything else is preserved. Validation: `npm test` passed (2 tests), and `npm run build` passed. codex/roundtable-J0C7p_TPsPMAEEXN7zqrk2qJADhEpcP1 1 file(s) changed
+						70 button Review changes
+						71 button Play build
+					72 container
+						73 heading Cancel proof: first run node -e "require('fs').writeFileSync('started.txt','star, Value: 3
+							74 text Cancel proof: first run node -e "require('fs').writeFileSync('started.txt','star
+						75 text Alice · interrupted Stopped by its owner. Local branch retained.
+						76 button Archive
+					77 container
+						78 heading Sibling proof: run node -e "setTimeout(()=>require('fs').writeFileSync('sibling., Value: 3
+							79 text Sibling proof: run node -e "setTimeout(()=>require('fs').writeFileSync('sibling.
+						80 text Alice · running Working on codex/roundtable-mjCFjQg--pne_urlGQviK8pg3eDYVyLb
+						81 button Stop
+
+The focused UI element is 0 AXWebArea Untitled table — Roundtable, URL: localhost:43141/s/evidence

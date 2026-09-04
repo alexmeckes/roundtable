@@ -1,0 +1,44 @@
+Browser tab: 7, Title: "Untitled table — Roundtable", URL: "http://localhost:43141/s/evidence".
+0 AXWebArea Untitled table — Roundtable, URL: localhost:43141/s/evidence
+	1 container
+		20 container Value: Untitled table, ID: h-title
+			21 text Untitled table
+		2 button Share, Help: Share this table, ID: h-link
+		22 container faces
+			23 text A
+			24 text B
+			25 text A
+		3 button Workspaces, ID: btn-workspaces
+		4 button Canvas, Help: Toggle the canvas, ID: btn-doc
+	5 container
+		26 text Alice, Bob came and went.
+		6 text entry area (settable) chat-text
+		7 button Send, ID: btn-send
+		27 text Talk with the group here. Start project work with your own Codex in Workspaces.
+		9 container doc
+			10 text Workspaces
+			11 container workspace-panel
+				12 heading Build together, Value: 2
+					13 text Build together
+				28 text alice · Your Codex is connected
+				15 button Reconnect my Codex, ID: workspace-connect
+				29 button Disconnect mine, ID: workspace-disconnect
+				30 container workspace-connections
+					31 text Bob · bob
+					32 text Alice · alice
+				16 container workspace-form
+					17 text What are you working on?
+					18 text entry area (settable) What are you working on?, ID: workspace-task
+					19 button Start with my Codex, ID: workspace-start
+				33 container workspace-cards
+					34 container
+						35 heading Dash feature: change only movement.js so step(position, action) adds SPEED * 5 f, Value: 3
+							36 text Dash feature: change only movement.js so step(position, action) adds SPEED * 5 f
+						37 text Alice · running Working on codex/roundtable-22y-knrKfx23Lk0ZWtbOKkEintSKXN5Y
+						38 button Stop
+					39 container
+						40 heading Coin feature: change only coins.js so coinScore(position, alreadyCollected) retu, Value: 3
+							41 text Coin feature: change only coins.js so coinScore(position, alreadyCollected) retu
+						42 text Bob · running Working on codex/roundtable-qYPkSddZF5krO7dSNzEjOzCfbwUWPojg
+
+The focused UI element is 19 button Start with my Codex, ID: workspace-start

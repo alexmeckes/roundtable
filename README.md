@@ -1,14 +1,81 @@
 # Roundtable
 
-**A link that turns any group chat into a shared workspace with agents at the table.**
+**A shared game studio where friends bring their own Codex and build together.**
 
-Open a table, drop the link in Slack, Discord, or a text thread, and everyone lands in
-the same live room: no accounts, no install. People and AI agents share one chat and one
-canvas. The agents think on a brain the host lends from their own machine (a Codex
-subscription today), so model-provider credentials stay on the host’s machine in
-bridge-only mode.
+Join a table, connect your Codex to a local clone of the game, and work alongside
+friends. Each person has their own tools, approach, and Git worktrees. The room shares
+discussion, task progress, proposed changes, checks, and playable browser builds.
 
-![A table in progress: people and agents in the chat, a diff, a table and a diagram on the canvas](docs/room.png)
+## Build together
+
+Requirements: Node 20+, Git, and the Codex CLI installed and logged in on each person's
+machine. Everyone needs a local clone with a committed baseline from the same game
+repository. The room server still deploys as one persistent Node process.
+
+```bash
+npm ci
+npm start
+```
+
+Open <http://localhost:3131>, join the room, and share its link. Each friend selects
+**Workspaces → Connect my Codex**, enters the path to their local game repository,
+and copies the private connection command. Run it from a checkout of Roundtable:
+
+```bash
+ROUNDTABLE_PAIR_TOKEN='<private token from your room>' node bridge/workspace.js \
+  'https://your-roundtable.example/s/room-id' \
+  --project '/path/to/game' \
+  --check 'npm ci && npm test && npm run build' \
+  --preview-dir dist
+```
+
+`--check` and `--preview-dir` are optional. Choose a check command appropriate for your
+project; it runs on your machine in each task or integration worktree. `--approach-file`
+can load your personal instructions from a local text file; `--model` and `--effort`
+are optional overrides. Use a Codex CLI version that supports your chosen model. `--codex-bin` can select a
+specific installed executable without changing your global CLI (for example the Codex
+macOS app’s `/Applications/Codex.app/Contents/Resources/codex`). A model-version error
+is shown on the work card and leaves the original checkout untouched.
+
+Your global Codex configuration and skills apply,
+and tracked project instructions travel with the Git checkout. Untracked local project
+configuration is not copied into worktrees. Use `--approach-file` for personal guidance.
+
+Describe your task and select **Start with my Codex**. Your friends can start their own
+work at the same time. No room-wide turn queue serializes these workspaces. Each person
+can run two tasks at once; existing hourly budgets still bound execution.
+
+Completed cards offer **Review changes** and, when a build is published, **Play build**.
+After reviewing a patch, a connected person can choose **Integrate into my checkout**.
+This prepares an isolated integration branch, runs their checks, and fast-forwards
+only a clean checkout whose branch and HEAD have not changed in the meantime. Conflicts
+retain the integration branch for local resolution. Integration does not push to GitHub;
+use your team's normal push/fetch workflow to share repository history.
+
+Worktrees and contribution commits remain beside your repo in `.<repo>-roundtable`.
+Archive removes a room card and its uploaded artifacts, not those local worktrees.
+Only the owner can stop their work or revoke their connection. A participant identity
+is remembered in that browser's local storage; losing it means pairing a new identity.
+Keep both browser storage and connection tokens private. Generating a new connection
+command revokes your previous bridge for that room. Do not share provider credentials.
+
+**Previews:** publish a self-contained build subfolder containing `index.html`, at most
+100 files / 5 MB. Symlinks are rejected. Builds run in an iframe without same-origin
+privileges. Fetches are restricted to that build’s own preview folder, so external APIs, multiplayer servers, and asset
+CDNs are not supported by this preview mode. Room participants receive the published
+code diff, check output, and preview files. Never put secrets into build output.
+
+**Execution boundary:** Git worktrees isolate simultaneous file edits, not untrusted
+code. Codex uses the workspace-write sandbox with approvals disabled. Your configured
+checks execute locally with your account's permissions. Use trusted teammates and
+review contributions before integrating. Separate OS isolation is needed for untrusted
+projects or tools.
+
+## Chat and canvas
+
+The original chat/canvas agents remain available as a secondary workflow. Their
+`bridge/codex.js` adapter produces notes and canvas blocks; it does not power the
+personal project workspaces above.
 
 ## What you get
 
@@ -29,7 +96,7 @@ bridge-only mode.
 - **Deploys as one container.** Node, Express, WebSockets, a JSON data file. A
   `Dockerfile` and `railway.json` are included.
 
-## Quick start
+## Chat-agent quick start
 
 Requirements: Node 20+, and for agent turns the [Codex CLI](https://github.com/openai/codex)
 installed and logged in (`codex login`).
@@ -210,6 +277,11 @@ Guards in place:
 ## How it's built
 
 ```
+workspace/server.js personal pairing, parallel work, contribution artifacts and previews
+bridge/workspace.js personal Codex connection and local project execution
+bridge/worktree.js  Git worktrees, checks, patch capture and safe integration
+bridge/app-server.js Codex JSON-RPC transport for workspace turns
+public/workspace.js workspace cards, pairing, review and playable previews
 server.js          room server: state, websocket fanout, permissions, agent run queue,
                    bridge routing, budgets, persistence
 agents/prompt.js   the agent contract: prompt builder, output schema, sanitizers, parser

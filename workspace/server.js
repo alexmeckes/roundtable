@@ -1,0 +1,184 @@
+import { createHash, randomBytes } from 'node:crypto';
+import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { resolve, join, extname } from 'node:path';
+import express from 'express';
+
+const key = () => randomBytes(24).toString('base64url');
+const hash = value => createHash('sha256').update(String(value)).digest('hex');
+const short = (value, max = 2000) => String(value || '').slice(0, max);
+const active = status => ['running', 'integrating'].includes(status);
+export {safeAsset} from './assets.js';
+import {safeAsset,MIME} from './assets.js';
+
+export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, allowRun, dataDir}) {
+  const pending = new Map();
+  const artifactRoot = resolve(dataDir, 'workspaces');
+  const init = room => {
+    room.members ||= [];
+    room.work ||= [];
+    room.personalBridges ||= new Map();
+  };
+  const publicWork = room => room.work.map(({runToken, ...work}) => work);
+  const connections = room => [...room.personalBridges.values()].map(({ownerId, name, project, approach}) => ({ownerId, name, project, approach}));
+  const announce = room => { room.lastActivity=Date.now(); broadcast(room, {t:'workspaces', work:publicWork(room), connections:connections(room)}); persist(); };
+  const artifactDir = (room, work) => join(artifactRoot, room.id, work.id);
+  function joinMember(room, token, name) {
+    init(room);
+    let member = token && room.members.find(m => m.keyHash === hash(token));
+    if (member) { member.name = name; return {member}; }
+    if (room.members.length >= 100) throw new Error('This table has reached its participant limit.');
+    const memberKey = key();
+    member = {id:key(), name, keyHash:hash(memberKey)};
+    room.members.push(member); persist();
+    return {member, memberKey};
+  }
+  function authenticate(room, token) {
+    return token && room?.members?.find(m => m.bridgeHash === hash(token));
+  }
+  function fail(room, work, status, message) {
+    const p = pending.get(work.id);
+    if (p) clearTimeout(p.timer);
+    pending.delete(work.id);
+    work.status = status; work.message = message; work.updatedAt = Date.now();
+    announce(room);
+  }
+  function detach(ws) {
+    for (const room of rooms.values()) {
+      init(room);
+      for (const [id, bridge] of room.personalBridges) if (bridge.ws === ws) room.personalBridges.delete(id);
+      let changed = false;
+      for (const work of room.work) if (pending.get(work.id)?.ws === ws) {
+        fail(room, work, 'interrupted', 'Connection lost. Local work is retained on its branch; start a new task when reconnected.'); changed = true;
+      }
+      if (changed || ws.workspaceRoom === room.id) announce(room);
+    }
+  }
+  function attach(ws, room, token, meta) {
+    init(room);
+    const member = authenticate(room, token);
+    if (!member) return false;
+    const previous = room.personalBridges.get(member.id);
+    if (previous) { detach(previous.ws); previous.ws.close(1008, 'replaced by your new connection'); }
+    ws.workspaceRoom = room.id;
+    room.personalBridges.set(member.id, {ws, ownerId:member.id, name:member.name, project:short(meta.project,80), approach:short(meta.approach,500)});
+    ws.send(JSON.stringify({t:'workspace_connected', room:room.id, ownerId:member.id}));
+    announce(room); return true;
+  }
+  function dispatch(room, you, instructions, source) {
+    const bridge = room.personalBridges.get(you.id);
+    if (!bridge || bridge.ws.readyState !== 1) throw new Error('Connect your Codex and game project first.');
+    if (room.work.length >= 48) throw new Error('Archive a finished work card before starting another.');
+    if (room.work.filter(w => w.ownerId === you.id && active(w.status)).length >= 2) throw new Error('Your two workspaces are busy. Other people can keep working.');
+    if (!allowRun(room)) return;
+    const work = {id:key(), ownerId:you.id, ownerName:you.name, title:short(instructions,80), instructions:short(instructions,4000), status:source?'integrating':'running', sourceId:source?.id || null, createdAt:Date.now(), updatedAt:Date.now(), message:source?'Preparing integration in your project…':'Starting your Codex…'};
+    const runToken = key();
+    const timer = setTimeout(() => {
+      bridge.ws.send(JSON.stringify({t:'workspace_cancel',room:room.id,id:work.id}));
+      fail(room,work,'interrupted','Task timed out. Local work is retained for inspection.');
+    }, 30 * 60_000);
+    timer.unref();
+    pending.set(work.id, {ws:bridge.ws, runToken, timer});
+    room.work.push(work); announce(room);
+    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken, instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{title:room.title, problem:room.problem, chat:room.chat.filter(m=>m.kind==='human').slice(-12).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,title,status})=>({ownerName,title,status}))}}));
+  }
+  function handle(ws, room, you, msg) {
+    if (!msg.t?.startsWith('workspace_')) return false;
+    init(room);
+    try {
+      if (!['workspace_cancel','workspace_disconnect'].includes(msg.t) && !canSpeak(room,you)) throw new Error('This table is view-only.');
+      const member = room.members.find(m => m.id === you.id);
+      if (!member) throw new Error('Rejoin the table to connect your workspace.');
+      if (msg.t === 'workspace_pair' || msg.t === 'workspace_disconnect') {
+        const old = room.personalBridges.get(you.id);
+        if (old) { detach(old.ws); old.ws.close(1008,'connection revoked'); }
+        delete member.bridgeHash;
+        if (msg.t === 'workspace_pair') {
+          const token = key(); member.bridgeHash = hash(token);
+          ws.send(JSON.stringify({t:'workspace_pair',token}));
+        }
+        announce(room);
+      } else if (msg.t === 'workspace_start') {
+        if (!String(msg.instructions || '').trim()) throw new Error('Describe the work you want your Codex to do.');
+        dispatch(room,you,msg.instructions);
+      } else if (msg.t === 'workspace_integrate') {
+        const source = room.work.find(w=>w.id===msg.id && ['ready','integrated'].includes(w.status) && w.hasPatch);
+        if (!source) throw new Error('This contribution is not ready to integrate.');
+        dispatch(room,you,'Integrate '+source.title,source);
+      } else if (msg.t === 'workspace_cancel' || msg.t === 'workspace_archive') {
+        const work = room.work.find(w=>w.id===msg.id && w.ownerId===you.id);
+        if (!work) throw new Error('You can only manage your own work.');
+        if (msg.t === 'workspace_cancel' && active(work.status)) {
+          pending.get(work.id)?.ws.send(JSON.stringify({t:'workspace_cancel',room:room.id,id:work.id}));
+          fail(room,work,'interrupted','Stopped by its owner. Local branch retained.');
+        } else if (msg.t === 'workspace_archive' && !active(work.status)) {
+          room.work = room.work.filter(w=>w!==work);
+          rm(artifactDir(room,work),{recursive:true,force:true}).catch(()=>{}); announce(room);
+        }
+      }
+    } catch (error) { tell(ws,error.message); }
+    return true;
+  }
+  function progress(ws, room, msg) {
+    const work = room.work.find(w=>w.id===msg.id);
+    if (!work || pending.get(work.id)?.ws !== ws || !active(work.status)) return;
+    work.message = short(msg.message,300); work.updatedAt=Date.now();
+    broadcast(room,{t:'workspace_progress',id:work.id,message:work.message});
+  }
+  function mount(app) {
+    const route = '/api/rooms/:room/work/:id';
+    // Authenticate before accepting the potentially large contribution body.
+    app.post(route+'/result', (req,res,next) => {
+      const room=rooms.get(req.params.room), member=authenticate(room,req.headers.authorization?.replace(/^Bearer /,''));
+      const work=room?.work?.find(w=>w.id===req.params.id);
+      const p=work && pending.get(work.id);
+      if (!member || work?.ownerId!==member.id || !p || p.runToken!==req.headers['x-run-token']) return res.sendStatus(403);
+      req.workspace={room,work,p}; next();
+    }, express.json({limit:'12mb'}), async (req,res) => {
+      const {room,work,p}=req.workspace;
+      try {
+        const body=req.body;
+        if (!body || !['ready','integrated','failed','conflict','interrupted'].includes(body.status)) return res.sendStatus(400);
+        const patch=String(body.patch || '');
+        if (Buffer.byteLength(patch)>1024*1024) throw new Error('Contribution exceeds 1 MB patch limit.');
+        const assets=Array.isArray(body.preview)?body.preview:[];
+        if (assets.length>100) throw new Error('Preview has too many files.');
+        let bytes=0; const seen=new Set();
+        const decoded=assets.map(asset=>{
+          if (!safeAsset(asset.path) || seen.has(asset.path)) throw new Error('Invalid preview asset path.');
+          seen.add(asset.path);
+          const buffer=Buffer.from(String(asset.data || ''),'base64'); bytes+=buffer.length;
+          if (bytes>5*1024*1024) throw new Error('Preview exceeds 5 MB.');
+          return {path:asset.path,buffer};
+        });
+        const dir=artifactDir(room,work);
+        await mkdir(dir,{recursive:true});
+        await writeFile(join(dir,'patch.diff'),patch);
+        for (const asset of decoded) {
+          const file=join(dir,'preview',asset.path); await mkdir(resolve(file,'..'),{recursive:true}); await writeFile(file,asset.buffer);
+        }
+        if (pending.get(work.id)!==p) return res.sendStatus(409);
+        Object.assign(work,{status:body.status,summary:short(body.summary,4000),message:short(body.message,500),branch:short(body.branch,120),baseCommit:short(body.baseCommit,64),headCommit:short(body.headCommit,64),files:Array.isArray(body.files)?body.files.slice(0,200).map(f=>short(f,240)):[],checks:short(body.checks,4000),hasPatch:!!patch,hasPreview:seen.has('index.html'),updatedAt:Date.now()});
+        clearTimeout(p.timer); pending.delete(work.id); announce(room); res.json({ok:true});
+      } catch(error) { res.status(400).json({error:error.message}); }
+    });
+    app.get(route+'/patch',async(req,res)=>{
+      const room=rooms.get(req.params.room), work=room?.work?.find(w=>w.id===req.params.id && w.hasPatch);
+      if (!work) return res.sendStatus(404);
+      try { res.type('text/plain').send(await readFile(join(artifactDir(room,work),'patch.diff'))); } catch { res.sendStatus(404); }
+    });
+    app.get(route+'/preview/*',async(req,res)=>{
+      const room=rooms.get(req.params.room), work=room?.work?.find(w=>w.id===req.params.id && w.hasPreview);
+      const path=req.params[0] || 'index.html';
+      if (!work || !safeAsset(path)) return res.sendStatus(404);
+      try {
+        const data=await readFile(join(artifactDir(room,work),'preview',path));
+        const host=new URL('http://'+req.headers.host).host;
+        const prefix='/api/rooms/'+encodeURIComponent(room.id)+'/work/'+encodeURIComponent(work.id)+'/preview/';
+        res.setHeader('Content-Security-Policy',"sandbox allow-scripts allow-pointer-lock; default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src http://"+host+prefix+" https://"+host+prefix+"; frame-ancestors 'self'; base-uri 'none'; form-action 'none'");
+        res.setHeader('Access-Control-Allow-Origin','*');
+        res.type(MIME[extname(path).toLowerCase()]).send(data);
+      } catch { res.sendStatus(404); }
+    });
+  }
+  return {init,joinMember,attach,detach,handle,progress,mount,publicWork,connections};
+}

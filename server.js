@@ -799,7 +799,7 @@ function detachBridgeWs(ws) {
 
 /* ---------------- HTTP ---------------- */
 
-const workspace = createWorkspaces({rooms,broadcast,persist:schedulePersist,tell,canSpeak,allowRun,dataDir:dirname(DATA_FILE)});
+const workspace = createWorkspaces({rooms,broadcast,persist:schedulePersist,tell,canSpeak,allowRun,say,dataDir:dirname(DATA_FILE)});
 const app = express();
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -1036,6 +1036,7 @@ wss.on('connection', (ws, req) => {
     if (isBridge) {
       if (ws.workspaceRoom) {
         if (msg.t === 'workspace_progress') workspace.progress(ws,room,msg);
+        if (msg.t === 'workspace_chat_result') workspace.conversation.result(ws,room,msg);
         return;
       }
       if (msg.t === 'apply_result') {
@@ -1091,6 +1092,7 @@ wss.on('connection', (ws, req) => {
         }
         if (handleCommand(room, you, text)) break;
         say(room, { author: you.name, kind: 'human', text, color: you.color });
+        const personalConversation=workspace.conversation.human(room,you,text);
         room.hops = 0; // humans reset the agent-to-agent budget
         const mentioned = humanMentions(room, text);
         if (!canSpend(room, you)) {
@@ -1101,7 +1103,7 @@ wss.on('connection', (ws, req) => {
         if (mentioned.length) {
           clearTimeout(room.autoT);
           mentioned.forEach((a) => enqueueAgentRun(room, a.name, text));
-        } else if (room.auto) {
+        } else if (room.auto && !personalConversation) {
           scheduleAutoRun(room);
         }
         break;
@@ -1113,6 +1115,7 @@ wss.on('connection', (ws, req) => {
         const changed = tier !== room.access || spend !== room.hostOnlySpend;
         room.access = tier;
         room.hostOnlySpend = spend;
+        workspace.conversation.reconcile(room);
         if (changed) {
           log(room.id, `access=${tier} hostOnlySpend=${spend} by ${you.name}`);
           broadcast(room, { t: 'access', access: tier, hostOnlySpend: spend });

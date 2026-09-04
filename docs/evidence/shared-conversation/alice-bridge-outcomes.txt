@@ -1,0 +1,4 @@
+Your Codex is connected to http://localhost:43143/s/conversation for alice
+fvvkGzV4V4DYMWo7ce8Nv05EIlDXvQGS: ready codex/roundtable-fvvkGzV4V4DYMWo7ce8Nv05EIlDXvQGS
+xIBcM0maM3wzmcg0yJC7ZMI3Ntlp4fll: integrated codex/roundtable-xIBcM0maM3wzmcg0yJC7ZMI3Ntlp4fll
+b5yWVzhBPsbYkufHof0GxX-KuOHz5SwB: integrated codex/roundtable-b5yWVzhBPsbYkufHof0GxX-KuOHz5SwB

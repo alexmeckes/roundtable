@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { resolve, join, extname } from 'node:path';
 import express from 'express';
+import {createConversation} from './conversation.js';
 
 const key = () => randomBytes(24).toString('base64url');
 const hash = value => createHash('sha256').update(String(value)).digest('hex');
@@ -10,7 +11,7 @@ const active = status => ['running', 'integrating'].includes(status);
 export {safeAsset} from './assets.js';
 import {safeAsset,MIME} from './assets.js';
 
-export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, allowRun, dataDir}) {
+export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, allowRun, say, dataDir}) {
   const pending = new Map();
   const artifactRoot = resolve(dataDir, 'workspaces');
   const init = room => {
@@ -19,8 +20,9 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     room.personalBridges ||= new Map();
   };
   const publicWork = room => room.work.map(({runToken, ...work}) => work);
-  const connections = room => [...room.personalBridges.values()].map(({ownerId, name, project, approach}) => ({ownerId, name, project, approach}));
+  const connections = room => [...room.personalBridges.values()].map(({ownerId, name, project, approach,handle,chatMode,chatBusy}) => ({ownerId, name, project, approach,handle,chatMode,chatBusy}));
   const announce = room => { room.lastActivity=Date.now(); broadcast(room, {t:'workspaces', work:publicWork(room), connections:connections(room)}); persist(); };
+  const conversation=createConversation({say,announce,allowRun});
   const artifactDir = (room, work) => join(artifactRoot, room.id, work.id);
   function joinMember(room, token, name) {
     init(room);
@@ -45,7 +47,7 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
   function detach(ws) {
     for (const room of rooms.values()) {
       init(room);
-      for (const [id, bridge] of room.personalBridges) if (bridge.ws === ws) room.personalBridges.delete(id);
+      for (const [id, bridge] of room.personalBridges) if (bridge.ws === ws) {conversation.stop(bridge);room.personalBridges.delete(id);}
       let changed = false;
       for (const work of room.work) if (pending.get(work.id)?.ws === ws) {
         fail(room, work, 'interrupted', 'Connection lost. Local work is retained on its branch; start a new task when reconnected.'); changed = true;
@@ -60,7 +62,11 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     const previous = room.personalBridges.get(member.id);
     if (previous) { detach(previous.ws); previous.ws.close(1008, 'replaced by your new connection'); }
     ws.workspaceRoom = room.id;
-    room.personalBridges.set(member.id, {ws, ownerId:member.id, name:member.name, project:short(meta.project,80), approach:short(meta.approach,500)});
+    if(!member.agentHandle){
+      const base=(member.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,20)||'friend')+'-codex';
+      member.agentHandle=room.members.some(m=>m.agentHandle===base)?base+'-'+member.id.slice(0,4).toLowerCase():base;
+    }
+    room.personalBridges.set(member.id, {ws, ownerId:member.id, name:member.name, project:short(meta.project,80), approach:short(meta.approach,500),handle:member.agentHandle,chatMode:member.chatMode||'off',chatBusy:false});
     ws.send(JSON.stringify({t:'workspace_connected', room:room.id, ownerId:member.id}));
     announce(room); return true;
   }
@@ -79,16 +85,23 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     timer.unref();
     pending.set(work.id, {ws:bridge.ws, runToken, timer});
     room.work.push(work); announce(room);
-    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken, instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{title:room.title, problem:room.problem, chat:room.chat.filter(m=>m.kind==='human').slice(-12).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,title,status})=>({ownerName,title,status}))}}));
+    conversation.activity(room,you.id,source?'I’m integrating '+source.title+'.':'I’m starting work: '+work.instructions);
+    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken, instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{title:room.title, problem:room.problem, chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-30).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,title,status})=>({ownerName,title,status}))}}));
   }
   function handle(ws, room, you, msg) {
     if (!msg.t?.startsWith('workspace_')) return false;
     init(room);
     try {
-      if (!['workspace_cancel','workspace_disconnect'].includes(msg.t) && !canSpeak(room,you)) throw new Error('This table is view-only.');
+      if (!['workspace_cancel','workspace_disconnect'].includes(msg.t) && !(msg.t==='workspace_chat_mode' && msg.mode==='off') && !canSpeak(room,you)) throw new Error('This table is view-only.');
       const member = room.members.find(m => m.id === you.id);
       if (!member) throw new Error('Rejoin the table to connect your workspace.');
-      if (msg.t === 'workspace_pair' || msg.t === 'workspace_disconnect') {
+      if(msg.t==='workspace_chat_mode'){
+        if(!['off','mentions','auto'].includes(msg.mode))throw new Error('Invalid conversation mode.');
+        const bridge=room.personalBridges.get(you.id);if(!bridge)throw new Error('Connect your Codex first.');
+        if(msg.mode==='off')conversation.stop(bridge);
+        member.chatMode=bridge.chatMode=msg.mode;announce(room);
+        say(room,{kind:'system',text:msg.mode==='off'?`${you.name} paused their Codex in chat.`:`${you.name} invited their Codex into the conversation. Mention @${bridge.handle}.`});
+      } else if (msg.t === 'workspace_pair' || msg.t === 'workspace_disconnect') {
         const old = room.personalBridges.get(you.id);
         if (old) { detach(old.ws); old.ws.close(1008,'connection revoked'); }
         delete member.bridgeHash;
@@ -158,6 +171,7 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
         }
         if (pending.get(work.id)!==p) return res.sendStatus(409);
         Object.assign(work,{status:body.status,summary:short(body.summary,4000),message:short(body.message,500),branch:short(body.branch,120),baseCommit:short(body.baseCommit,64),headCommit:short(body.headCommit,64),files:Array.isArray(body.files)?body.files.slice(0,200).map(f=>short(f,240)):[],checks:short(body.checks,4000),hasPatch:!!patch,hasPreview:seen.has('index.html'),updatedAt:Date.now()});
+        conversation.activity(room,work.ownerId,`${work.title} — ${work.status}. ${work.summary || work.message}`);
         clearTimeout(p.timer); pending.delete(work.id); announce(room); res.json({ok:true});
       } catch(error) { res.status(400).json({error:error.message}); }
     });
@@ -180,5 +194,5 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
       } catch { res.sendStatus(404); }
     });
   }
-  return {init,joinMember,attach,detach,handle,progress,mount,publicWork,connections};
+  return {init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation};
 }

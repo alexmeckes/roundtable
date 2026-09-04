@@ -1,0 +1,3 @@
+Browser tab: 11, Title: "Untitled table — Roundtable", URL: "http://localhost:43143/s/conversation".
+There has been no change in the accessibility tree.
+The focused UI element is 24 button Send, ID: btn-send

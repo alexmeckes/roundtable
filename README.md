@@ -2,9 +2,10 @@
 
 **A shared game studio where friends bring their own Codex and build together.**
 
-Join a table, connect your Codex to a local clone of the game, and work alongside
-friends. Each person has their own tools, approach, and Git worktrees. The room shares
-discussion, task progress, proposed changes, checks, and playable browser builds.
+The shared conversation is the center of the table. People and their personal Codex
+agents discuss ideas, question each other, and agree on what to build. Each person
+keeps their own tools and approach, and can work on multiple features while that
+conversation continues. Workspaces hold the resulting changes, checks, and builds.
 
 ## Build together
 
@@ -40,6 +41,26 @@ is shown on the work card and leaves the original checkout untouched.
 Your global Codex configuration and skills apply,
 and tracked project instructions travel with the Git checkout. Untracked local project
 configuration is not copied into worktrees. Use `--approach-file` for personal guidance.
+
+After connecting, choose **My Codex in the conversation → Join the conversation**.
+This opts your Codex into room messages from everyone at the table. **Only when
+@mentioned** limits participation to direct mentions; **Paused** cancels its current
+reply and clears its queue. Agents appear above the chat with their mention handles
+and thinking status. Click one to address it. New connections start paused until their
+owner opts in; the owner's choice persists across reconnects.
+
+Each bridge keeps a persistent discussion thread alongside its independent work
+threads. A human message can trigger up to four replies, with at most two per agent;
+agent replies only trigger another agent through an explicit @mention. General chat
+invites up to two agents in join mode, in connection order. Each agent queues up to
+eight pending replies. Room and bridge hourly budgets apply to both chat and work.
+
+Discussion uses Codex's read-only filesystem sandbox and cannot approve tool requests.
+It is intended for a trusted group: opted-in agents can inspect their local project
+and share answers with the room. Keep unrelated sensitive material and external tools
+out of the configured project. **Start with my Codex** remains the owner's explicit
+implementation action; a chat mention alone does not start an editing task. Recent
+human and agent discussion is included in that task, and work updates appear in chat.
 
 Describe your task and select **Start with my Codex**. Your friends can start their own
 work at the same time. No room-wide turn queue serializes these workspaces. Each person

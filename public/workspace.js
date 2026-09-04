@@ -8,6 +8,14 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak}) {
   const url=job=>'/api/rooms/'+encodeURIComponent(roomId)+'/work/'+encodeURIComponent(job.id);
   function render(){
     $('my-workspace').textContent=mine()?mine().project+' · Your Codex is connected':'Bring your Codex and a local clone of the game.';
+    $('conversation-mode').disabled=!mine() || (!canSpeak() && mine().chatMode==='off');
+    $('conversation-mode').value=mine()?.chatMode || 'off';
+    $('conversation-help').textContent=!mine()?'Connect your Codex in Workspaces to bring it to the table.':mine().chatMode==='off'?'Your agent is paused. Joining lets everyone in this room talk with your Codex.':'Room messages use your Codex. Replies are bounded; pause here anytime. Discussion is read-only; implementation starts in Workspaces.';
+    $('conversation-agents').replaceChildren(...connections.map(c=>{
+      const button=action(c.name+"’s Codex · "+(c.chatMode==='off'?'paused':c.chatBusy?'thinking…':c.chatMode==='mentions'?'@'+c.handle:'at the table'),()=>{
+        const input=$('chat-text');input.value+=(input.value && !input.value.endsWith(' ')?' ':'')+'@'+c.handle+' ';input.dispatchEvent(new Event('input'));input.focus();
+      });button.disabled=c.chatMode==='off' || !canSpeak();button.title='@'+c.handle;return button;
+    }));
     $('workspace-start').disabled=!mine() || !canSpeak();
     $('workspace-connect').disabled=!canSpeak();
     $('workspace-connect').textContent=mine()?'Reconnect my Codex':'Connect my Codex';
@@ -54,6 +62,7 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak}) {
     $('workspace-preview').src=url(job)+'/preview/index.html';
     $('workspace-play').showModal();
   }
+  $('conversation-mode').addEventListener('change',()=>send({t:'workspace_chat_mode',mode:$('conversation-mode').value}));
   $('workspace-play').addEventListener('close',()=>{$('workspace-preview').src='about:blank';});
   document.querySelectorAll('[data-close-workspace]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
   $('workspace-connect').addEventListener('click',()=>{

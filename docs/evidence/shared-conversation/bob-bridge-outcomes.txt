@@ -1,0 +1,2 @@
+Your Codex is connected to http://127.0.0.1:43143/s/conversation for bob
+3hJTqv_jxz3BdCAcWTba9xLordGdTojW: ready codex/roundtable-3hJTqv_jxz3BdCAcWTba9xLordGdTojW

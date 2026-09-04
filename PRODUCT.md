@@ -2,37 +2,43 @@
 
 **A shared game studio where friends bring their own Codex and build together.**
 
-The table is the common space. Each person brings a local clone of the same Git
-repository, their own Codex login, and their own instructions, skills, and approach.
-People work on movement, enemies, environments, and other features simultaneously.
-The room makes those contributions visible and gives the group a place to discuss,
-review, play, and integrate them.
+The conversation is the common space. Friends bring their own Codex into the same
+room, each with their own instructions, skills, tools, and approach. People and agents
+can propose ideas, challenge choices, resolve overlaps, and decide what to build.
+Workspaces support that conversation with parallel implementation, review, and play.
 
 ## The working loop
 
 1. Join a room through a link and connect your own Codex to your game repository.
-2. Start a task in your own workspace. Other people can start theirs immediately.
-3. Codex edits a separate Git worktree on your machine. The table shows ownership,
-   progress, results, changed files, checks, and an optional browser-game build.
-4. Friends play the published build and review the changes.
-5. A receiving person explicitly integrates a contribution into their own checkout.
-   Integration uses a separate branch, runs that person's checks, and fast-forwards
-   a clean, unchanged checkout. Conflicts leave the checkout untouched.
-6. Use the team's normal Git push/fetch workflow to share repository history.
+2. Invite your Codex into the conversation, or choose to have it answer only @mentions.
+3. Talk with people and their agents. Agent-to-agent questions appear in the same chat.
+4. Start implementation with your own Codex. Recent discussion travels into the task;
+   others can work on separate features, and the conversation can continue meanwhile.
+5. Review contributions and play the published builds together. Work updates return
+   to the conversation with a distinct work-update label.
+6. Explicitly integrate a reviewed contribution into your clean local checkout, then
+   use the team's normal Git push/fetch workflow to share repository history.
+
+Each owner can pause their agent at any time. A human message permits at most four
+replies, including explicit agent-to-agent follow-ups, so the room eventually waits
+for people. Conversational turns use a persistent read-only thread; implementation
+uses separate Git worktrees and requires the owner's explicit task submission.
 
 ## Ownership
 
 Being the room host controls room governance; it does not grant access to another
 person's Codex, files, or subscription. Each person pairs their own bridge and can
 start, stop, and revoke their own execution. Host-only spending applies to shared
-chat compute; it does not prevent guests from using their own paired Codex.
+chat compute; it does not prevent guests from using their own paired Codex. Opting a
+personal agent into conversation lets other room participants request discussion
+replies from it, but grants no ability to start or stop its implementation tasks.
 
 ## Architecture
 
 - The room holds discussion, task metadata, proposed patches, and published previews.
 - Each bridge holds its provider credentials, local tool configuration, and game repo.
 - Workspaces are real Git worktrees. Up to two tasks can run per person, independently
-  of other people and the legacy serialized chat/canvas agents.
+  of other people and the bridge’s single conversation thread.
 - Personal pairing uses a browser participant capability and a revocable room-specific
   bridge token. Neither token is a provider credential.
 - Previews are self-contained static builds, displayed in a sandboxed iframe. They

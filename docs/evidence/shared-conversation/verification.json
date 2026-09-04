@@ -1,0 +1,82 @@
+{
+  "capturedAt": "2026-09-04T23:49:18.770Z",
+  "node": "v24.15.0",
+  "codex": "codex-cli 0.153.3",
+  "model": "gpt-6-astra",
+  "effort": "low",
+  "identities": [
+    "Alice",
+    "Bob"
+  ],
+  "accounts": "Two local bridge processes using the same signed-in account, separate disposable clones and browser origins.",
+  "parallelWork": true,
+  "generatedReplyWhileBothTasksRunning": true,
+  "alicePausedAt": "2026-09-04T23:46:00.876Z",
+  "noLateAliceReply": true,
+  "aliceHead": "fbbfbf05929411c264d81ced8b7d9d87ca80fc65",
+  "bobHead": "f0e56ecbe8bf97b5bec351efc65f5c94bed371d6",
+  "bothOriginalCheckoutsClean": true,
+  "coinCases": [
+    {
+      "position": 110,
+      "collected": false,
+      "previous": 80,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "position": 100,
+      "collected": false,
+      "previous": 70,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "position": 90,
+      "collected": false,
+      "previous": 60,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "position": 90,
+      "collected": false,
+      "previous": 120,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "position": 130,
+      "collected": false,
+      "previous": 100,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "position": 110,
+      "collected": true,
+      "previous": 80,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "position": 100,
+      "collected": false,
+      "previous": null,
+      "expected": 1,
+      "passed": true
+    },
+    {
+      "position": 110,
+      "collected": false,
+      "previous": null,
+      "expected": 0,
+      "passed": true
+    }
+  ],
+  "changedFiles": [
+    "coins.js",
+    "game.js",
+    "movement.js"
+  ]
+}

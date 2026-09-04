@@ -1,0 +1,8 @@
+node_modules
+data
+bridge/.threads.json
+tools
+.claude
+*.md
+docs
+.git

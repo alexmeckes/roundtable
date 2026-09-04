@@ -1,0 +1,17 @@
+{
+  "name": "roundtable",
+  "version": "0.1.0",
+  "description": "A link that turns any group chat into a shared workspace with agents at the table.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "mermaid": "^11.16.1"
+  }
+}

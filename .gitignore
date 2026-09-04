@@ -1,0 +1,16 @@
+# dependencies
+node_modules/
+
+# runtime state (real room content, per-machine Codex thread ids)
+data/
+bridge/.threads.json
+
+# local env / secrets
+.env
+.env.*
+!.env.example
+
+# tool + editor state
+.claude/
+.DS_Store
+*.log

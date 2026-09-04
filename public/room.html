@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roundtable</title>
+<style>
+:root{
+  --ink:#37352F;
+  --muted:rgba(55,53,47,.5);
+  --faint:rgba(55,53,47,.35);
+  --line:rgba(55,53,47,.09);
+  --hover:rgba(55,53,47,.04);
+  --active:rgba(55,53,47,.08);
+  --bg:#FFFFFF;
+  --panel:#FBFBFA;
+  --accent:#2F80ED;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--ink);
+  font-size:15px;line-height:1.5;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button:focus-visible,textarea:focus-visible,[contenteditable]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+[contenteditable]:focus{outline:none}
+
+/* ---------- Frame ---------- */
+.app{display:flex;flex-direction:column;height:100%}
+header{
+  display:flex;align-items:center;gap:8px;
+  height:48px;padding:0 12px 0 16px;
+  border-bottom:1px solid var(--line);flex-shrink:0;
+}
+#h-title{
+  font-weight:700;font-size:15px;
+  padding:2px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:32vw;
+}
+#h-title:hover{background:var(--hover)}
+.icon-btn{
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;color:var(--muted);
+  padding:5px 8px;border-radius:5px;white-space:nowrap;
+}
+.icon-btn:hover{background:var(--hover);color:var(--ink)}
+.icon-btn.copied{color:#0F7B55}
+#h-parent,#h-branches{
+  color:var(--accent);background:rgba(47,128,237,.07);
+  border-radius:999px;padding:4px 11px;font-weight:600;
+}
+#h-parent:hover,#h-branches:hover{background:rgba(47,128,237,.14);color:var(--accent)}
+#h-parent{max-width:150px;overflow:hidden;text-overflow:ellipsis;display:block;white-space:nowrap}
+#branch-menu{
+  position:fixed;z-index:60;display:none;
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  box-shadow:0 8px 28px rgba(0,0,0,.12);padding:5px;min-width:200px;
+}
+#branch-menu.open{display:block}
+#branch-menu a{
+  display:block;padding:6px 10px;border-radius:5px;
+  font-size:13px;color:var(--ink);text-decoration:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;
+}
+#branch-menu a:hover{background:var(--hover)}
+#branch-menu a .bid{font-size:11px;color:var(--faint);margin-left:6px}
+#brain{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);padding:5px 8px;cursor:default}
+#brain .dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+#brain.on .dot{background:#2FBF71}
+.spacer{flex:1}
+
+/* faces (people + the agent) */
+.faces{display:flex;align-items:center}
+.face{
+  position:relative;
+  width:26px;height:26px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:12px;font-weight:600;
+  border:2px solid var(--bg);
+  margin-left:-6px;flex-shrink:0;
+  text-shadow:0 1px 2px rgba(0,0,0,.18);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
+}
+.face .brain-tag{
+  position:absolute;right:-4px;bottom:-4px;
+  width:13px;height:13px;border-radius:4px;
+  background:var(--ink);color:#fff;
+  font-size:8px;font-weight:700;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  border:1.5px solid var(--bg);
+}
+.face:first-child{margin-left:0}
+.face.agent{border-radius:50%;cursor:pointer}
+.face.me{cursor:pointer}
+.face.thinking{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+#btn-doc{margin-left:4px}
+#btn-doc.open{background:var(--active);color:var(--ink)}
+#btn-auto{margin-left:8px}
+#btn-auto.on{color:#0F7B55}
+#btn-auto.on::before{content:'✓ ';font-weight:600}
+
+/* ---------- Arrival screen ---------- */
+#arrival{
+  position:fixed;inset:0;z-index:80;display:none;
+  align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#FBFBFA 0%,#F3F4F8 100%);
+  padding:24px;
+}
+#arrival.open{display:flex}
+.arrival-card{
+  width:min(420px,100%);background:var(--bg);
+  border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 18px 60px rgba(0,0,0,.10);
+  padding:26px 24px 20px;animation:blockin .22s ease;
+}
+.arrival-card .a-eyebrow{
+  font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:8px;
+}
+.arrival-card h1{font-size:23px;line-height:1.25;letter-spacing:-.01em;margin-bottom:6px}
+.arrival-card .a-sub{font-size:13.5px;color:var(--muted);margin-bottom:18px}
+.arrival-card .a-faces{display:flex;align-items:center;margin:0 0 18px 6px;min-height:26px}
+.arrival-card label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+#a-name{
+  width:100%;border:1px solid var(--line);border-radius:8px;
+  padding:10px 12px;font-size:15px;background:var(--bg);margin-bottom:6px;
+}
+#a-name:focus{outline:none;border-color:rgba(47,128,237,.5)}
+.arrival-card .a-hint{font-size:11.5px;color:var(--faint);margin-bottom:16px}
+#a-join{
+  width:100%;background:var(--ink);color:#fff;border-radius:9px;
+  padding:11px;font-size:14.5px;font-weight:600;
+}
+#a-join:hover{opacity:.88}
+.arrival-card .a-note{
+  font-size:12px;color:var(--muted);margin-top:14px;padding-top:14px;
+  border-top:1px solid var(--line);
+}
+.arrival-card .a-note b{font-weight:600;color:var(--ink)}
+
+/* ---------- Share sheet ---------- */
+#share{
+  position:fixed;inset:0;z-index:70;display:none;
+  align-items:flex-start;justify-content:center;padding-top:12vh;
+  background:rgba(15,15,15,.28);
+}
+#share.open{display:flex}
+.share-card{
+  width:min(430px,92vw);background:var(--bg);border-radius:12px;
+  box-shadow:0 16px 50px rgba(0,0,0,.18);padding:20px;animation:blockin .16s ease;
+}
+.share-card h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.share-card .s-sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.share-link{
+  display:flex;gap:8px;align-items:center;margin-bottom:18px;
+}
+.share-link input{
+  flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;
+  padding:9px 11px;font-size:12.5px;background:var(--panel);color:var(--muted);
+}
+#s-copy{background:var(--ink);color:#fff;border-radius:8px;padding:9px 15px;font-size:13px;font-weight:600}
+#s-copy.copied{background:#0F7B55}
+.tier{
+  display:flex;gap:10px;align-items:flex-start;
+  border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;
+  cursor:pointer;transition:border-color .12s,background .12s;
+}
+.tier:hover{background:var(--hover)}
+.tier.sel{border-color:rgba(47,128,237,.55);background:rgba(47,128,237,.05)}
+.tier input{margin-top:3px;flex-shrink:0}
+.tier .t-name{font-size:13.5px;font-weight:600}
+.tier .t-desc{font-size:12px;color:var(--muted)}
+.spend-row{
+  display:flex;gap:9px;align-items:flex-start;margin-top:12px;
+  font-size:12.5px;color:var(--muted);
+}
+.spend-row b{color:var(--ink);font-weight:600}
+#share .s-close{width:100%;margin-top:14px;padding:8px;font-size:13px;color:var(--muted)}
+
+/* ---------- Brain onboarding ---------- */
+#brain-panel{
+  margin:12px 20px;padding:14px 16px;
+  border:1px dashed rgba(47,128,237,.4);border-radius:11px;background:rgba(47,128,237,.035);
+  display:none;
+}
+#brain-panel.open{display:block}
+#brain-panel .bp-title{font-size:13.5px;font-weight:600;margin-bottom:4px}
+#brain-panel .bp-sub{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+#brain-panel .bp-cmd{
+  display:flex;gap:8px;align-items:center;
+}
+#brain-panel code{
+  flex:1;min-width:0;overflow-x:auto;white-space:nowrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;
+}
+#bp-copy{background:var(--ink);color:#fff;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:600;flex-shrink:0}
+#bp-copy.copied{background:#0F7B55}
+#brain-panel .bp-wait{font-size:11.5px;color:var(--faint);margin-top:9px}
+
+/* ---------- Me popover ---------- */
+#me-pop{
+  position:fixed;z-index:65;display:none;
+  background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 10px 34px rgba(0,0,0,.14);padding:12px;width:230px;
+}
+#me-pop.open{display:block}
+#me-pop label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px}
+#me-name{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:13.5px;background:var(--bg)}
+#me-name:focus{outline:none;border-color:rgba(55,53,47,.28)}
+#me-save{width:100%;margin-top:9px;background:var(--ink);color:#fff;border-radius:7px;padding:7px;font-size:13px;font-weight:600}
+#me-pop .me-hint{font-size:11px;color:var(--faint);margin-top:8px}
+
+/* ---------- Main ---------- */
+main{display:flex;flex:1;min-height:0}
+
+/* Chat */
+.chat{flex:1;display:flex;flex-direction:column;min-width:0}
+.chat-scroll{flex:1;overflow-y:auto;padding:16px 0 8px}
+.msg{display:flex;gap:10px;padding:5px 20px;position:relative}
+.msg:hover{background:var(--hover)}
+.msg.cont{padding:1px 20px 1px 64px}
+.msg.cont .gutter-ts{
+  position:absolute;left:0;top:3px;width:58px;text-align:right;
+  font-size:10px;color:var(--faint);opacity:0;
+}
+.msg.cont:hover .gutter-ts{opacity:1}
+.msg .who .ts{font-size:11px;font-weight:400;color:var(--faint);margin-left:6px}
+.msg .text .mention{
+  color:var(--accent);font-weight:600;
+  background:rgba(47,128,237,.08);border-radius:3px;padding:0 2px;
+}
+.msg .avatar{
+  width:34px;height:34px;border-radius:8px;flex-shrink:0;margin-top:2px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:14px;font-weight:600;
+  text-shadow:0 1px 2px rgba(0,0,0,.18);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
+}
+.msg.agent .avatar{border-radius:50%;cursor:pointer}
+.msg .body{min-width:0}
+.msg .who{font-weight:700;font-size:15px}
+.msg .who .tag{
+  font-size:10px;font-weight:600;color:var(--muted);
+  border:1px solid var(--line);border-radius:3px;
+  padding:0 4px;margin-left:6px;vertical-align:1px;
+  text-transform:uppercase;letter-spacing:.03em;
+}
+.msg .who .via{font-size:11px;font-weight:400;color:var(--faint);margin-left:6px}
+.msg .text{white-space:pre-wrap;overflow-wrap:break-word}
+.msg.system{padding:2px 20px 2px 64px}
+.msg.system + .msg.system{padding-top:0}
+.msg.ctx{opacity:.55}
+.msg.ctx:hover{opacity:.8}
+.msg.system:hover{background:none}
+.msg.system .text{font-size:12.5px;color:var(--faint)}
+.msg.system .roomlink{color:var(--accent);text-decoration:none;font-weight:600}
+.msg.system .roomlink:hover{text-decoration:underline}
+
+/* Branch cards — forks in the table's life get real presence in the flow */
+.branch-card{
+  display:flex;align-items:center;gap:12px;
+  margin:10px 20px;padding:12px 14px;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel);
+  transition:border-color .12s, box-shadow .12s;
+}
+.branch-card:hover{border-color:rgba(47,128,237,.35);box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.branch-card .bc-icon{
+  width:36px;height:36px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(135deg,#5A8DF0,#8B6BE8);
+  color:#fff;font-size:17px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+}
+.branch-card .bc-body{min-width:0}
+.branch-card .bc-title{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.branch-card .bc-sub{font-size:12px;color:var(--muted)}
+.branch-card .bc-open{
+  margin-left:auto;flex-shrink:0;
+  font-size:13px;font-weight:600;color:#fff;background:var(--ink);
+  border-radius:7px;padding:7px 13px;text-decoration:none;
+}
+.branch-card .bc-open:hover{opacity:.85}
+
+/* Agent typing indicator */
+#typing{display:flex;gap:10px;padding:5px 20px;align-items:center}
+#typing .avatar{
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:14px;font-weight:600;
+  animation:pulse 1.1s ease-in-out infinite;
+}
+#typing .dots{display:flex;gap:4px;align-items:center}
+#typing .dots span{
+  width:6px;height:6px;border-radius:50%;background:var(--faint);
+  animation:blink 1.2s ease-in-out infinite;
+}
+#typing .dots span:nth-child(2){animation-delay:.2s}
+#typing .dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+#typing .label{font-size:12.5px;color:var(--faint);margin-left:6px}
+
+/* Composer */
+.composer{padding:4px 20px 16px;flex-shrink:0}
+.composer-box{
+  border:1px solid var(--line);border-radius:8px;
+  display:flex;align-items:flex-end;
+  transition:border-color .12s;background:var(--bg);
+}
+.composer-box:focus-within{border-color:rgba(55,53,47,.28)}
+.composer textarea{
+  flex:1;border:none;background:none;resize:none;
+  padding:10px 12px;height:42px;max-height:120px;
+}
+.composer textarea:focus{outline:none}
+#btn-send{
+  color:var(--faint);padding:9px 12px;font-weight:600;font-size:13px;
+}
+#btn-send.ready{color:var(--accent)}
+.hint{font-size:12px;color:var(--faint);padding:6px 4px 0}
+body.offline .composer-box{border-color:#E5A3A3;background:#FDF9F9}
+body.offline .hint{color:#C25E5E}
+
+/* ---------- Doc panel ---------- */
+.doc{
+  width:min(420px,42vw);flex-shrink:0;
+  border-left:1px solid var(--line);background:var(--panel);
+  display:flex;flex-direction:column;
+}
+.doc.closed{display:none}
+.doc-head{
+  display:flex;align-items:center;gap:8px;
+  height:44px;padding:0 12px 0 20px;flex-shrink:0;
+  font-size:13px;font-weight:600;color:var(--muted);
+}
+.doc-head .writing{display:none;font-size:12px;font-weight:400;color:#8A63D2}
+.doc.working .doc-head .writing{display:inline}
+.doc-scroll{flex:1;overflow-y:auto;padding:4px 24px 40px}
+#d-problem{
+  font-size:14px;color:var(--ink);
+  border-left:2px solid rgba(55,53,47,.2);
+  padding:2px 0 2px 12px;margin:8px 0 20px;
+  border-radius:0 4px 4px 0;
+}
+#d-problem:hover{background:var(--hover)}
+#d-problem:empty::before{content:attr(data-empty);color:var(--faint)}
+/* Canvas blocks */
+.block{margin-bottom:20px;animation:blockin .25s ease}
+@keyframes blockin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.block .bhead{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;
+  cursor:pointer;user-select:none;
+}
+.block .bhead .chev{font-size:9px;color:var(--faint);width:10px;flex-shrink:0;transition:transform .12s}
+.block.folded .bhead .chev{transform:rotate(-90deg)}
+.block.folded > :not(.bhead){display:none}
+.block.folded{margin-bottom:10px}
+.block .btag{
+  font-size:9px;font-weight:600;color:var(--faint);
+  border:1px solid var(--line);border-radius:3px;padding:0 4px;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.block .btext{
+  font-size:14px;white-space:pre-wrap;overflow-wrap:break-word;
+  min-height:21px;padding:2px 6px;margin:0 -6px;border-radius:4px;
+}
+.block .btext:hover{background:var(--hover)}
+.block .btext:empty::before{content:'…';color:var(--faint)}
+.block pre{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px;line-height:1.55;
+  background:#F7F6F3;border:1px solid var(--line);border-radius:6px;
+  padding:8px 0;overflow-x:auto;
+}
+.block pre .ln{padding:0 12px;white-space:pre}
+.block pre .ln.add{background:#E7F4EA;color:#19703A}
+.block pre .ln.del{background:#FBEAE8;color:#A33B2E}
+.block pre .ln.hunk{color:var(--faint)}
+.block table{
+  border-collapse:collapse;width:100%;font-size:13px;
+  border:1px solid var(--line);border-radius:6px;overflow:hidden;
+}
+.block th,.block td{
+  border-bottom:1px solid var(--line);padding:5px 10px;text-align:left;
+  vertical-align:top;
+}
+.block th{font-weight:600;background:#F7F6F3;font-size:12px}
+.block tr:last-child td{border-bottom:none}
+.block .mermaid-box{
+  background:var(--bg);border:1px solid var(--line);border-radius:6px;
+  padding:10px;overflow-x:auto;
+}
+.block .mermaid-box svg{max-width:100%;height:auto}
+.block .bapply{
+  margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);
+  border:1px solid var(--line);border-radius:4px;padding:1px 8px;
+}
+.block .bapply:hover{color:#0F7B55;border-color:#0F7B55}
+#canvas-empty{font-size:13px;color:var(--faint);padding:8px 0}
+
+/* ---------- Agent settings popover ---------- */
+#agent-pop{
+  position:fixed;top:54px;right:12px;z-index:50;
+  width:300px;background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 12px 40px rgba(0,0,0,.14);
+  padding:14px;display:none;
+}
+#agent-pop.open{display:block}
+#agent-pop .ap-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+#ap-name{
+  flex:1;border:none;font-weight:700;font-size:15px;min-width:0;
+  padding:2px 4px;border-radius:4px;
+}
+#ap-name:not(:disabled):hover{background:var(--hover)}
+#ap-name:disabled{color:var(--ink)}
+#ap-brief,#ap-soul{
+  width:100%;border:1px solid var(--line);border-radius:6px;
+  padding:7px 9px;font-size:13px;resize:vertical;min-height:56px;
+  margin-bottom:10px;background:var(--bg);
+}
+#ap-soul{min-height:72px;font-size:12.5px}
+#ap-brief:focus,#ap-soul:focus{outline:none;border-color:rgba(55,53,47,.28)}
+#agent-pop label{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--muted);margin-bottom:8px;
+}
+#agent-pop label span{width:44px;flex-shrink:0}
+#agent-pop select,#ap-model-custom{
+  flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;
+  padding:5px 8px;font-size:13px;background:var(--bg);color:var(--ink);
+}
+#agent-pop select:focus,#ap-model-custom:focus{outline:none;border-color:rgba(55,53,47,.28)}
+.ap-actions{display:flex;align-items:center;margin-top:12px}
+#ap-retire{font-size:13px;color:#C25E5E;padding:5px 8px;border-radius:5px}
+#ap-retire:hover{background:#FDF0F0}
+#ap-save{
+  margin-left:auto;font-size:13px;font-weight:600;color:#fff;background:var(--ink);
+  border-radius:6px;padding:6px 14px;
+}
+#ap-save:hover{opacity:.85}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media (max-width:860px){
+  .doc{position:fixed;top:48px;right:0;bottom:0;width:min(380px,92vw);z-index:30;box-shadow:-8px 0 24px rgba(0,0,0,.08)}
+  #h-link{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div id="h-title" contenteditable="true" spellcheck="false"></div>
+    <a class="icon-btn" id="h-parent" style="display:none;text-decoration:none" title="Back to the table this was branched from"></a>
+    <button class="icon-btn" id="h-merge" style="display:none" title="Fold this branch's work back into the parent table (one agent turn)">⇤ Merge back</button>
+    <button class="icon-btn" id="h-branches" style="display:none" title="Branches of this table">⑂ 0</button>
+    <button class="icon-btn" id="h-link" title="Share this table">Share</button>
+    <div id="brain" title=""><span class="dot"></span><span id="brain-label">no brain</span></div>
+    <div class="spacer"></div>
+    <div class="faces" id="faces"></div>
+    <button class="icon-btn" id="btn-new-agent" title="Invite a new agent">+</button>
+    <button class="icon-btn" id="btn-auto" title="Auto-reply: agents chime in without being @mentioned">Auto</button>
+    <button class="icon-btn" id="btn-doc" title="Toggle the canvas">Canvas</button>
+  </header>
+
+  <main>
+    <section class="chat">
+      <div class="chat-scroll" id="chat"></div>
+      <div id="brain-panel">
+        <div class="bp-title">This table has no brain yet</div>
+        <div class="bp-sub">Agents can't think until you lend them one. Run this on your machine — your credentials never leave it:</div>
+        <div class="bp-cmd">
+          <code id="bp-cmd"></code>
+          <button id="bp-copy">Copy</button>
+        </div>
+        <div class="bp-wait">Waiting for a brain to connect…</div>
+      </div>
+      <div class="composer">
+        <div class="composer-box">
+          <textarea id="chat-text" placeholder="Message the table…" rows="1"></textarea>
+          <button id="btn-send">Send</button>
+        </div>
+        <div class="hint" id="hint">@agent to put the agent to work, or just talk.</div>
+      </div>
+    </section>
+
+    <aside class="doc" id="doc">
+      <div class="doc-head">
+        <span>Canvas</span>
+        <span class="writing">agent writing…</span>
+      </div>
+      <div class="doc-scroll">
+        <div id="d-problem" contenteditable="true" data-empty="What's the problem? Optional — the agents also read the chat."></div>
+        <div id="canvas"></div>
+        <div id="canvas-empty">Agents lay out notes, code, and diffs here. Text blocks are editable by anyone.</div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<!-- Arrival screen: the first thing a guest sees -->
+<div id="arrival">
+  <div class="arrival-card">
+    <div class="a-eyebrow" id="a-eyebrow">You're invited to a table</div>
+    <h1 id="a-title">Untitled table</h1>
+    <div class="a-sub" id="a-sub">Loading…</div>
+    <div class="a-faces" id="a-faces"></div>
+    <label for="a-name">Your name at this table</label>
+    <input id="a-name" maxlength="24" placeholder="e.g. Alex" spellcheck="false" autocomplete="off">
+    <div class="a-hint">Remembered on this device. No account, no email.</div>
+    <button id="a-join">Join the table</button>
+    <div class="a-note" id="a-note"></div>
+  </div>
+</div>
+
+<!-- Share sheet -->
+<div id="share">
+  <div class="share-card">
+    <h3>Share this table</h3>
+    <div class="s-sub" id="s-sub">Anyone with the link can join.</div>
+    <div class="share-link">
+      <input id="s-url" readonly>
+      <button id="s-copy">Copy</button>
+    </div>
+    <div id="s-host-only">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">What can guests do?</label>
+      <label class="tier" data-tier="open">
+        <input type="radio" name="tier" value="open">
+        <span><span class="t-name">Open</span><br><span class="t-desc">Anyone can talk, task agents, and manage them.</span></span>
+      </label>
+      <label class="tier" data-tier="managed">
+        <input type="radio" name="tier" value="managed">
+        <span><span class="t-name">Managed</span><br><span class="t-desc">Anyone can talk and task agents; only you configure them.</span></span>
+      </label>
+      <label class="tier" data-tier="view">
+        <input type="radio" name="tier" value="view">
+        <span><span class="t-name">View-only</span><br><span class="t-desc">Guests can watch the table and canvas, but not speak.</span></span>
+      </label>
+      <label class="spend-row">
+        <input type="checkbox" id="s-spend">
+        <span><b>Only I can put agents to work.</b> Agent runs spend your subscription — reserve them for yourself.</span>
+      </label>
+    </div>
+    <button class="s-close" id="s-close">Done</button>
+  </div>
+</div>
+
+<!-- Rename popover -->
+<div id="me-pop">
+  <label for="me-name">Your name</label>
+  <input id="me-name" maxlength="24" spellcheck="false" autocomplete="off">
+  <button id="me-save">Save</button>
+  <div class="me-hint">Remembered on this device.</div>
+</div>
+
+<!-- Branch list dropdown -->
+<div id="branch-menu"></div>
+
+<!-- Agent settings popover -->
+<div id="agent-pop">
+  <div class="ap-head">
+    <input id="ap-name" placeholder="Name" maxlength="16" spellcheck="false">
+  </div>
+  <textarea id="ap-brief" placeholder="What should this agent do? (their brief)" maxlength="300"></textarea>
+  <textarea id="ap-soul" placeholder="Soul (optional) — who they are: voice, values, quirks, boundaries. Written to the agent: “You are…”" maxlength="1500"></textarea>
+  <label><span>Model</span><select id="ap-model"></select></label>
+  <label id="ap-model-custom-row" style="display:none"><span></span><input id="ap-model-custom" placeholder="model id, e.g. gpt-5.6-terra"></label>
+  <label><span>Effort</span><select id="ap-effort"></select></label>
+  <label><span>Brain</span><select id="ap-brain"></select></label>
+  <div class="ap-actions">
+    <button id="ap-retire">Retire</button>
+    <button id="ap-save">Save</button>
+  </div>
+</div>
+
+<script>
+/* ---------------- Roundtable client: server-authoritative, ws-synced ---------------- */
+const $ = id => document.getElementById(id);
+const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls)n.className=cls; if(html!==undefined)n.innerHTML=html; return n; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Vercel-style identity gradients: deterministic from the assigned color plus
+   a hue-shifted partner stop; angle varies by name so same-color identities
+   still read differently. */
+function hexToHsl(hex){
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if(d){
+    if(mx === r) h = ((g - b) / d + (g < b ? 6 : 0));
+    else if(mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+  }
+  const l = (mx + mn) / 2;
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return [h, s * 100, l * 100];
+}
+const nameHash = s => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+function avatarBg(color, name){
+  try{
+    const [h, s, l] = hexToHsl(color || '#37352F');
+    const seed = nameHash(name || '');
+    const angle = 120 + (seed % 140);
+    const h2 = (h + 14 + (seed % 22)) % 360; // close analogous partner — smooth, never acid
+    const from = `hsl(${h.toFixed(0)} ${Math.min(s + 6, 92).toFixed(0)}% ${Math.max(l - 7, 22).toFixed(0)}%)`;
+    const to = `hsl(${h2.toFixed(0)} ${Math.min(s + 10, 92).toFixed(0)}% ${Math.min(l + 10, 72).toFixed(0)}%)`;
+    return `linear-gradient(${angle}deg, ${from}, ${to})`;
+  }catch{ return color || '#37352F'; }
+}
+function avatarStops(color, name){
+  const m = avatarBg(color, name).match(/hsl\([^)]*\)/g);
+  return m || [color, color];
+}
+
+const roomId = location.pathname.split('/').pop();
+const state = { you:null, people:[], agents:[], brains:[], branches:[], busy:new Set(),
+  auto:true, access:'open', hostOnlySpend:false, isHost:false, joined:false };
+const HOST_KEY_STORE = 'rt-host-' + roomId;
+const NAME_STORE = 'rt-name'; // one chosen name per device, across tables
+const canManage = () => state.access === 'open' || state.isHost;
+const canSpeak = () => state.access !== 'view' || state.isHost;
+
+// Connection lifecycle always logs to the console; add ?debug to the URL
+// to also trace every ws message in and out.
+const DEBUG = new URLSearchParams(location.search).has('debug');
+const clog = (...a) => console.info('%c[roundtable]', 'color:#2F80ED', ...a);
+const dlog = (...a) => { if(DEBUG) clog(...a); };
+
+function setAgents(agents){
+  state.agents = agents;
+  state.busy = new Set(agents.filter(a => a.busy).map(a => a.name));
+  renderFaces();
+  syncBusyUi();
+  if(!document.body.classList.contains('offline')) $('hint').textContent = hintText();
+}
+
+function setBrains(brains){
+  state.brains = brains;
+  updateBrainPanel();
+  const b = $('brain');
+  b.classList.toggle('on', brains.length > 0);
+  if(brains.length){
+    $('brain-label').textContent = brains.length === 1
+      ? brains[0].name
+      : brains.map(x => x.name).join(' · ');
+    b.title = 'Brains serving this table: ' + brains.map(x => `${x.name} (${x.provider})`).join(', ');
+  } else {
+    $('brain-label').textContent = 'no brain';
+    b.title = 'Attach one: node bridge/codex.js ' + location.origin;
+  }
+  renderFaces(); // brain badges on agent faces depend on the brain count
+}
+
+let ws = null, retryDelay = 1000;
+function connect(){
+  clog('connecting to', location.host, 'room', roomId);
+  ws = new WebSocket((location.protocol==='https:'?'wss://':'ws://') + location.host);
+  ws.addEventListener('open', () => {
+    const hostKey = localStorage.getItem(HOST_KEY_STORE) || undefined;
+    if(state.joined){
+      clog('socket open, rejoining room');           // reconnect: no arrival screen
+      ws.send(JSON.stringify({t:'join', room:roomId, name: state.you?.name, hostKey}));
+    } else {
+      clog('socket open, peeking at room');          // first arrival: look before sitting down
+      ws.send(JSON.stringify({t:'peek', room:roomId, hostKey}));
+    }
+  });
+  ws.addEventListener('message', onMessage);
+  ws.addEventListener('close', () => {
+    clog('socket closed; retrying in', retryDelay/1000 + 's');
+    setConnected(false);
+    setTimeout(connect, retryDelay);
+    retryDelay = Math.min(retryDelay * 2, 8000);
+  });
+}
+const send = m => {
+  if(ws && ws.readyState === 1){
+    dlog('->', m.t, m);
+    ws.send(JSON.stringify(m));
+    return true;
+  }
+  clog('send dropped (socket not open):', m.t);
+  return false;
+};
+function hintText(){
+  if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
+  if(state.hostOnlySpend && !state.isHost) return 'Only the host can put agents to work here.';
+  if(!state.agents.length) return 'No agents at the table — /agent Name: brief invites one.';
+  const names = state.agents.slice(0, 2).map(a => '@' + a.name.toLowerCase()).join(' or ');
+  return state.auto
+    ? `Just talk — agents reply on their own. ${names} for someone specific · /agent Name: brief invites another.`
+    : `Auto-reply is off — summon agents with ${names} · /agent Name: brief invites another.`;
+}
+function showArrival(p){
+  const host = !!p.wouldHost;
+  const n = p.people.length, a = p.agents.length;
+  $('a-eyebrow').textContent = host
+    ? (p.exists ? 'Your table' : 'A new table')
+    : `You're invited to a table`;
+  $('a-title').textContent = p.title || 'Untitled table';
+  $('a-sub').textContent = host && !p.exists
+    ? "Nobody's here yet — you'll be the host."
+    : `${n} ${n === 1 ? 'person' : 'people'} here · ${a} ${a === 1 ? 'agent' : 'agents'} at the table` +
+      (p.brains.length ? ` · powered by ${p.brains.join(', ')}` : ' · no brain attached yet');
+
+  const f = $('a-faces'); f.innerHTML = '';
+  for(const x of [...p.people, ...p.agents.map(g => ({...g, agent:true}))].slice(0, 8)){
+    const d = el('div','face' + (x.agent ? ' agent' : ''), esc(x.name[0]));
+    d.style.background = avatarBg(x.color, x.name);
+    d.title = x.name;
+    f.appendChild(d);
+  }
+
+  $('a-name').value = localStorage.getItem(NAME_STORE) || '';
+  const notes = [];
+  if(host) notes.push('You <b>host</b> this table: you set what guests can do, and agents think with the brain you attach.');
+  if(p.access === 'view' && !host) notes.push('This table is <b>view-only</b> — you can watch, but only the host can speak.');
+  else if(p.access === 'managed' && !host) notes.push('You can talk and put agents to work; the host configures them.');
+  if(p.hostOnlySpend && !host) notes.push('Only the host can put agents to work here.');
+  $('a-note').innerHTML = notes.join('<br>');
+  $('a-note').style.display = notes.length ? '' : 'none';
+  $('a-join').textContent = (p.access === 'view' && !host) ? 'Watch the table' : 'Join the table';
+
+  $('arrival').classList.add('open');
+  setTimeout(() => $('a-name').focus(), 60);
+}
+
+function doJoin(){
+  const name = $('a-name').value.trim().slice(0, 24);
+  if(name) localStorage.setItem(NAME_STORE, name); else localStorage.removeItem(NAME_STORE);
+  state.joined = true;
+  $('arrival').classList.remove('open');
+  send({t:'join', room:roomId, name: name || undefined,
+        hostKey: localStorage.getItem(HOST_KEY_STORE) || undefined});
+}
+$('a-join').addEventListener('click', doJoin);
+$('a-name').addEventListener('keydown', e => { if(e.key === 'Enter') doJoin(); });
+
+function setConnected(on){
+  document.body.classList.toggle('offline', !on);
+  $('hint').textContent = on ? hintText() : 'Connection lost — reconnecting…';
+}
+function setAuto(on){
+  state.auto = on;
+  $('btn-auto').classList.toggle('on', on);
+  if(!document.body.classList.contains('offline')) $('hint').textContent = hintText();
+}
+
+// A table with no brain is a dead table — teach the host how to fix it.
+function updateBrainPanel(){
+  const need = state.brains.length === 0 && state.isHost && state.joined;
+  $('brain-panel').classList.toggle('open', need);
+  if(need){
+    const nm = (state.you?.name || '').split(' ')[0].toLowerCase().replace(/[^a-z0-9-]/g, '');
+    $('bp-cmd').textContent = `node bridge/codex.js ${location.origin}/s/${roomId}` + (nm ? ` --name ${nm}` : '');
+  }
+}
+$('bp-copy').addEventListener('click', e => {
+  navigator.clipboard?.writeText($('bp-cmd').textContent).catch(()=>{});
+  const b = e.currentTarget;
+  b.textContent = 'Copied'; b.classList.add('copied');
+  setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('copied'); }, 1400);
+});
+
+function setBranches(branches){
+  state.branches = branches;
+  const b = $('h-branches');
+  b.style.display = branches.length ? '' : 'none';
+  b.textContent = '⑂ ' + branches.length;
+  $('branch-menu').innerHTML = branches.map(x =>
+    `<a href="/s/${esc(x.id)}">${esc(x.title || x.id)}<span class="bid">/s/${esc(x.id)}</span></a>`).join('');
+}
+$('h-branches').addEventListener('click', e => {
+  e.stopPropagation();
+  const menu = $('branch-menu');
+  const r = e.currentTarget.getBoundingClientRect();
+  menu.style.left = Math.max(8, r.left) + 'px';
+  menu.style.top = (r.bottom + 6) + 'px';
+  menu.classList.toggle('open');
+});
+document.addEventListener('click', e => {
+  if(!e.target.closest('#branch-menu') && !e.target.closest('#h-branches')) $('branch-menu').classList.remove('open');
+});
+
+function setAccess(tier, hostOnlySpend){
+  state.access = tier || 'open';
+  state.hostOnlySpend = !!hostOnlySpend;
+  $('btn-new-agent').style.display = canManage() ? '' : 'none';
+  // View-only guests get a muted composer rather than a rejection after typing.
+  const mute = !canSpeak();
+  $('chat-text').disabled = mute;
+  $('btn-send').style.display = mute ? 'none' : '';
+  $('chat-text').placeholder = mute ? 'View-only — the host is speaking' : 'Message the table…';
+  if(!document.body.classList.contains('offline')) $('hint').textContent = hintText();
+  // Keep the share sheet honest if it's open.
+  document.querySelectorAll('#share .tier').forEach(t => {
+    const on = t.dataset.tier === state.access;
+    t.classList.toggle('sel', on);
+    t.querySelector('input').checked = on;
+  });
+  $('s-spend').checked = state.hostOnlySpend;
+  $('s-sub').textContent = {
+    open: 'Anyone with the link can talk, task agents, and manage them.',
+    managed: 'Anyone with the link can talk and task agents; only you configure them.',
+    view: 'Anyone with the link can watch. Only you can speak.',
+  }[state.access];
+}
+
+function onMessage(ev){
+  const m = JSON.parse(ev.data);
+  dlog('<-', m.t, m);
+  switch(m.t){
+    case 'welcome': {
+      clog('welcome: you are', m.you.name, '· agents:', (m.state.agents || []).map(a => a.name).join(', ') || 'none');
+      // May be a reconnect: rebuild everything from the server's state.
+      $('chat').innerHTML = '';
+      lastEntry = null;
+      presenceRun = null;
+      retryDelay = 1000;
+      setConnected(true);
+      state.you = m.you;
+      state.isHost = !!m.you.isHost;
+      state.joined = true;
+      localStorage.setItem(NAME_STORE, m.you.name);
+      $('arrival').classList.remove('open');
+      if(m.hostKey) localStorage.setItem(HOST_KEY_STORE, m.hostKey);
+      state.people = m.state.people;
+      if(m.state.parent){
+        $('h-parent').style.display = '';
+        $('h-parent').href = '/s/' + m.state.parent.id;
+        $('h-parent').textContent = '↰ ' + (m.state.parent.title || m.state.parent.id).slice(0, 24);
+        $('h-merge').style.display = '';
+        // Branches inherit the parent's host key — if this browser hosts the
+        // parent but arrived here keyless, present the parent's key and rejoin.
+        if(!m.you.isHost && !localStorage.getItem(HOST_KEY_STORE)){
+          const pk = localStorage.getItem('rt-host-' + m.state.parent.id);
+          if(pk && !sessionStorage.getItem('rt-triedpk-' + roomId)){
+            sessionStorage.setItem('rt-triedpk-' + roomId, '1');
+            localStorage.setItem(HOST_KEY_STORE, pk);
+            clog('presenting parent host key; rejoining');
+            ws.close(); // reconnect sends the key
+            return;
+          }
+        }
+      } else {
+        $('h-parent').style.display = 'none';
+        $('h-merge').style.display = 'none';
+      }
+      setBranches(m.state.branches || []);
+      setAccess(m.state.access, m.state.hostOnlySpend);
+      updateBrainPanel();
+      setTitle(m.state.title);
+      $('d-problem').innerText = m.state.problem || '';
+      setAuto(m.state.auto !== false);
+      setBrains(m.state.brains || []); // before canvas/chat render: Apply buttons and "via" suffixes need brains
+      setAgents(m.state.agents || []);
+      renderCanvas(m.state.canvas || [], false);
+      m.state.chat.forEach(renderChat);
+      break;
+    }
+    case 'auto': setAuto(m.on); break;
+    case 'access': setAccess(m.access, m.hostOnlySpend); break;
+    case 'preview': showArrival(m); break;
+    case 'you':
+      state.you = m.you;
+      state.isHost = !!m.you.isHost;
+      localStorage.setItem(NAME_STORE, m.you.name);
+      renderFaces();
+      break;
+    case 'branches': setBranches(m.branches); break;
+    case 'chat': renderChat(m.entry); break;
+    case 'presence': state.people = m.people; renderFaces(); break;
+    case 'agents': setAgents(m.agents); break;
+    case 'brains': setBrains(m.brains); break;
+    case 'title': if(document.activeElement !== $('h-title')) setTitle(m.text); break;
+    case 'problem':
+      if(document.activeElement !== $('d-problem')) $('d-problem').innerText = m.text;
+      break;
+    case 'canvas': renderCanvas(m.blocks, m.animate); break;
+    case 'block': {
+      const content = document.querySelector(`#canvas .block[data-index="${m.index}"] .btext`);
+      if(content && document.activeElement !== content) content.innerText = m.content;
+      break;
+    }
+    case 'agent_state': {
+      if(m.busy) state.busy.add(m.name); else state.busy.delete(m.name);
+      const a = state.agents.find(x => x.name === m.name);
+      if(a) a.busy = m.busy;
+      syncBusyUi();
+      break;
+    }
+  }
+}
+
+/* ---------------- Header ---------------- */
+function setTitle(t){
+  document.title = t + ' — Roundtable';
+  $('h-title').textContent = t;
+}
+$('h-title').addEventListener('input', () => {
+  send({t:'edit_title', text: $('h-title').innerText.trim()});
+});
+$('h-title').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); $('h-title').blur(); } });
+$('h-title').addEventListener('blur', () => {
+  if(!$('h-title').innerText.trim()) setTitle('Untitled table');
+});
+
+function renderFaces(){
+  const f = $('faces'); f.innerHTML = '';
+  for(const p of state.people){
+    const isMe = p.name === state.you?.name;
+    const d = el('div','face' + (isMe ? ' me' : ''), esc(p.name[0]));
+    d.style.background = avatarBg(p.color, p.name);
+    d.title = isMe ? `${p.name} (you) — click to rename` : p.name;
+    f.appendChild(d);
+  }
+  const multiBrain = state.brains.length > 1;
+  for(const a of state.agents){
+    const d = el('div','face agent', esc(a.name[0]));
+    d.id = 'face-' + a.name;
+    d.style.background = avatarBg(a.color, a.name);
+    if(multiBrain && a.via) d.appendChild(el('span','brain-tag', esc(a.via[0].toUpperCase())));
+    const settings = ['model','effort','brain'].filter(k => a[k]).map(k => `${k}=${a[k]}`).join(' ');
+    d.title = `${a.name} — ${a.brief || 'agent'}${a.via ? `\nthinks on ${a.via}` : ''}${settings ? `\n${settings}` : ''}\n@${a.name.toLowerCase()} to task · click for settings`;
+    if(state.busy.has(a.name)) d.classList.add('thinking');
+    f.appendChild(d);
+  }
+  updateFavicon();
+}
+
+/* Live favicon: the lead agent's face on its color, with a green dot while
+   any agent is thinking. The tab becomes a presence indicator. */
+let faviconLink = null;
+function updateFavicon(){
+  if(!faviconLink){
+    faviconLink = document.createElement('link');
+    faviconLink.rel = 'icon';
+    document.head.appendChild(faviconLink);
+  }
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const x = cv.getContext('2d');
+  const lead = state.agents[0];
+  const stops = avatarStops(lead?.color || '#37352F', lead?.name || '');
+  const grad = x.createLinearGradient(0, 0, 64, 64);
+  grad.addColorStop(0, stops[0]);
+  grad.addColorStop(1, stops[1]);
+  x.fillStyle = grad;
+  x.beginPath();
+  x.roundRect(0, 0, 64, 64, 16);
+  x.fill();
+  x.font = '600 34px -apple-system, sans-serif';
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.fillStyle = '#fff';
+  x.fillText(lead?.name?.[0] ?? '·', 32, 34);
+  if(state.busy.size){
+    x.fillStyle = '#2FBF71';
+    x.beginPath();
+    x.arc(51, 51, 11, 0, 7);
+    x.fill();
+    x.lineWidth = 4;
+    x.strokeStyle = '#fff';
+    x.stroke();
+  }
+  faviconLink.href = cv.toDataURL('image/png');
+}
+
+function syncBusyUi(){
+  for(const a of state.agents){
+    $('face-' + a.name)?.classList.toggle('thinking', state.busy.has(a.name));
+  }
+  const anyBusy = state.busy.size > 0;
+  $('doc').classList.toggle('working', anyBusy);
+  const current = anyBusy ? state.agents.find(a => state.busy.has(a.name)) : null;
+  showTyping(current);
+  updateFavicon();
+}
+
+function showTyping(agent){
+  const existing = $('typing');
+  if(!agent){ existing?.remove(); return; }
+  if(existing){
+    if(existing.dataset.name === agent.name) return;
+    existing.remove();
+  }
+  const t = el('div','');
+  t.id = 'typing';
+  t.dataset.name = agent.name;
+  t.innerHTML = `
+    <div class="avatar" style="background:${esc(avatarBg(agent.color, agent.name))}">${esc(agent.name[0])}</div>
+    <div class="dots"><span></span><span></span><span></span></div>
+    <span class="label">${esc(agent.name)} is thinking…</span>`;
+  $('chat').appendChild(t);
+  $('chat').scrollTop = $('chat').scrollHeight;
+}
+function keepTypingLast(){
+  const t = $('typing');
+  if(t) $('chat').appendChild(t);
+}
+
+function openShare(){
+  $('s-url').value = location.href;
+  $('s-host-only').style.display = state.isHost ? '' : 'none';
+  setAccess(state.access, state.hostOnlySpend); // refresh radios/blurb
+  if(!state.isHost) $('s-sub').textContent = 'Anyone with this link can join the table.';
+  $('share').classList.add('open');
+}
+const closeShare = () => $('share').classList.remove('open');
+$('s-close').addEventListener('click', closeShare);
+$('share').addEventListener('click', e => { if(e.target === $('share')) closeShare(); });
+$('s-copy').addEventListener('click', e => {
+  navigator.clipboard?.writeText(location.href).catch(()=>{});
+  $('s-url').select?.();
+  const b = e.currentTarget;
+  b.textContent = 'Copied'; b.classList.add('copied');
+  setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('copied'); }, 1400);
+});
+document.querySelectorAll('#share .tier').forEach(t => {
+  t.addEventListener('click', () => {
+    if(!state.isHost) return;
+    send({t:'set_access', tier: t.dataset.tier, hostOnlySpend: $('s-spend').checked});
+  });
+});
+$('s-spend').addEventListener('change', () => {
+  if(!state.isHost) return;
+  send({t:'set_access', tier: state.access, hostOnlySpend: $('s-spend').checked});
+});
+
+$('h-link').addEventListener('click', () => openShare());
+
+/* ---------------- Chat ---------------- */
+let lastEntry = null; // grouping: consecutive same-author messages share a header
+const GROUP_WINDOW_MS = 5 * 60 * 1000;
+const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+
+// Highlight @mentions of agents (escape first, then wrap tokens).
+function richText(text){
+  return esc(text).replace(/@([\w-]+)/g, (m, name) =>
+    (name.toLowerCase() === 'agent' || state.agents.some(a => a.name.toLowerCase() === name.toLowerCase()))
+      ? `<span class="mention">${m}</span>` : m);
+}
+
+function nearBottom(){
+  const c = $('chat');
+  return c.scrollHeight - c.scrollTop - c.clientHeight < 80;
+}
+function appendMsg(node){
+  const follow = nearBottom();
+  $('chat').appendChild(node);
+  keepTypingLast();
+  if(follow) $('chat').scrollTop = $('chat').scrollHeight;
+}
+
+function renderChat(entry){
+  if(entry.kind === 'branch'){ addBranchCard(entry); return; }
+  if(entry.kind === 'system'){ addSystem(entry.text, entry.room); return; }
+  const grouped = lastEntry &&
+    lastEntry.kind === entry.kind && lastEntry.author === entry.author &&
+    entry.ts && lastEntry.ts && (entry.ts - lastEntry.ts) < GROUP_WINDOW_MS;
+  lastEntry = entry;
+
+  const m = el('div','msg' + (entry.kind === 'agent' ? ' agent' : '') + (grouped ? ' cont' : '') + (entry.ctx ? ' ctx' : ''));
+  if(entry.ctx) m.title = 'Context carried from the parent table';
+  if(entry.kind === 'agent') m.dataset.agent = entry.author;
+  if(grouped){
+    m.innerHTML = `
+      <span class="gutter-ts">${fmtTime(entry.ts)}</span>
+      <div class="body"><div class="text">${richText(entry.text)}</div></div>`;
+  } else {
+    m.innerHTML = `
+      <div class="avatar" style="background:${esc(avatarBg(entry.color, entry.author))}">${esc((entry.author||'?')[0])}</div>
+      <div class="body">
+        <div class="who">${esc(entry.author)}${entry.via && state.brains.length > 1 ? `<span class="via">via ${esc(entry.via)}</span>` : ''}<span class="ts">${fmtTime(entry.ts)}</span></div>
+        <div class="text">${richText(entry.text)}</div>
+      </div>`;
+  }
+  appendMsg(m);
+}
+// Branch events render as proper cards — a fork in the table's life deserves
+// more than a gray line.
+function addBranchCard(entry){
+  lastEntry = null;
+  presenceRun = null;
+  const c = el('div','branch-card');
+  c.innerHTML = `
+    <div class="bc-icon">⑂</div>
+    <div class="bc-body">
+      <div class="bc-title">${entry.back ? '↰ ' : ''}${esc(entry.label || entry.room)}</div>
+      <div class="bc-sub">${esc(entry.sub || 'branched table')}</div>
+    </div>
+    <a class="bc-open" href="/s/${esc(entry.room)}">Open table →</a>`;
+  appendMsg(c);
+}
+
+// Consecutive joins/leaves collapse into one quiet line instead of a parade.
+const PRESENCE_RE = /^(.+) (pulled up a chair|left the table)\.$/;
+let presenceRun = null; // {node, names:Set, count} — valid while its node is still last
+
+function addSystem(text, linkRoom){
+  lastEntry = null; // a system line breaks a message group
+  const pm = !linkRoom && text.match(PRESENCE_RE);
+  if(pm){
+    const lastMsg = [...$('chat').querySelectorAll('.msg')].pop();
+    if(presenceRun && presenceRun.node === lastMsg){
+      presenceRun.count++;
+      presenceRun.names.add(pm[1]);
+      const names = [...presenceRun.names];
+      const shown = names.slice(0, 2).join(', ');
+      presenceRun.node.querySelector('.text').textContent =
+        `${shown}${names.length > 2 ? ` and ${names.length - 2} other${names.length > 3 ? 's' : ''}` : ''} came and went.`;
+      presenceRun.node.title = `${presenceRun.count} joins/leaves`;
+      return;
+    }
+    const m = el('div','msg system');
+    m.innerHTML = `<div class="text">${esc(text)}</div>`;
+    appendMsg(m);
+    presenceRun = { node: m, names: new Set([pm[1]]), count: 1 };
+    return;
+  }
+  presenceRun = null;
+  const m = el('div','msg system');
+  m.innerHTML = `<div class="text">${esc(text)}${linkRoom ? ` <a class="roomlink" href="/s/${esc(linkRoom)}">open&nbsp;→</a>` : ''}</div>`;
+  appendMsg(m);
+}
+function sendChat(){
+  const t = $('chat-text');
+  const text = t.value.trim();
+  if(!text) return;
+  if(!send({t:'chat', text})) return; // offline: keep the draft, banner explains
+  t.value = '';
+  $('btn-send').classList.remove('ready');
+}
+$('btn-send').addEventListener('click', sendChat);
+$('chat-text').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }
+});
+$('chat-text').addEventListener('input', () => {
+  $('btn-send').classList.toggle('ready', !!$('chat-text').value.trim());
+});
+
+/* ---------------- Doc panel ---------------- */
+const docOpenDefault = matchMedia('(min-width: 861px)').matches;
+$('doc').classList.toggle('closed', !docOpenDefault);
+$('btn-doc').classList.toggle('open', docOpenDefault);
+$('btn-doc').addEventListener('click', () => {
+  const closed = $('doc').classList.toggle('closed');
+  $('btn-doc').classList.toggle('open', !closed);
+});
+
+let probT;
+$('d-problem').addEventListener('input', () => {
+  clearTimeout(probT);
+  probT = setTimeout(() => send({t:'edit_problem', text: $('d-problem').innerText.trim()}), 350);
+});
+
+/* ---------------- Canvas blocks ---------------- */
+let mermaidReady = null;
+function ensureMermaid(){
+  if(!mermaidReady){
+    mermaidReady = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = '/vendor/mermaid.min.js';
+      s.onload = () => { window.mermaid.initialize({startOnLoad:false, theme:'neutral', securityLevel:'strict'}); res(); };
+      s.onerror = () => rej(new Error('mermaid failed to load'));
+      document.head.appendChild(s);
+    });
+  }
+  return mermaidReady;
+}
+let mermaidSeq = 0;
+const foldedBlocks = new Set(); // per-client fold state, keyed by type:title so it survives re-renders
+
+function renderTable(w, content){
+  const rows = content.split('\n').map(l => l.trim()).filter(l => l && !/^[|\s:-]+$/.test(l));
+  if(!rows.length) return;
+  const table = el('table','');
+  rows.forEach((line, ri) => {
+    const tr = el('tr','');
+    for(const cell of line.replace(/^\||\|$/g, '').split('|')){
+      tr.appendChild(el(ri === 0 ? 'th' : 'td', '', esc(cell.trim())));
+    }
+    table.appendChild(tr);
+  });
+  w.appendChild(table);
+}
+
+function renderMermaid(w, content){
+  const box = el('div','mermaid-box');
+  const fallback = () => {
+    box.innerHTML = '';
+    const pre = el('pre','');
+    const ln = el('div','ln');
+    ln.textContent = content;
+    pre.appendChild(ln);
+    box.appendChild(pre);
+  };
+  box.textContent = 'rendering diagram…';
+  w.appendChild(box);
+  ensureMermaid()
+    .then(() => window.mermaid.render('rt-mmd-' + (++mermaidSeq), content))
+    .then(({svg}) => { box.innerHTML = svg; })
+    .catch(fallback);
+}
+
+function renderDiffLines(pre, content){
+  for(const line of content.split('\n')){
+    const d = el('div','ln');
+    if(line.startsWith('+')) d.classList.add('add');
+    else if(line.startsWith('-')) d.classList.add('del');
+    else if(line.startsWith('@@')) d.classList.add('hunk');
+    d.textContent = line || ' ';
+    pre.appendChild(d);
+  }
+}
+
+function renderCanvas(blocks, animate){
+  // Don't yank a text block out from under someone mid-edit.
+  if(document.activeElement?.closest?.('#canvas')) return;
+  const c = $('canvas');
+  c.innerHTML = '';
+  $('canvas-empty').style.display = blocks.length ? 'none' : '';
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  blocks.forEach((b, i) => {
+    const w = el('div','block');
+    w.dataset.index = i;
+    if(!animate || reduced) w.style.animation = 'none';
+    const foldKey = `${b.type}:${b.title}`;
+    const head = el('div','bhead');
+    head.innerHTML = `<span class="chev">▾</span>${esc(b.title || '')}` +
+      (b.type !== 'text' ? `<span class="btag">${esc(b.type)}${b.lang && b.lang !== b.type ? ' · ' + esc(b.lang) : ''}</span>` : '');
+    head.title = 'Click to collapse';
+    head.addEventListener('click', () => {
+      const folded = w.classList.toggle('folded');
+      folded ? foldedBlocks.add(foldKey) : foldedBlocks.delete(foldKey);
+    });
+    if(b.type === 'diff' && state.isHost && state.brains.some(x => x.canApply)){
+      const btn = el('button','bapply','Apply');
+      btn.title = "Apply this diff on the host's machine (git apply, via the --allow-apply bridge)";
+      btn.addEventListener('click', (e) => { e.stopPropagation(); send({t:'apply_diff', index: i}); });
+      head.appendChild(btn);
+    }
+    w.appendChild(head);
+    if(foldedBlocks.has(foldKey)) w.classList.add('folded');
+    if(b.type === 'text'){
+      const t = el('div','btext');
+      t.contentEditable = 'true';
+      t.innerText = b.content;
+      let bt;
+      t.addEventListener('input', () => {
+        clearTimeout(bt);
+        bt = setTimeout(() => send({t:'edit_block', index: i, content: t.innerText}), 350);
+      });
+      w.appendChild(t);
+    } else if(b.type === 'table'){
+      renderTable(w, b.content);
+    } else if(b.type === 'mermaid'){
+      renderMermaid(w, b.content);
+    } else {
+      const pre = el('pre','');
+      if(b.type === 'diff') renderDiffLines(pre, b.content);
+      else {
+        const ln = el('div','ln');
+        ln.textContent = b.content;
+        pre.appendChild(ln);
+      }
+      w.appendChild(pre);
+    }
+    c.appendChild(w);
+  });
+}
+
+$('btn-auto').addEventListener('click', () => send({t:'set_auto', on: !state.auto}));
+$('h-merge').addEventListener('click', () => send({t:'merge'}));
+
+/* ---------------- Agent settings popover ---------------- */
+const EFFORTS = ['', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
+let editingName = null; // null = creating a new agent
+
+function openAgentPop(agent){
+  editingName = agent ? agent.name : null;
+  $('ap-name').value = agent ? agent.name : '';
+  $('ap-name').disabled = !!agent;
+  $('ap-brief').value = agent ? (agent.brief || '') : '';
+  $('ap-soul').value = agent ? (agent.soul || '') : '';
+
+  // Model dropdown from what the attached brains actually serve, plus a
+  // custom option for anything unlisted.
+  const models = [...new Set(state.brains.flatMap(b => (b.models || []).map(m => m.id)))];
+  const current = agent?.model || '';
+  if(current && !models.includes(current)) models.push(current);
+  $('ap-model').innerHTML = [
+    `<option value="">brain default</option>`,
+    ...models.map(m => `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`),
+    `<option value="__custom">custom…</option>`,
+  ].join('');
+  $('ap-model-custom-row').style.display = 'none';
+  $('ap-model-custom').value = '';
+
+  const knownEfforts = [...new Set(state.brains.flatMap(b => (b.models || []).flatMap(m => m.efforts || [])))];
+  const efforts = knownEfforts.length ? ['', ...knownEfforts] : EFFORTS;
+  $('ap-effort').innerHTML = efforts.map(e =>
+    `<option value="${esc(e)}"${(agent?.effort || '') === e ? ' selected' : ''}>${e || 'brain default'}</option>`).join('');
+
+  // With zero or one brain attached, "which brain" is meaningless — hide it.
+  // (Still shown if this agent has a stale pin to clear.)
+  $('ap-brain').innerHTML = ['', ...state.brains.map(b => b.name)].map(b =>
+    `<option value="${esc(b)}"${(agent?.brain || '') === b ? ' selected' : ''}>${b || 'auto'}</option>`).join('');
+  $('ap-brain').closest('label').style.display =
+    (state.brains.length > 1 || agent?.brain) ? '' : 'none';
+
+  // Locked table, not the host: settings are view-only.
+  const editable = canManage();
+  for(const id of ['ap-brief','ap-soul','ap-model','ap-model-custom','ap-effort','ap-brain']){
+    $(id).disabled = !editable;
+  }
+  $('ap-save').style.display = editable ? '' : 'none';
+  $('ap-retire').style.display = (agent && editable) ? '' : 'none';
+
+  $('agent-pop').classList.add('open');
+  if(editable) (agent ? $('ap-brief') : $('ap-name')).focus();
+}
+const closeAgentPop = () => { $('agent-pop').classList.remove('open'); editingName = null; };
+
+function saveMyName(){
+  const nm = $('me-name').value.trim().slice(0, 24);
+  $('me-pop').classList.remove('open');
+  if(nm && nm !== state.you?.name){ localStorage.setItem(NAME_STORE, nm); send({t:'set_name', name: nm}); }
+}
+$('me-save').addEventListener('click', saveMyName);
+$('me-name').addEventListener('keydown', e => { if(e.key === 'Enter') saveMyName(); });
+document.addEventListener('click', e => {
+  if(!e.target.closest('#me-pop') && !e.target.closest('.face.me')) $('me-pop').classList.remove('open');
+});
+
+$('btn-new-agent').addEventListener('click', () => openAgentPop(null));
+$('faces').addEventListener('click', e => {
+  const me = e.target.closest('.face.me');
+  if(me){
+    const r = me.getBoundingClientRect();
+    $('me-pop').style.left = Math.max(8, Math.min(r.left - 100, innerWidth - 246)) + 'px';
+    $('me-pop').style.top = (r.bottom + 8) + 'px';
+    $('me-name').value = state.you?.name || '';
+    $('me-pop').classList.add('open');
+    setTimeout(() => $('me-name').select(), 40);
+    return;
+  }
+  const face = e.target.closest('.face.agent');
+  if(!face) return;
+  const agent = state.agents.find(a => 'face-' + a.name === face.id);
+  if(agent) openAgentPop(agent);
+});
+// Agents in chat: right-click a message (or click the avatar) for settings.
+function agentFromMsg(target){
+  const row = target.closest('.msg.agent');
+  return row && state.agents.find(a => a.name === row.dataset.agent);
+}
+$('chat').addEventListener('contextmenu', e => {
+  const agent = agentFromMsg(e.target);
+  if(!agent) return; // retired agents' old messages get the normal menu
+  e.preventDefault();
+  openAgentPop(agent);
+});
+$('chat').addEventListener('click', e => {
+  if(!e.target.closest('.msg.agent .avatar')) return;
+  const agent = agentFromMsg(e.target);
+  if(agent) openAgentPop(agent);
+});
+$('ap-model').addEventListener('change', () => {
+  const custom = $('ap-model').value === '__custom';
+  $('ap-model-custom-row').style.display = custom ? '' : 'none';
+  if(custom) $('ap-model-custom').focus();
+});
+$('ap-save').addEventListener('click', () => {
+  const name = ($('ap-name').value || '').trim();
+  if(!name) return;
+  const modelSel = $('ap-model').value;
+  send({
+    t: 'agent_upsert',
+    name,
+    brief: $('ap-brief').value.trim(),
+    model: modelSel === '__custom' ? $('ap-model-custom').value.trim() : modelSel,
+    effort: $('ap-effort').value,
+    brain: $('ap-brain').value,
+    soul: $('ap-soul').value.trim(),
+  });
+  closeAgentPop();
+});
+$('ap-retire').addEventListener('click', () => {
+  if(editingName) send({t:'agent_retire', name: editingName});
+  closeAgentPop();
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeAgentPop(); });
+document.addEventListener('click', e => {
+  if($('agent-pop').classList.contains('open') &&
+     !e.target.closest('#agent-pop') && !e.target.closest('.face.agent') &&
+     !e.target.closest('#btn-new-agent') && !e.target.closest('.msg.agent .avatar')){
+    closeAgentPop();
+  }
+});
+
+connect();
+</script>
+</body>
+</html>

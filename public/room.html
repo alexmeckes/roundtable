@@ -500,7 +500,7 @@ body.offline .hint{color:#C25E5E}
       <div class="doc-scroll">
         <div id="d-problem" contenteditable="true" data-empty="What's the problem? Optional — the agents also read the chat."></div>
         <div id="canvas"></div>
-        <div id="canvas-empty">Agents lay out notes, code, and diffs here. Text blocks are editable by anyone.</div>
+        <div id="canvas-empty">Agents lay out notes, code, and diffs here. Text blocks are editable when your table permissions allow it.</div>
       </div>
     </aside>
   </main>
@@ -624,7 +624,7 @@ function avatarStops(color, name){
 
 const roomId = location.pathname.split('/').pop();
 const state = { you:null, people:[], agents:[], brains:[], branches:[], busy:new Set(),
-  auto:true, access:'open', hostOnlySpend:false, isHost:false, joined:false };
+  canvas:[], auto:true, access:'open', hostOnlySpend:false, isHost:false, joined:false };
 const HOST_KEY_STORE = 'rt-host-' + roomId;
 const NAME_STORE = 'rt-name'; // one chosen name per device, across tables
 const canManage = () => state.access === 'open' || state.isHost;
@@ -656,7 +656,7 @@ function setBrains(brains){
     b.title = 'Brains serving this table: ' + brains.map(x => `${x.name} (${x.provider})`).join(', ');
   } else {
     $('brain-label').textContent = 'no brain';
-    b.title = 'Attach one: node bridge/codex.js ' + location.origin;
+    b.title = 'Attach one: node bridge/codex.js ' + location.origin + location.pathname;
   }
   renderFaces(); // brain badges on agent faces depend on the brain count
 }
@@ -677,6 +677,7 @@ function connect(){
   });
   ws.addEventListener('message', onMessage);
   ws.addEventListener('close', () => {
+    preservePendingCanvasEdits();
     clog('socket closed; retrying in', retryDelay/1000 + 's');
     setConnected(false);
     setTimeout(connect, retryDelay);
@@ -798,6 +799,10 @@ function setAccess(tier, hostOnlySpend){
   $('btn-new-agent').style.display = canManage() ? '' : 'none';
   // View-only guests get a muted composer rather than a rejection after typing.
   const mute = !canSpeak();
+  $('h-title').contentEditable = String(!mute);
+  $('d-problem').contentEditable = String(!mute);
+  document.querySelectorAll('#canvas .btext').forEach(n => { n.contentEditable = String(!mute); });
+  $('btn-auto').disabled = !canManage();
   $('chat-text').disabled = mute;
   $('btn-send').style.display = mute ? 'none' : '';
   $('chat-text').placeholder = mute ? 'View-only — the host is speaking' : 'Message the table…';
@@ -864,8 +869,9 @@ function onMessage(ev){
       setAuto(m.state.auto !== false);
       setBrains(m.state.brains || []); // before canvas/chat render: Apply buttons and "via" suffixes need brains
       setAgents(m.state.agents || []);
-      renderCanvas(m.state.canvas || [], false);
+      renderCanvas(m.state.canvas || [], false, true);
       m.state.chat.forEach(renderChat);
+      readCanvasDrafts().forEach(draft => renderChat({kind:'system', text:'Unsaved canvas draft (copy to recover):\n' + draft}));
       break;
     }
     case 'auto': setAuto(m.on); break;
@@ -887,9 +893,19 @@ function onMessage(ev){
       if(document.activeElement !== $('d-problem')) $('d-problem').innerText = m.text;
       break;
     case 'canvas': renderCanvas(m.blocks, m.animate); break;
+    case 'canvas_conflict':
+      for(const [id, draft] of pendingCanvasEdits) if(draft === m.draft) pendingCanvasEdits.delete(id);
+      saveCanvasDraft(m.draft);
+      renderCanvas(m.blocks, false, true);
+      break;
     case 'block': {
-      const content = document.querySelector(`#canvas .block[data-index="${m.index}"] .btext`);
+      if(pendingCanvasEdits.get(m.blockId) === m.content) pendingCanvasEdits.delete(m.blockId);
+      const block = state.canvas.find(b => b.id === m.blockId);
+      if(block) block.content = m.content;
+      const content = document.querySelector(`#canvas .block[data-id="${m.blockId}"] .btext`);
       if(content && document.activeElement !== content) content.innerText = m.content;
+      if(content && document.activeElement !== content) content.dataset.baseContent = m.content;
+      if(content && document.activeElement === content) canvasRenderPending = true;
       break;
     }
     case 'agent_state': {
@@ -1224,9 +1240,40 @@ function renderDiffLines(pre, content){
   }
 }
 
-function renderCanvas(blocks, animate){
+let canvasRenderPending = false;
+const pendingCanvasEdits = new Map();
+const CANVAS_DRAFT_STORE = 'rt-canvas-drafts-' + roomId;
+function readCanvasDrafts(){
+  try {
+    const drafts = JSON.parse(sessionStorage.getItem(CANVAS_DRAFT_STORE) || '[]');
+    return Array.isArray(drafts) ? drafts.filter(d => typeof d === 'string') : [];
+  } catch { return []; }
+}
+function saveCanvasDraft(draft){
+  if(!draft || readCanvasDrafts().includes(draft)) return;
+  try { sessionStorage.setItem(CANVAS_DRAFT_STORE, JSON.stringify([...readCanvasDrafts(), draft].slice(-10))); } catch { /* the visible draft still survives */ }
+  renderChat({kind:'system', text:'Your canvas edit could not be saved. Newer work is preserved. Copy this draft to recover your text:\n' + draft});
+}
+function preservePendingCanvasEdits(){
+  pendingCanvasEdits.forEach(saveCanvasDraft);
+  pendingCanvasEdits.clear();
+  document.querySelectorAll('#canvas .btext').forEach(n => n.disposeEditor?.());
+}
+window.addEventListener('beforeunload', preservePendingCanvasEdits);
+$('canvas').addEventListener('focusout', () => {
+  setTimeout(() => {
+    if(canvasRenderPending && !document.activeElement?.closest?.('#canvas')) renderCanvas(state.canvas, false);
+  }, 0);
+});
+
+function renderCanvas(blocks, animate, force = false){
+  state.canvas = blocks;
   // Don't yank a text block out from under someone mid-edit.
-  if(document.activeElement?.closest?.('#canvas')) return;
+  if(document.activeElement?.closest?.('#canvas') && !force){ canvasRenderPending = true; return; }
+  // A reconnect or rejected edit can replace a focused editor. Keep any text
+  // still waiting for its debounce timer and cancel callbacks for removed DOM.
+  document.querySelectorAll('#canvas .btext').forEach(n => n.disposeEditor?.());
+  canvasRenderPending = false;
   const c = $('canvas');
   c.innerHTML = '';
   $('canvas-empty').style.display = blocks.length ? 'none' : '';
@@ -1234,6 +1281,7 @@ function renderCanvas(blocks, animate){
   blocks.forEach((b, i) => {
     const w = el('div','block');
     w.dataset.index = i;
+    w.dataset.id = b.id;
     if(!animate || reduced) w.style.animation = 'none';
     const foldKey = `${b.type}:${b.title}`;
     const head = el('div','bhead');
@@ -1247,20 +1295,39 @@ function renderCanvas(blocks, animate){
     if(b.type === 'diff' && state.isHost && state.brains.some(x => x.canApply)){
       const btn = el('button','bapply','Apply');
       btn.title = "Apply this diff on the host's machine (git apply, via the --allow-apply bridge)";
-      btn.addEventListener('click', (e) => { e.stopPropagation(); send({t:'apply_diff', index: i}); });
+      btn.addEventListener('click', (e) => { e.stopPropagation(); send({t:'apply_diff', blockId: b.id}); });
       head.appendChild(btn);
     }
     w.appendChild(head);
     if(foldedBlocks.has(foldKey)) w.classList.add('folded');
     if(b.type === 'text'){
       const t = el('div','btext');
-      t.contentEditable = 'true';
+      t.contentEditable = String(canSpeak());
       t.innerText = b.content;
+      t.dataset.baseContent = b.content;
       let bt;
+      const flush = () => {
+        clearTimeout(bt);
+        const content = t.innerText.slice(0, 6000);
+        if(content === t.dataset.baseContent) return;
+        if(!canSpeak() || !send({t:'edit_block', blockId:b.id, baseContent:t.dataset.baseContent, content})){
+          saveCanvasDraft(content);
+          return;
+        }
+        t.dataset.baseContent = content;
+        pendingCanvasEdits.set(b.id, content);
+        const current = state.canvas.find(block => block.id === b.id);
+        if(current) current.content = content;
+      };
+      t.disposeEditor = () => {
+        clearTimeout(bt);
+        if(t.innerText !== t.dataset.baseContent) saveCanvasDraft(t.innerText);
+      };
       t.addEventListener('input', () => {
         clearTimeout(bt);
-        bt = setTimeout(() => send({t:'edit_block', index: i, content: t.innerText}), 350);
+        bt = setTimeout(flush, 350);
       });
+      t.addEventListener('blur', flush);
       w.appendChild(t);
     } else if(b.type === 'table'){
       renderTable(w, b.content);

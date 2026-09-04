@@ -29,7 +29,7 @@ const confirmApply = confirmIdx !== -1 && (args.splice(confirmIdx, 1), true);
 const roomUrl = args[0];
 if (!roomUrl) {
   console.error(`Usage: node bridge/codex.js <server or room url> [--name Ada] [--allow-apply]
-  node bridge/codex.js http://localhost:3131            # serve every room
+  node bridge/codex.js http://localhost:3131            # serve operator-approved rooms
   node bridge/codex.js http://localhost:3131/s/abc123   # serve one room
   --name gives this brain its name at the table (default: codex)
   --allow-apply lets the room's HOST apply diff blocks to this machine,
@@ -39,14 +39,14 @@ if (!roomUrl) {
 }
 const parsed = new URL(roomUrl);
 const roomMatch = parsed.pathname.match(/^\/s\/([^/]+)/);
-const roomId = roomMatch ? roomMatch[1] : '*'; // '*' = default bridge for all rooms
+const roomId = roomMatch ? roomMatch[1] : '*'; // '*' = shared bridge; server allowlist selects rooms
 const wsUrl = (parsed.protocol === 'https:' ? 'wss://' : 'ws://') + parsed.host;
 const TURN_TIMEOUT_MS = 3 * 60 * 1000;
 
-// Agent turns run in a dedicated EMPTY workspace, never the bridge's real
-// cwd — the read-only sandbox scopes file reads to the workspace, so a
-// prompt-injected "read ~/.ssh/..." has nothing to read. (git apply for
-// --allow-apply still targets process.cwd(); that power is opt-in.)
+// A separate cwd avoids working in the bridge's project by accident. Read-only
+// prevents writes, not reads outside this directory. This is NOT a filesystem
+// read boundary: use an isolated account/container for untrusted room content.
+// --allow-apply separately opts into git apply in process.cwd().
 const AGENT_WORKSPACE = join(homedir(), '.roundtable-bridge', 'workspace');
 mkdirSync(AGENT_WORKSPACE, { recursive: true });
 
@@ -296,12 +296,15 @@ function connect() {
       name: agentName || 'codex', models: availableModels, canApply: allowApply,
       secret: process.env.ROUNDTABLE_BRIDGE_SECRET || undefined }));
     log(roomId === '*'
-      ? `bridge connected to ${wsUrl} as "${agentName || 'codex'}", serving every room (your Codex subscription).`
+      ? `bridge connected to ${wsUrl} as "${agentName || 'codex'}", serving operator-approved rooms (ROUNDTABLE_SHARED_ROOMS on the server).`
       : `bridge connected to room ${roomId} at ${wsUrl} as "${agentName || 'codex'}" (your Codex subscription).`);
   });
   ws.on('message', async (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
+    if (msg.t === 'apply' && (roomId === '*' || msg.room !== roomId)) return;
+    if (roomId !== '*' && msg.room !== roomId) return;
     if (msg.t === 'apply') { handleApply(msg); return; }
     if (msg.t !== 'task') return;
     if (!allowBridgeRun()) {

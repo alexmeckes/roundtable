@@ -3,6 +3,7 @@ import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { resolve, join, extname } from 'node:path';
 import express from 'express';
 import {createConversation} from './conversation.js';
+import {initContext,contextSummary,readContext,createSharedContext} from './context.js';
 
 const key = () => randomBytes(24).toString('base64url');
 const hash = value => createHash('sha256').update(String(value)).digest('hex');
@@ -13,12 +14,14 @@ import {safeAsset,safeDeliverable,MIME} from './assets.js';
 
 export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, allowRun, say, dataDir}) {
   const pending = new Map();
+  const sharedContext=createSharedContext({broadcast,persist,tell,canSpeak,say});
   const artifactRoot = resolve(dataDir, 'workspaces');
   const init = room => {
     room.members ||= [];
     room.work ||= [];
     room.specialists ||= [];
     room.personalBridges ||= new Map();
+    initContext(room);
   };
   const publicWork = room => room.work.map(({runToken, ...work}) => work);
   const agentView=b=>({agentId:b.agentId || b.ownerId,ownerId:b.ownerId,ownerName:b.name,name:b.agentName || `${b.name}'s Codex`,role:b.role || '',handle:b.handle,chatBusy:b.chatBusy,chatMode:b.chatMode});
@@ -93,7 +96,7 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     pending.set(work.id, {ws:bridge.ws, runToken, timer});
     room.work.push(work); announce(room);
     conversation.activity(room,you.id,source?'I’m integrating '+source.title+'.':'I’m starting work: '+work.instructions,work.agentId);
-    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken,agentId:work.agentId,agentName:work.agentName,agentRole:agent.role || '', instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{title:room.title, problem:room.problem, chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-30).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,agentName,title,status})=>({ownerName,agentName,title,status}))}}));
+    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken,agentId:work.agentId,agentName:work.agentName,agentRole:agent.role || '', instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{shared:contextSummary(room,you.id),title:room.title, problem:room.problem, chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-30).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,agentName,title,status})=>({ownerName,agentName,title,status}))}}));
   }
   function handle(ws, room, you, msg) {
     if (!msg.t?.startsWith('workspace_')) return false;
@@ -162,6 +165,24 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     if (!work || pending.get(work.id)?.ws !== ws || !active(work.status)) return;
     work.message = short(msg.message,300); work.updatedAt=Date.now();
     broadcast(room,{t:'workspace_progress',id:work.id,message:work.message});
+  }
+  function contextRequest(ws,room,msg){
+    if(typeof msg.requestId!=='string' || msg.requestId.length>80)return;
+    const reply=value=>ws.readyState===1 && ws.send(JSON.stringify({t:'workspace_context_result',room:room.id,requestId:msg.requestId,...value}));
+    try{
+      if(msg.room!==room.id)throw new Error('Context belongs to the connected table.');
+      const chat=conversation.contextJob(ws,room,msg.id),work=room.work.find(w=>w.id===msg.id),task=work && pending.get(work.id);
+      const job=chat || (task?.ws===ws && active(work.status)?task:null);
+      if(!job)throw new Error('This agent run is no longer active.');
+      const ownerId=chat?.bridge.ownerId || work.ownerId;
+      if((job.contextCalls=(job.contextCalls || 0)+1)>32)throw new Error('Context request limit reached for this turn.');
+      if(msg.action==='read')return reply({result:readContext(room,ownerId,msg.args)});
+      if(msg.action!=='propose')throw new Error('Unknown context action.');
+      if(room.access==='view' && ![...room.people.values()].some(p=>p.id===ownerId && p.isHost))throw new Error('This table is view-only.');
+      if((job.contextProposals=(job.contextProposals || 0)+1)>4)throw new Error('Four proposals per turn is the limit.');
+      const agent=chat?{id:chat.bridge.agentId || ownerId,name:chat.bridge.agentName || `${chat.bridge.name}'s Codex`,ownerName:chat.bridge.name}:{id:work.agentId,name:work.agentName,ownerName:work.ownerName};
+      reply({result:sharedContext.propose(room,agent,msg.args)});
+    }catch(error){reply({error:error.message});}
   }
   function mount(app) {
     const route = '/api/rooms/:room/work/:id';
@@ -251,5 +272,5 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     }
     return true;
   }
-  return {init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation,command};
+  return {init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation,command,sharedContext,contextRequest};
 }

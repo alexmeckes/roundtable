@@ -1,0 +1,71 @@
+[
+  {
+    "name": "Roundtable · context-demo · Quinn · Read the current shared source and accepted decision using the context tool. Write shared-context-brief.md with the recommendation, source title",
+    "threadId": "01a074e4-e8b2-73c3-bcb1-63faba1e4420",
+    "projectId": "01a06e66-5a95-7c81-a824-41e1fd9820bc",
+    "calls": [
+      {
+        "tool": "roundtable_context_read",
+        "status": "completed",
+        "success": true,
+        "arguments": {
+          "ids": [
+            "UUMr9SqfgxoGhUGB",
+            "w265o8nRd9b5mgFo",
+            "ehXpxBsANJhV6Hcl"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Roundtable · context-demo · Quinn · conversation",
+    "threadId": "01a074e4-2ca9-7ed0-8b2c-9dc27344035e",
+    "projectId": "01a06e66-5a95-7c81-a824-41e1fd9820bc",
+    "calls": [
+      {
+        "tool": "roundtable_context_read",
+        "status": "completed",
+        "success": true,
+        "arguments": {
+          "ids": [
+            "UUMr9SqfgxoGhUGB",
+            "w265o8nRd9b5mgFo",
+            "ehXpxBsANJhV6Hcl"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Roundtable · context-demo · Mira · conversation",
+    "threadId": "01a074e0-2d57-7090-b21f-4fe6025c3580",
+    "projectId": "01a06e66-5a95-7c81-a824-41e1fd9820bc",
+    "calls": [
+      {
+        "tool": "roundtable_context_read",
+        "status": "completed",
+        "success": true,
+        "arguments": {
+          "ids": [
+            "UUMr9SqfgxoGhUGB",
+            "w265o8nRd9b5mgFo"
+          ]
+        }
+      },
+      {
+        "tool": "roundtable_context_propose",
+        "status": "completed",
+        "success": true,
+        "arguments": {
+          "kind": "learning",
+          "title": "Atlas is the lowest-cost supplied option with exports",
+          "body": "According to “Supplied comparison — September 5” (source date: September 5, 2026; version 1), Atlas costs 30/month for 6 seats and supports exports, making it the lowest-cost supplied option with exports for the six-person team. Cedar supports exports at 45/month for 10 seats; Beacon costs 20/month for 6 seats but has no exports. These are fictional supplied values. Export ease is not specified.",
+          "refs": [
+            "UUMr9SqfgxoGhUGB"
+          ]
+        }
+      }
+    ]
+  }
+]

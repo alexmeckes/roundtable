@@ -1,5 +1,5 @@
 /* Personal workspaces: the room shares progress; each owner controls execution. */
-function createWorkspaceUI({send,roomId,getYou,canSpeak}) {
+function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact}) {
   const $=id=>document.getElementById(id);
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   let work=[],connections=[],pairToken=null;
@@ -37,7 +37,7 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak}) {
       if(job.files?.length)card.append(node('p',job.files.length+(job.deliverables?.length?' deliverable(s)':' file(s) changed'),'work-meta'));
       const buttons=node('div',undefined,'work-actions');
       if(job.hasPatch)buttons.append(action('Review changes',()=>review(job)));
-      for(const file of job.deliverables || []){const link=node('a','Download '+file.path);link.href=url(job)+'/deliverables/'+file.path.split('/').map(encodeURIComponent).join('/');link.download=file.path.split('/').pop();buttons.append(link);}
+      for(const file of job.deliverables || []){const link=node('a','Download '+file.path);link.href=url(job)+'/deliverables/'+file.path.split('/').map(encodeURIComponent).join('/');link.download=file.path.split('/').pop();buttons.append(link);if(saveArtifact)buttons.append(action('Save '+file.path+' to context',()=>saveArtifact(job,file)));}
       if(job.hasPreview)buttons.append(action('Open preview',()=>play(job)));
       const busy=['running','integrating'].includes(job.status);
       if(job.ownerId===getYou()?.id && (busy || canSpeak())) {

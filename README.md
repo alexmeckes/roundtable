@@ -53,6 +53,42 @@ API. The bridge prints its selected project and ID at startup. This requires the
 project APIs supported by Codex CLI 0.153.3; unsupported runtimes report a startup
 error. Existing threads are not automatically reassigned.
 
+## Shared context
+
+Open **Context** beside the conversation to maintain a shared brief, sources,
+decisions, learnings, and skills. Paste relevant source text and optional reference
+links. **Save to context** on a chat message preserves the original message and its
+author; completed deliverables also have a save-to-context action.
+
+People with permission to speak can create or edit accepted context and review
+agent proposals. Proposals remain separate until a person accepts them. Retiring an
+item removes it from the agents' accepted context without erasing its history.
+Entries retain authors, revisions, timestamps, and cited evidence versions.
+Concurrent edits use version checks: an outdated save is rejected and its draft
+stays in the editor for recovery.
+
+Personal Codex agents receive a compact accepted-context index on every discussion
+or execution turn. They can retrieve current details with `roundtable_context_read`
+and suggest sources, decisions, learnings, or skills through
+`roundtable_context_propose`. Tool access belongs to the active run and connected
+table; stopping or disconnecting a run revokes it. Agents cannot accept their own
+proposals. The legacy canvas agents receive the accepted overview only.
+
+Shared skills are instructions that each person explicitly opts into with **Use for
+my agents**. Adoption applies to that version; editing the skill requires a fresh
+opt-in. Sharing or adopting a skill does not install plugins, execute code, or change
+local tool permissions. Existing local Codex skills and configuration still apply.
+
+Context persists with room state across server and bridge restarts. This is shared
+project memory, not private agent thread history. Sources are pasted text, reference
+links, or links to existing deliverables; this version does not upload arbitrary
+files, crawl websites, or automatically synchronize external documents. Links to
+work outputs depend on that work card remaining available.
+
+Limits: 100 context items per table, 6,000 characters per item, 30 saved historical
+versions per item, up to eight full entries per agent read, and four proposals / 32
+context calls per agent turn. Retired items still count toward the table limit.
+
 ## Bring specialists into the conversation
 
 Choose **Join the conversation**, **Only when @mentioned**, or **Paused** for your

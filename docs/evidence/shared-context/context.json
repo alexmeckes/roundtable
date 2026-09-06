@@ -1,0 +1,218 @@
+{
+  "revision": 11,
+  "entries": [
+    {
+      "id": "5nFfPWV4SP4sLsLS",
+      "version": 1,
+      "createdBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "createdAt": 1788667187130,
+      "history": [],
+      "kind": "brief",
+      "title": "Choose a knowledge tool",
+      "body": "Choose a fictional knowledge tool for six people. Prefer low cost and exports. Use the shared comparison source, make uncertainty explicit, and produce a decision brief. No external services are needed.",
+      "url": "",
+      "refs": [],
+      "status": "accepted",
+      "updatedBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "updatedAt": 1788667187130
+    },
+    {
+      "id": "UUMr9SqfgxoGhUGB",
+      "version": 2,
+      "createdBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "createdAt": 1788667198054,
+      "history": [
+        {
+          "version": 1,
+          "title": "Supplied comparison \u2014 September 5",
+          "body": "Fictional supplied data: Atlas costs 30/month for 6 seats and supports exports. Beacon costs 20/month for 6 seats with no exports. Cedar costs 45/month for 10 seats and supports exports. Six people will use the tool. Export ease is not specified. Source date: September 5, 2026. Verification phrase: paper lantern.",
+          "url": "",
+          "refs": [],
+          "status": "accepted",
+          "updatedBy": {
+            "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+            "name": "Alex",
+            "kind": "human"
+          },
+          "updatedAt": 1788667198054
+        }
+      ],
+      "kind": "source",
+      "title": "Supplied comparison \u2014 September 5",
+      "body": "Fictional supplied data: Atlas costs 30/month for 6 seats and supports exports. Beacon costs 20/month for 6 seats with no exports. Cedar costs 45/month for 10 seats and supports exports. Six people will use the tool. Export ease is not specified. Source date: September 6, 2026. Updated verification phrase: copper orchard.",
+      "url": "",
+      "refs": [],
+      "status": "accepted",
+      "updatedBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "updatedAt": 1788667434274,
+      "evidence": []
+    },
+    {
+      "id": "w265o8nRd9b5mgFo",
+      "version": 2,
+      "createdBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "createdAt": 1788667209811,
+      "history": [
+        {
+          "version": 1,
+          "title": "Evidence-first comparison",
+          "body": "When comparing supplied options, cite the source title and source date. Distinguish verified values from unknown qualities. End a recommendation with one concrete uncertainty. Do not install anything or use external services.",
+          "url": "",
+          "refs": [],
+          "status": "accepted",
+          "updatedBy": {
+            "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+            "name": "Alex",
+            "kind": "human"
+          },
+          "updatedAt": 1788667209811
+        }
+      ],
+      "kind": "skill",
+      "title": "Evidence-first comparison",
+      "body": "Cite the source title, current version, and date in comparisons. Distinguish verified values from unknown qualities. End with one uncertainty. Do not install anything or use external services.",
+      "url": "",
+      "refs": [],
+      "status": "accepted",
+      "updatedBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "updatedAt": 1788667445014,
+      "evidence": []
+    },
+    {
+      "id": "xX7_Svo7uFN05idE",
+      "version": 2,
+      "createdBy": {
+        "id": "Bz3UQX1wR1eMQBcjikfbtz1kr0rx3IdE",
+        "name": "Mira",
+        "kind": "agent",
+        "ownerName": "Alex"
+      },
+      "createdAt": 1788667284721,
+      "history": [
+        {
+          "version": 1,
+          "title": "Atlas is the lowest-cost supplied option with exports",
+          "body": "According to \u201cSupplied comparison \u2014 September 5\u201d (source date: September 5, 2026; version 1), Atlas costs 30/month for 6 seats and supports exports, making it the lowest-cost supplied option with exports for the six-person team. Cedar supports exports at 45/month for 10 seats; Beacon costs 20/month for 6 seats but has no exports. These are fictional supplied values. Export ease is not specified.",
+          "url": "",
+          "refs": [
+            "UUMr9SqfgxoGhUGB"
+          ],
+          "status": "proposed",
+          "updatedBy": {
+            "id": "Bz3UQX1wR1eMQBcjikfbtz1kr0rx3IdE",
+            "name": "Mira",
+            "kind": "agent",
+            "ownerName": "Alex"
+          },
+          "updatedAt": 1788667284721
+        }
+      ],
+      "kind": "learning",
+      "title": "Atlas is the lowest-cost supplied option with exports",
+      "body": "According to \u201cSupplied comparison \u2014 September 5\u201d (source date: September 5, 2026; version 1), Atlas costs 30/month for 6 seats and supports exports, making it the lowest-cost supplied option with exports for the six-person team. Cedar supports exports at 45/month for 10 seats; Beacon costs 20/month for 6 seats but has no exports. These are fictional supplied values. Export ease is not specified.",
+      "url": "",
+      "refs": [
+        "UUMr9SqfgxoGhUGB"
+      ],
+      "status": "accepted",
+      "updatedBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "updatedAt": 1788667334069
+    },
+    {
+      "id": "ehXpxBsANJhV6Hcl",
+      "version": 1,
+      "createdBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "createdAt": 1788667356966,
+      "history": [],
+      "origin": {
+        "chatId": "iFRXhtg91TETdKpn",
+        "author": "Mira",
+        "text": "Verification phrase: **\u201cpaper lantern.\u201d**\n\nRetrieved both full entries and applied your adopted **Evidence-first comparison** skill. Proposed one learning for human review: **Atlas is the lowest-cost supplied option with exports**, at 30/month for six seats.\n\nEvidence: *Supplied comparison \u2014 September 5*, dated September 5, 2026, version 1. The proposal remains unaccepted. Export ease is unspecified.",
+        "ts": 1788667289755
+      },
+      "kind": "decision",
+      "title": "Proceed with Atlas",
+      "body": "For this fictional six-person comparison, choose Atlas as the lowest-cost supplied option with exports. Confirm export ease before any real adoption.",
+      "url": "",
+      "refs": [
+        "UUMr9SqfgxoGhUGB"
+      ],
+      "status": "accepted",
+      "updatedBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "updatedAt": 1788667356966
+    },
+    {
+      "id": "uAf4CZsHMfbSojft",
+      "version": 1,
+      "createdBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "createdAt": 1788667647269,
+      "history": [],
+      "kind": "source",
+      "title": "shared-context-brief.md",
+      "body": "Deliverable from Quinn: Read the current shared source and accepted decision using the context tool. Wri\nCreated [shared-context-brief.md](shared-context-brief.md) and checked it against current stored context. It records the accepted Atlas decision, source version 2 dated September 6, 2026, and verification phrase \u201ccopper orchard.\u201d No external services were used.\n\nUncertainty: Export ease remains unspecified.",
+      "url": "http://localhost:43146/api/rooms/context-demo/work/s6dPMmfyehqxnyQzlotAcgF6JC16CQ6i/deliverables/shared-context-brief.md",
+      "refs": [
+        "UUMr9SqfgxoGhUGB"
+      ],
+      "evidence": [
+        {
+          "id": "UUMr9SqfgxoGhUGB",
+          "version": 2,
+          "title": "Supplied comparison \u2014 September 5"
+        }
+      ],
+      "status": "accepted",
+      "updatedBy": {
+        "id": "5TglqJGur-hW2i6pktDOl99S4GOQJeQs",
+        "name": "Alex",
+        "kind": "human"
+      },
+      "updatedAt": 1788667647269
+    }
+  ],
+  "adoptions": {
+    "5TglqJGur-hW2i6pktDOl99S4GOQJeQs": {
+      "w265o8nRd9b5mgFo": 2
+    }
+  }
+}

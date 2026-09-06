@@ -20,6 +20,7 @@ import { dirname } from 'path';
 import { runHouseAgent, houseAvailable } from './agents/house.js';
 import { sanitizeCanvas, sanitizeActions, serializeCanvas } from './agents/prompt.js';
 import { createWorkspaces } from './workspace/server.js';
+import {contextSummary} from './workspace/context.js';
 
 const PORT = process.env.PORT || 3131;
 const BRIDGE_TASK_TIMEOUT_MS = 3.5 * 60 * 1000;
@@ -232,6 +233,7 @@ function publicState(room) {
     id: room.id,
     work: workspace.publicWork(room),
     connections: workspace.connections(room),
+    sharedContext: room.sharedContext,
     title: room.title,
     branches: branchesOf(room),
     problem: room.problem,
@@ -271,6 +273,7 @@ function broadcast(room, msg, except) {
 }
 
 function say(room, entry) {
+  entry.id ||= randomBytes(12).toString('base64url');
   entry.ts = Date.now();
   room.lastActivity = entry.ts;
   room.chat.push(entry);
@@ -322,7 +325,7 @@ function schedulePersist() {
       hostKey: r.hostKey, hostClaimed: r.hostClaimed,
       access: r.access, hostOnlySpend: r.hostOnlySpend,
       parent: r.parent || null,
-      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,specialists:r.specialists,
+      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,specialists:r.specialists,sharedContext:r.sharedContext,
       colorIdx: r.colorIdx, createdAt: r.createdAt, lastActivity: r.lastActivity,
     }));
     try {
@@ -357,7 +360,7 @@ function loadRooms() {
       hostOnlySpend: !!r.hostOnlySpend,
       parent: r.parent || null,
       agents: Array.isArray(r.agents) && r.agents.length ? r.agents : [{ ...DEFAULT_AGENT, color: AGENT_COLORS[0] }],
-      members:r.members || [], specialists:r.specialists || [], work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',message:'Server restarted. Local work is retained on its branch.'}:w), personalBridges:new Map(),
+      members:r.members || [], specialists:r.specialists || [],sharedContext:r.sharedContext, work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',message:'Server restarted. Local work is retained on its branch.'}:w), personalBridges:new Map(),
       chat: r.chat || [], autoT: null, queue: [], running: null, hops: 0,
       people: new Map(), bridges: new Map(),
       colorIdx: r.colorIdx || 0, createdAt: r.createdAt || Date.now(),
@@ -372,6 +375,7 @@ function loadRooms() {
 
 function snapshotFor(room, agent, directTask) {
   return {
+    sharedContext:contextSummary(room),
     agentName: agent.name,
     brief: agent.brief,
     soul: agent.soul || '',
@@ -1037,6 +1041,7 @@ wss.on('connection', (ws, req) => {
       if (ws.workspaceRoom) {
         if (msg.t === 'workspace_progress') workspace.progress(ws,room,msg);
         if (msg.t === 'workspace_chat_result') workspace.conversation.result(ws,room,msg);
+        if (msg.t === 'workspace_context_request') workspace.contextRequest(ws,room,msg);
         return;
       }
       if (msg.t === 'apply_result') {
@@ -1071,6 +1076,7 @@ wss.on('connection', (ws, req) => {
 
     const you = room.people.get(ws);
     if (!you) return;
+    if (workspace.sharedContext.handle(ws,room,you,msg)) return;
     if (workspace.handle(ws,room,you,msg)) return;
     if (['edit_title', 'edit_problem', 'edit_block', 'merge'].includes(msg.t) && !canSpeak(room, you)) {
       tell(ws, 'This table is view-only — only the host can change it.');

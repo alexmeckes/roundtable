@@ -1,4 +1,5 @@
 import {randomBytes} from 'node:crypto';
+import {contextSummary} from './context.js';
 
 const id=()=>randomBytes(18).toString('base64url');
 const label=bridge=>bridge.agentName || `${bridge.name}'s Codex`;
@@ -29,7 +30,7 @@ export function createConversation({say,announce,allowRun}) {
     },3*60_000);timer.unref();
     pending.set(key,{room,bridge,...next,timer});announce(room);
     bridge.ws.send(JSON.stringify({t:'workspace_chat',room:room.id,id:key,agentId:identity(bridge),agentName:label(bridge),agentRole:bridge.role || '',handle:bridge.handle,trigger:next.text,
-      context:{title:room.title,problem:room.problem,participants:enabled(room).map(b=>({name:label(b),handle:b.handle,owner:b.name,role:b.role || 'General collaborator',approach:b.approach})),chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-40).map(({author,text,kind})=>({author,text,kind})),work:room.work.slice(-12).map(({ownerName,agentName,title,status,summary})=>({ownerName,agentName,title,status,summary}))}}));
+      context:{shared:contextSummary(room,bridge.ownerId),title:room.title,problem:room.problem,participants:enabled(room).map(b=>({name:label(b),handle:b.handle,owner:b.name,role:b.role || 'General collaborator',approach:b.approach})),chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-40).map(({author,text,kind})=>({author,text,kind})),work:room.work.slice(-12).map(({ownerName,agentName,title,status,summary})=>({ownerName,agentName,title,status,summary}))}}));
   }
   function enqueue(room,bridge,text,chain){
     if(chain.remaining<=0 || (chain.visits.get(identity(bridge))||0)>=2)return;
@@ -64,5 +65,6 @@ export function createConversation({say,announce,allowRun}) {
     for(const bridge of room.personalBridges.values())if(!allowed.includes(bridge))stop(bridge);
     announce(room);
   }
-  return {human,result,stop,activity,reconcile};
+  function contextJob(ws,room,id){const job=pending.get(id);return job?.room===room && job.bridge.ws===ws && enabled(room).includes(job.bridge)?job:null;}
+  return {human,result,stop,activity,reconcile,contextJob};
 }

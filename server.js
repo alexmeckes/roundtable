@@ -322,7 +322,7 @@ function schedulePersist() {
       hostKey: r.hostKey, hostClaimed: r.hostClaimed,
       access: r.access, hostOnlySpend: r.hostOnlySpend,
       parent: r.parent || null,
-      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,
+      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,specialists:r.specialists,
       colorIdx: r.colorIdx, createdAt: r.createdAt, lastActivity: r.lastActivity,
     }));
     try {
@@ -357,7 +357,7 @@ function loadRooms() {
       hostOnlySpend: !!r.hostOnlySpend,
       parent: r.parent || null,
       agents: Array.isArray(r.agents) && r.agents.length ? r.agents : [{ ...DEFAULT_AGENT, color: AGENT_COLORS[0] }],
-      members:r.members || [], work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',message:'Server restarted. Local work is retained on its branch.'}:w), personalBridges:new Map(),
+      members:r.members || [], specialists:r.specialists || [], work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',message:'Server restarted. Local work is retained on its branch.'}:w), personalBridges:new Map(),
       chat: r.chat || [], autoT: null, queue: [], running: null, hops: 0,
       people: new Map(), bridges: new Map(),
       colorIdx: r.colorIdx || 0, createdAt: r.createdAt || Date.now(),
@@ -1090,6 +1090,7 @@ wss.on('connection', (ws, req) => {
           tell(ws, 'Only the host manages agents at this table.');
           break;
         }
+        if (workspace.command(ws,room,you,text)) break;
         if (handleCommand(room, you, text)) break;
         say(room, { author: you.name, kind: 'human', text, color: you.color });
         const personalConversation=workspace.conversation.human(room,you,text);

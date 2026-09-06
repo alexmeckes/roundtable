@@ -1,0 +1,3 @@
+Browser tab: 15, Title: "Untitled table — Roundtable", URL: "http://localhost:43145/s/general-work".
+There has been no change in the accessibility tree.
+The focused UI element is 48 button Start with my Codex, ID: workspace-start

@@ -418,3 +418,34 @@ test('mentioning a paused agent does not spend another agent’s compute; view-o
   assert.equal((await f.inspect()).chat.some(m=>m.text==='Late guest reply'),false);
   await chatMode(bob,'off');
 });
+
+test('specialists can join and accept owner work from chat, with separate conversation identities',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob'),a=await personalBridge(f,alice);
+  alice.send({t:'chat',text:'/specialist Mira | Research options and explain tradeoffs'});
+  const intro=await chatTask(a);assert.equal(intro.agentName,'Mira');assert.equal(intro.agentRole,'Research options and explain tradeoffs');assert.notEqual(intro.agentId,a.ownerId);
+  chatReply(a,intro,'I can research options.');await alice.wait(m=>m.t==='chat' && m.entry.author==='Mira');
+  bob.send({t:'chat',text:'@mira What should we compare?'});const discussion=await chatTask(a);assert.equal(discussion.agentId,intro.agentId);
+  chatReply(a,discussion,'Compare cost, usability, and reliability.');await alice.wait(m=>m.t==='chat' && m.entry.text.includes('Compare cost'));
+  bob.send({t:'chat',text:'/work @mira Spend Alice compute'});await bob.wait(m=>m.t==='chat' && m.entry.text.includes('only to your own'));assert.equal(a.ws.messages.some(m=>m.t==='workspace_task'),false);
+  alice.send({t:'chat',text:'/work @mira Write a decision brief'});const job=await a.task();assert.equal(job.agentId,intro.agentId);assert.equal(job.agentName,'Mira');assert.equal(job.agentRole,intro.agentRole);assert.ok(job.context.chat.some(m=>m.text.includes('Compare cost')));
+  alice.send({t:'workspace_specialist_retire',agentId:intro.agentId});await alice.wait(m=>m.t==='chat' && m.entry.text.includes('Stop this specialist'));
+  await upload(f,a,job,{status:'ready',summary:'Decision brief ready',deliverables:[{path:'decision.md',data:Buffer.from('# Decision').toString('base64')}]});
+  await alice.wait(m=>m.t==='chat' && m.entry.author==='Mira' && m.entry.activity && m.entry.text.includes('Decision brief ready'));
+  const output=await fetch(f.origin+'/api/rooms/room/work/'+job.id+'/deliverables/decision.md');assert.equal(await output.text(),'# Decision');assert.match(output.headers.get('content-disposition'),/^attachment/);assert.match(output.headers.get('content-security-policy'),/sandbox/);
+  alice.send({t:'workspace_specialist_retire',agentId:intro.agentId});await alice.wait(m=>m.t==='chat' && m.entry.text.includes('retired Mira'));
+  const state=await f.inspect();assert.equal(state.connections[0].agents.length,1);assert.ok(state.chat.some(m=>m.author==='Mira'));
+});
+
+test('specialist creation is bounded, owner pause cancels all its agents, and unsafe downloads are rejected',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),a=await personalBridge(f,alice);
+  const tasks=[];
+  for(let i=0;i<4;i++){alice.send({t:'workspace_specialist_create',name:'Researcher',role:'Research a topic'});tasks.push(await chatTask(a));}
+  assert.equal(new Set(tasks.map(j=>j.handle)).size,4);
+  alice.send({t:'workspace_specialist_create',name:'Fifth',role:'Extra'});await alice.wait(m=>m.t==='chat' && m.entry.text.includes('limit reached'));
+  await chatMode(alice,'off');for(let i=0;i<4;i++)await a.wait(m=>m.t==='workspace_chat_cancel');
+  for(const job of tasks)chatReply(a,job,'Late specialist reply');await pause(40);assert.equal((await f.inspect()).chat.some(m=>m.text==='Late specialist reply'),false);
+  alice.send({t:'workspace_start',instructions:'Document'});const job=await a.task();
+  for(const path of ['../secret.txt','.env','folder/.secret','a\\b','bad\nname'])assert.equal((await upload(f,a,job,{status:'ready',deliverables:[{path,data:'eA=='}]})).status,400);
+  assert.equal((await upload(f,a,job,{status:'ready',deliverables:[{path:'result.html',data:Buffer.from('<script>bad()</script>').toString('base64')}]})).status,200);
+  const output=await fetch(f.origin+'/api/rooms/room/work/'+job.id+'/deliverables/result.html');assert.match(output.headers.get('content-type'),/application\/octet-stream/);assert.match(output.headers.get('content-disposition'),/attachment/);
+});

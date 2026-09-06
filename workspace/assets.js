@@ -1,3 +1,5 @@
 import { extname } from 'node:path';
 export const MIME = {'.html':'text/html', '.js':'text/javascript', '.mjs':'text/javascript', '.css':'text/css', '.json':'application/json', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.gif':'image/gif', '.svg':'image/svg+xml', '.mp3':'audio/mpeg', '.ogg':'audio/ogg', '.wav':'audio/wav', '.woff2':'font/woff2', '.wasm':'application/wasm', '.glb':'model/gltf-binary', '.gltf':'model/gltf+json', '.bin':'application/octet-stream', '.fnt':'text/plain', '.atlas':'text/plain'};
 export const safeAsset = path => typeof path === 'string' && path.length < 200 && !path.startsWith('/') && path.split('/').every(p => p && p !== '.' && p !== '..' && !p.includes('\\') && !p.includes('\0')) && !!MIME[extname(path).toLowerCase()];
+// Downloads are always served as attachments, never rendered in the room origin.
+export const safeDeliverable = path => typeof path==='string' && path.length<200 && !path.startsWith('/') && !/[\x00-\x1f\x7f\\:]/.test(path) && path.split('/').every(p=>p && !p.startsWith('.') && p!=='node_modules');

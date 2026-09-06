@@ -481,6 +481,7 @@ body.offline .hint{color:#C25E5E}
 .work-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#f5f5f3;border-radius:8px;font-size:12px;max-height:40vh;overflow:auto}
 .work-close{float:right}.work-play{width:95vw}#workspace-preview{width:100%;height:65vh;border:0;background:#111}
 @media(max-width:860px){.doc{width:100%;min-width:0}}
+#specialist-add{border:1px solid #ded8ed;border-radius:6px;padding:5px 9px;margin-bottom:8px;background:white;cursor:pointer}#specialist-form{display:grid;gap:12px}#specialist-form input,#specialist-form textarea,#workspace-agent,#pair-mode{font:inherit;padding:8px;border:1px solid #ddd;border-radius:6px}#specialist-role{min-height:100px}.work-actions a{font-size:13px;overflow-wrap:anywhere}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -508,6 +509,7 @@ body.offline .hint{color:#C25E5E}
         <label for="conversation-mode">My Codex in the conversation</label>
         <select id="conversation-mode" disabled><option value="off">Paused</option><option value="auto">Join the conversation</option><option value="mentions">Only when @mentioned</option></select>
         <p id="conversation-help">Connect your Codex in Workspaces to bring it to the table.</p>
+        <button id="specialist-add" disabled>Add specialist</button>
         <div id="conversation-agents" aria-label="Agents at the table"></div>
       </div>
       <div class="chat-scroll" id="chat"></div>
@@ -536,16 +538,18 @@ body.offline .hint{color:#C25E5E}
       </div>
       <div class="doc-scroll">
 <section id="workspace-panel">
-  <h2>Build together</h2>
-  <p id="my-workspace">Bring your Codex and a local clone of the game.</p>
+  <h2>Work together</h2>
+  <p id="my-workspace">Bring your Codex and a folder of work.</p>
   <div class="work-actions"><button id="workspace-connect">Connect my Codex</button><button id="workspace-disconnect" hidden>Disconnect mine</button></div>
   <div id="workspace-connections"></div>
   <form id="workspace-form">
+    <label for="workspace-agent">Who should do this?</label><select id="workspace-agent"></select>
     <label for="workspace-task">What are you working on?</label>
-    <textarea id="workspace-task" maxlength="4000" placeholder="Add a dash to the player. Follow our movement conventions and test it."></textarea>
+    <textarea id="workspace-task" maxlength="4000" placeholder="Draft a proposal, compare options, analyze a spreadsheet, or improve the code."></textarea>
     <button id="workspace-start" disabled>Start with my Codex</button>
   </form>
-  <p id="workspace-empty">Everyone can work on a different part of the game. Contributions, checks, and playable builds appear here.</p>
+  <p id="workspace-empty">Work together on research, writing, design, data, or code. Results and deliverables appear here.</p>
+  <div id="specialist-roster"></div>
   <div id="workspace-cards"></div>
 </section>
 
@@ -636,11 +640,12 @@ body.offline .hint{color:#C25E5E}
 <dialog id="workspace-pair" class="work-dialog">
   <button data-close-workspace class="work-close">Close</button>
   <h2>Connect your Codex</h2>
-  <p>Use your own Codex login, instructions, skills, and tools. Run the command from your Roundtable checkout on your machine. Each task gets its own Git worktree.</p>
-  <label for="pair-project">Local game repository</label><input id="pair-project" placeholder="/path/to/game">
-  <label for="pair-check">Your setup, tests, and build command (optional)</label><input id="pair-check" placeholder="npm ci && npm test && npm run build">
-  <label for="pair-preview">Build folder to share (optional)</label><input id="pair-preview" placeholder="dist">
-  <p class="work-meta">Worktrees start from your committed HEAD. Build folders must contain a self-contained index.html. The room receives code changes, check output, and published preview files. Keep this connection command private.</p>
+  <p>Use your own Codex login, instructions, skills, and tools. Run the command from your Roundtable checkout on your machine. Use an ordinary folder for documents and research, or a Git repository for code changes.</p>
+  <label for="pair-mode">Workspace type</label><select id="pair-mode"><option value="folder">Folder — documents, research, data, and other work</option><option value="git">Git repository — isolated branches and patch review</option></select>
+  <label for="pair-project">Local work folder</label><input id="pair-project" placeholder="/path/to/work">
+  <label for="pair-check">Validation command (optional)</label><input id="pair-check" placeholder="npm ci && npm test && npm run build">
+  <label for="pair-preview">Preview folder (optional)</label><input id="pair-preview" placeholder="dist">
+  <p class="work-meta">Folder tasks write into separate output folders and share their deliverables. Git tasks start from your committed HEAD and publish reviewable patches. Optional previews need a self-contained index.html. Keep this connection command private.</p>
   <pre id="pair-command"></pre><button id="pair-copy">Copy command</button>
 </dialog>
 <dialog id="workspace-review" class="work-dialog">
@@ -652,9 +657,15 @@ body.offline .hint{color:#C25E5E}
   <label><input type="checkbox" id="review-accept"> I reviewed these changes and want them integrated into my local checkout.</label>
   <button id="review-integrate" disabled>Integrate into my checkout</button>
 </dialog>
+<dialog id="specialist-dialog" class="work-dialog">
+  <button data-close-workspace class="work-close">Close</button><h2>Bring a specialist to the table</h2>
+  <p>This agent uses your Codex and approach. Everyone can discuss work with it; you control its tasks. Up to four specialists per person.</p>
+  <form id="specialist-form"><label for="specialist-name">Name</label><input id="specialist-name" maxlength="40" required placeholder="Mira">
+  <label for="specialist-role">Role and approach</label><textarea id="specialist-role" maxlength="1000" required placeholder="Research options, check sources, and explain tradeoffs."></textarea><button type="submit">Create specialist</button></form>
+</dialog>
 <dialog id="workspace-play" class="work-dialog work-play">
   <button data-close-workspace class="work-close">Close</button><h2 id="play-title"></h2>
-  <iframe id="workspace-preview" title="Playable game build" sandbox="allow-scripts allow-pointer-lock" allow="gamepad" referrerpolicy="no-referrer"></iframe>
+  <iframe id="workspace-preview" title="Shared preview" sandbox="allow-scripts allow-pointer-lock" allow="gamepad" referrerpolicy="no-referrer"></iframe>
 </dialog>
 <script src="/workspace.js"></script>
 
@@ -774,7 +785,7 @@ const send = m => {
 };
 const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak});
 function hintText(){
-  if(document.body.classList.contains('work-mode')) return canSpeak()?'Talk with people and their Codex here. Click an agent to @mention it; start implementation in Workspaces.':'View-only — follow the group’s work and play their published builds.';
+  if(document.body.classList.contains('work-mode')) return canSpeak()?'Talk with people and their Codex here. Click an agent to @mention it; assign work with /work @handle instructions.':'View-only — follow the group’s work and review their shared results.';
   if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
   if(state.hostOnlySpend && !state.isHost) return 'Only the host can put agents to work here.';
   if(!state.agents.length) return 'No agents at the table — /agent Name: brief invites one.';
@@ -792,7 +803,7 @@ function showArrival(p){
   $('a-title').textContent = p.title || 'Untitled table';
   $('a-sub').textContent = host && !p.exists
     ? "Nobody's here yet — you'll be the host."
-    : `${n} ${n === 1 ? 'person' : 'people'} here · bring your Codex and build together`;
+    : `${n} ${n === 1 ? 'person' : 'people'} here · bring your Codex and work together`;
 
   const f = $('a-faces'); f.innerHTML = '';
   for(const x of [...p.people, ...p.agents.map(g => ({...g, agent:true}))].slice(0, 8)){
@@ -1167,7 +1178,7 @@ function renderChat(entry){
   if(entry.kind === 'branch'){ addBranchCard(entry); return; }
   if(entry.kind === 'system'){ addSystem(entry.text, entry.room); return; }
   const grouped = lastEntry &&
-    lastEntry.kind === entry.kind && lastEntry.author === entry.author && !!lastEntry.activity === !!entry.activity &&
+    lastEntry.kind === entry.kind && lastEntry.author === entry.author && lastEntry.agentId === entry.agentId && !!lastEntry.activity === !!entry.activity &&
     entry.ts && lastEntry.ts && (entry.ts - lastEntry.ts) < GROUP_WINDOW_MS;
   lastEntry = entry;
 
@@ -1183,7 +1194,7 @@ function renderChat(entry){
     m.innerHTML = `
       <div class="avatar" style="background:${esc(avatarBg(entry.color, entry.author))}">${esc((entry.author||'?')[0])}</div>
       <div class="body">
-        <div class="who">${esc(entry.author)}${entry.activity ? '<span class="via">work update</span>' : ''}${entry.via && state.brains.length > 1 ? `<span class="via">via ${esc(entry.via)}</span>` : ''}<span class="ts">${fmtTime(entry.ts)}</span></div>
+        <div class="who">${esc(entry.author)}${entry.agentOwnerName ? `<span class="via">${esc(entry.agentOwnerName)}’s agent</span>` : ''}${entry.activity ? '<span class="via">work update</span>' : ''}${entry.via && state.brains.length > 1 ? `<span class="via">via ${esc(entry.via)}</span>` : ''}<span class="ts">${fmtTime(entry.ts)}</span></div>
         <div class="text">${richText(entry.text)}</div>
       </div>`;
   }

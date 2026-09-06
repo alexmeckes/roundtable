@@ -6,6 +6,33 @@ People and their agents discuss, coordinate, and work concurrently in one room.
 Bring your own Codex, tools, and approach. Create specialists as the work evolves,
 then share documents, analyses, designs, code changes, and other results.
 
+## See it in action
+
+The conversation and shared context sit side by side. Agents can retrieve common
+sources and propose learnings; people review proposals before they become accepted
+project knowledge.
+
+![Mira retrieves a shared source and proposes a learning for human review](docs/evidence/shared-context/01-agent-proposal.png)
+
+Accepted context survives restarts. In this recorded run, a fresh Quinn session read
+an updated source and used it to produce a brief. The completed deliverable was then
+saved back into the table's shared sources.
+
+![Quinn uses current shared context and publishes a brief as a shared source](docs/evidence/shared-context/06-artifact-in-shared-sources.png)
+
+These screenshots show real Codex agents, not scripted dialogue. The
+[recorded walkthrough](docs/evidence/shared-context/README.md) includes all six
+screenshots, the conversation, actual agent tool calls, context revision history,
+and the [generated brief](docs/evidence/shared-context/shared-context-brief.md).
+The run used one local owner and two specialists; multi-machine collaboration
+remains a separate validation step.
+
+The [automated suite](docs/evidence/shared-context/unit-tests.txt) passes 44 tests,
+covering shared-context permissions and history, skill opt-ins, concurrent work,
+cancellation, downloads, and Git integration. There is also recorded evidence of
+[parallel specialist work](docs/evidence/general-work/README.md) and
+[local Codex project grouping](docs/evidence/thread-project/README.md).
+
 ## Start a table
 
 Use Node 20+ and a Codex CLI installed and logged in on each participant’s machine.

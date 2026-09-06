@@ -10,18 +10,23 @@ function option(name,fallback='') {const i=args.indexOf(name);if(i<0)return fall
 const workspaceMode=option('--workspace-mode','git');
 if(!['git','folder'].includes(workspaceMode))throw new Error('Workspace mode must be git or folder.');
 const codexBin=option('--codex-bin','codex');
+const codexProjectId=option('--codex-project-id');
 const projectPath=option('--project'),check=option('--check'),preview=option('--preview-dir'),approachFile=option('--approach-file'),model=option('--model',null),effort=option('--effort',null);
 const url=new URL(args[0] || 'http://invalid');
 const room=url.pathname.match(/^\/s\/([A-Za-z0-9_-]{1,80})\/?$/)?.[1];
 const token=process.env.ROUNDTABLE_PAIR_TOKEN;
 if(!room || !projectPath || !token || !['http:','https:'].includes(url.protocol)) {
-  console.error('Usage: ROUNDTABLE_PAIR_TOKEN=<from Connect my Codex> node bridge/workspace.js <room-url> --project /path/to/work [--workspace-mode folder|git] [--check "validation command"] [--preview-dir dist] [--approach-file path] [--model model] [--effort effort] [--codex-bin path]');process.exit(1);
+  console.error('Usage: ROUNDTABLE_PAIR_TOKEN=<from Connect my Codex> node bridge/workspace.js <room-url> --project /path/to/work [--workspace-mode folder|git] [--codex-project-id id] [--check "validation command"] [--preview-dir dist] [--approach-file path] [--model model] [--effort effort] [--codex-bin path]');process.exit(1);
 }
 const approach=approachFile?(await readFile(approachFile,'utf8')).slice(0,8000):'';
 const codex=new CodexAppServer({cwd:projectPath,command:codexBin});
 const Project=workspaceMode==='folder'?FolderProject:WorktreeProject;
 const project=new Project(projectPath,{check,preview,execute:params=>codex.run({...params,approach,model,effort})});
 const projectName=await project.initialize(); await codex.initialize();
+try {
+  const threadProject=await codex.useProject({cwd:project.project,projectId:codexProjectId});
+  console.log('Local Codex project: '+threadProject.name+' ('+threadProject.id+')');
+}catch(error){codex.close();throw error;}
 const jobs=new Map(),chatJobs=new Map();let ws,stopping=false;const chatThreads=new Map();
 let runStart=Date.now(),runs=0;
 async function post(job,result) {

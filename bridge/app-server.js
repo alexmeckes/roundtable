@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
+import {resolveThreadProject,threadName} from './thread-project.js';
 
 export class CodexAppServer {
   constructor({command='codex',args=['app-server'],cwd=process.cwd()}={}) {
@@ -50,11 +51,18 @@ export class CodexAppServer {
     await this.rpc('initialize',{clientInfo:{name:'roundtable-workspace',version:'0.2.0'},capabilities:{experimentalApi:true}});
     this.process.stdin.write(JSON.stringify({method:'initialized'})+'\n');
   }
+  async useProject(options){
+    try {
+      const project=await resolveThreadProject(this.rpc.bind(this),options);
+      this.projectId=project.id;return project;
+    }catch(error){throw new Error('Could not select the local Codex project. Use a CLI supporting project/list and thread projectId, and check --codex-project-id if supplied. '+error.message);}
+  }
   async run({cwd,job,signal,progress=()=>{},approach='',model=null,effort=null,conversation=false,sessionId=null,onThread=()=>{}}) {
     signal?.throwIfAborted();
-    const started=sessionId?{thread:{id:sessionId}}:await this.rpc('thread/start',{cwd,sandbox:conversation?'read-only':'workspace-write',approvalPolicy:'never',model});
+    const started=sessionId?{thread:{id:sessionId}}:await this.rpc('thread/start',{cwd,sandbox:conversation?'read-only':'workspace-write',approvalPolicy:'never',model,...(this.projectId?{projectId:this.projectId}:{})});
     const threadId=started.thread.id;
     onThread(threadId);
+    if(!sessionId && this.projectId)await this.rpc('thread/name/set',{threadId,name:threadName(job,conversation)});
     signal?.throwIfAborted();
     const context=JSON.stringify(job.context || {});
     const prompt=conversation

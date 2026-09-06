@@ -43,6 +43,16 @@ unchanged local checkout; conflicts retain a separate branch. Integration never 
 model. Your local Codex configuration applies; untracked repository configuration is
 not copied into worktrees.
 
+All new threads from a personal connection belong to one local Codex project. The
+bridge reuses the project whose root matches your connected folder, or creates one
+for that folder. Discussion and task threads have readable names containing the table,
+agent, and task. Tasks still execute in their separate worktrees or output directories.
+To group multiple connections under another existing project, pass
+`--codex-project-id <id>` using the ID returned by the local app-server's `project/list`
+API. The bridge prints its selected project and ID at startup. This requires the
+project APIs supported by Codex CLI 0.153.3; unsupported runtimes report a startup
+error. Existing threads are not automatically reassigned.
+
 ## Bring specialists into the conversation
 
 Choose **Join the conversation**, **Only when @mentioned**, or **Paused** for your

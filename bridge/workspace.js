@@ -18,7 +18,7 @@ const approach=approachFile?(await readFile(approachFile,'utf8')).slice(0,8000):
 const codex=new CodexAppServer({cwd:projectPath,command:codexBin});
 const project=new WorktreeProject(projectPath,{check,preview,execute:params=>codex.run({...params,approach,model,effort})});
 const projectName=await project.initialize(); await codex.initialize();
-const jobs=new Map();let ws,stopping=false;
+const jobs=new Map(),chatJobs=new Map();let ws,stopping=false,chatThread=null;
 let runStart=Date.now(),runs=0;
 async function post(job,result) {
   const response=await fetch(url.origin+'/api/rooms/'+room+'/work/'+job.id+'/result',{method:'POST',headers:{Authorization:'Bearer '+token,'X-Run-Token':job.runToken,'Content-Type':'application/json'},body:JSON.stringify(result),signal:AbortSignal.timeout(30_000)});
@@ -32,6 +32,19 @@ function connect(){
     if(!msg || msg.room!==room)return;
     if(msg.t==='workspace_connected'){console.log('Your Codex is connected to '+url.origin+'/s/'+room+' for '+projectName);return;}
     if(msg.t==='workspace_cancel'){jobs.get(msg.id)?.abort();return;}
+    if(msg.t==='workspace_chat_cancel'){chatJobs.get(msg.id)?.abort();return;}
+    if(msg.t==='workspace_chat'){
+      const connection=ws;
+      const reply=result=>{if(connection.readyState===1)connection.send(JSON.stringify({t:'workspace_chat_result',room,id:msg.id,...result}));};
+      if(Date.now()-runStart>3600_000){runStart=Date.now();runs=0;}
+      if(chatJobs.size || runs>=Number(process.env.ROUNDTABLE_BRIDGE_RUNS || 60)){reply({error:'Conversation busy or hourly budget exhausted.'});return;}
+      runs++;const controller=new AbortController();chatJobs.set(msg.id,controller);
+      try{
+        const text=await codex.run({cwd:project.project,job:msg,signal:controller.signal,approach,model,effort,conversation:true,sessionId:chatThread,onThread:id=>{chatThread=id;}});
+        if(!controller.signal.aborted)reply({text});
+      }catch(error){if(!controller.signal.aborted)reply({error:error.message});}
+      finally{chatJobs.delete(msg.id);}return;
+    }
     if(!['workspace_task','workspace_integrate'].includes(msg.t) || jobs.has(msg.id))return;
     if(Date.now()-runStart>3600_000){runStart=Date.now();runs=0;}
     if(jobs.size>=2 || runs>=Number(process.env.ROUNDTABLE_BRIDGE_RUNS || 60)) {
@@ -63,10 +76,11 @@ function connect(){
   ws.on('error',error=>console.error(error.message));
   ws.on('close',code=>{
     for(const controller of jobs.values())controller.abort();
+    for(const controller of chatJobs.values())controller.abort();
     if(code===1008){console.error('Connection revoked or pairing invalid. Generate a new connection command in the room.');stop();return;}
     if(!stopping)setTimeout(connect,3000);
   });
 }
-function stop(){if(stopping)return;stopping=true;for(const c of jobs.values())c.abort();ws?.close();codex.close();}
+function stop(){if(stopping)return;stopping=true;for(const c of [...jobs.values(),...chatJobs.values()])c.abort();ws?.close();codex.close();}
 process.on('SIGINT',stop);process.on('SIGTERM',stop);
 connect();

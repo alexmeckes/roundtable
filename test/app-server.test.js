@@ -56,3 +56,31 @@ test('cancellation waits for its delayed turn ID and stops background terminals 
   await new Promise(r=>setTimeout(r,250));
   await assert.rejects(access(log+'.finished'));
 });
+
+test('conversation preserves its thread and enforces read-only on every turn',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'roundtable-conversation-')),fixture=join(dir,'server.cjs'),log=join(dir,'calls.jsonl');
+  await writeFile(fixture,`
+    const {createInterface}=require('node:readline'),{appendFileSync}=require('node:fs');
+    const send=value=>process.stdout.write(JSON.stringify(value)+'\\n');
+    createInterface({input:process.stdin}).on('line',line=>{
+      const m=JSON.parse(line);appendFileSync(process.argv[2],line+'\\n');
+      if(m.method==='initialize')send({id:m.id,result:{}});
+      if(m.method==='thread/start')send({id:m.id,result:{thread:{id:'discussion'}}});
+      if(m.method==='turn/start'){
+        send({id:m.id,result:{turn:{id:'turn'}}});
+        send({method:'item/completed',params:{threadId:'discussion',item:{type:'agentMessage',text:'A useful reply'}}});
+        send({method:'turn/completed',params:{threadId:'discussion',turn:{status:'completed'}}});
+      }
+    });
+  `);
+  const server=new CodexAppServer({command:process.execPath,args:[fixture,log]});
+  t.after(async()=>{server.close();await rm(dir,{recursive:true,force:true});});
+  await server.initialize();let sessionId;
+  const params={cwd:dir,conversation:true,job:{agentName:'Alice',handle:'alice-codex',trigger:'Discuss dash'},onThread:id=>{sessionId=id;}};
+  assert.equal(await server.run(params),'A useful reply');
+  assert.equal(await server.run({...params,sessionId}),'A useful reply');
+  const calls=(await readFile(log,'utf8')).trim().split('\n').map(JSON.parse);
+  const starts=calls.filter(m=>m.method==='thread/start');assert.equal(starts.length,1);assert.equal(starts[0].params.sandbox,'read-only');
+  const turns=calls.filter(m=>m.method==='turn/start');assert.equal(turns.length,2);
+  for(const turn of turns){assert.equal(turn.params.threadId,'discussion');assert.equal(turn.params.sandboxPolicy.type,'readOnly');assert.match(turn.params.input[0].text,/Conversation is read-only/);}
+});

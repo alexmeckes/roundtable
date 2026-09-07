@@ -1,0 +1,72 @@
+[
+  {
+    "id": "fvvkGzV4V4DYMWo7ce8Nv05EIlDXvQGS",
+    "ownerName": "Alice",
+    "title": "Implement the movement part of our chat agreement in movement.js only. Preserve ",
+    "instructions": "Implement the movement part of our chat agreement in movement.js only. Preserve SPEED and normal movement; use the agreed fixed dash distance for action dash. No changes to coins or UI. Run the configured checks.",
+    "status": "ready",
+    "summary": "Updated `movement.js`: `dash` advances exactly 30 units; `SPEED` remains 10 and normal movement is unchanged. Only `movement.js` changed.\n\nValidation: `npm test` passed (2 tests); `npm run build` passed.",
+    "checks": "Passed: npm test && npm run build\n\n> test\n> node --test test.mjs\n\n✔ movement advances by its configured speed (0.374125ms)\n✔ score is numeric and collected coins cannot repeat (0.0615ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 46.989958\n\n> build\n> node build.mjs\n\n",
+    "files": [
+      "M\tmovement.js"
+    ],
+    "baseCommit": "f0e56ecbe8bf97b5bec351efc65f5c94bed371d6",
+    "headCommit": "1984b19dc19ca557766757be039f94e895ad8883",
+    "createdAt": 1788565419019,
+    "updatedAt": 1788565449550,
+    "sourceId": null
+  },
+  {
+    "id": "3hJTqv_jxz3BdCAcWTba9xLordGdTojW",
+    "ownerName": "Bob",
+    "title": "Implement the coin part of the corrected chat agreement in coins.js and game.js ",
+    "instructions": "Implement the coin part of the corrected chat agreement in coins.js and game.js only. Use our final backward-compatible signature and inclusive swept interval, award one coin at position 100 only once. Pass the previous position from game.js. Leave movement.js alone. Run the configured checks.",
+    "status": "ready",
+    "summary": "Implemented in `coins.js` and `game.js` only:\n\n- Added backward-compatible `coinScore(position, alreadyCollected, previousPosition = position)`.\n- Inclusive crossings in either direction award the coin once.\n- Game passes the position before movement.\n\nValidation: `npm test`, `npm run build`, and targeted crossing, endpoint, compatibility, repeat-collection, and reset checks all passed.",
+    "checks": "Passed: npm test && npm run build\n\n> test\n> node --test test.mjs\n\n✔ movement advances by its configured speed (0.902792ms)\n✔ score is numeric and collected coins cannot repeat (0.11325ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 36.656833\n\n> build\n> node build.mjs\n\n",
+    "files": [
+      "M\tcoins.js",
+      "M\tgame.js"
+    ],
+    "baseCommit": "f0e56ecbe8bf97b5bec351efc65f5c94bed371d6",
+    "headCommit": "852412d4ba2f102c527a587465e684ddf947e565",
+    "createdAt": 1788565419295,
+    "updatedAt": 1788565465256,
+    "sourceId": null
+  },
+  {
+    "id": "xIBcM0maM3wzmcg0yJC7ZMI3Ntlp4fll",
+    "ownerName": "Alice",
+    "title": "Integrate Implement the movement part of our chat agreement in movement.js only.",
+    "instructions": "Integrate Implement the movement part of our chat agreement in movement.js only. Preserve ",
+    "status": "integrated",
+    "summary": "Integrated fvvkGzV4V4DYMWo7ce8Nv05EIlDXvQGS into main",
+    "checks": "Passed: npm test && npm run build\n\n> test\n> node --test test.mjs\n\n✔ movement advances by its configured speed (0.258875ms)\n✔ score is numeric and collected coins cannot repeat (0.044583ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 36.922375\n\n> build\n> node build.mjs\n\n",
+    "files": [
+      "M\tmovement.js"
+    ],
+    "baseCommit": "f0e56ecbe8bf97b5bec351efc65f5c94bed371d6",
+    "headCommit": "1c08157450510d244b42f02d01bf1b20c34b24da",
+    "createdAt": 1788565487336,
+    "updatedAt": 1788565487822,
+    "sourceId": "fvvkGzV4V4DYMWo7ce8Nv05EIlDXvQGS"
+  },
+  {
+    "id": "b5yWVzhBPsbYkufHof0GxX-KuOHz5SwB",
+    "ownerName": "Alice",
+    "title": "Integrate Implement the coin part of the corrected chat agreement in coins.js an",
+    "instructions": "Integrate Implement the coin part of the corrected chat agreement in coins.js and game.js ",
+    "status": "integrated",
+    "summary": "Integrated 3hJTqv_jxz3BdCAcWTba9xLordGdTojW into main",
+    "checks": "Passed: npm test && npm run build\n\n> test\n> node --test test.mjs\n\n✔ movement advances by its configured speed (0.502959ms)\n✔ score is numeric and collected coins cannot repeat (0.06475ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 37.211083\n\n> build\n> node build.mjs\n\n",
+    "files": [
+      "M\tcoins.js",
+      "M\tgame.js"
+    ],
+    "baseCommit": "1c08157450510d244b42f02d01bf1b20c34b24da",
+    "headCommit": "fbbfbf05929411c264d81ced8b7d9d87ca80fc65",
+    "createdAt": 1788565502045,
+    "updatedAt": 1788565502539,
+    "sourceId": "3hJTqv_jxz3BdCAcWTba9xLordGdTojW"
+  }
+]

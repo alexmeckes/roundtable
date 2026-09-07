@@ -353,3 +353,68 @@ test('view-only owners can still stop their own active Codex and revoke its conn
   guest.send({t:'workspace_start',instructions:'More work'});await guest.wait(m=>m.t==='chat' && m.entry.text.includes('view-only'));
   guest.send({t:'workspace_disconnect'});await guest.wait(m=>m.t==='workspaces' && m.connections.length===0);
 });
+
+async function chatMode(person,mode){
+  person.send({t:'workspace_chat_mode',mode});
+  await person.wait(m=>m.t==='chat' && m.entry.kind==='system' && /invited their Codex|paused their Codex/.test(m.entry.text));
+}
+const chatTask=bridge=>bridge.wait(m=>m.t==='workspace_chat');
+const chatReply=(bridge,job,text)=>bridge.send({t:'workspace_chat_result',room:'room',id:job.id,text,author:'Spoofed'});
+
+test('personal conversation is owner opt-in, shared, authenticated, and bounded across agents',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob'),eve=await f.person('room','Eve');
+  const a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  eve.send({t:'workspace_chat_mode',mode:'auto',ownerId:a.ownerId});
+  await eve.wait(m=>m.t==='chat' && m.entry.text.includes('Connect your Codex'));
+  alice.send({t:'chat',text:'Nobody opted in yet'});await pause(40);
+  assert.equal(a.ws.messages.some(m=>m.t==='workspace_chat'),false);
+  await chatMode(alice,'mentions');await chatMode(bob,'mentions');
+  eve.send({t:'chat',text:'@alice-codex coordinate the dash with Bob'});
+  const first=await chatTask(a);
+  chatReply(b,first,'Impersonation');await pause(40);
+  assert.equal((await f.inspect()).chat.some(m=>m.text==='Impersonation'),false);
+  chatReply(a,first,'@bob-codex should dash collect coins?');
+  const second=await chatTask(b);
+  assert.ok(second.context.chat.some(m=>m.author==="Alice's Codex" && m.text.includes('collect coins')));
+  chatReply(b,second,'@alice-codex yes, collect along the swept path.');
+  chatReply(a,await chatTask(a),'@bob-codex agreed, test the endpoints too.');
+  chatReply(b,await chatTask(b),'@alice-codex agreed, ready for implementation.');
+  await pause(80);
+  assert.equal(a.ws.messages.some(m=>m.t==='workspace_chat'),false);
+  const messages=(await f.inspect()).chat.filter(m=>m.workspaceOwnerId);
+  assert.equal(messages.length,4);
+  assert.deepEqual(messages.map(m=>m.author),["Alice's Codex","Bob's Codex","Alice's Codex","Bob's Codex"]);
+});
+
+test('conversation queues follow-ups, runs beside work, passes discussion into tasks, and pause rejects late replies',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  await chatMode(alice,'auto');await chatMode(bob,'auto');
+  alice.send({t:'chat',text:'Discuss the game'});
+  const [first,other]=await Promise.all([chatTask(a),chatTask(b)]);
+  alice.send({t:'chat',text:'Keep the dash deterministic'});
+  chatReply(a,first,'Use a fixed 30-unit dash.');
+  const follow=await chatTask(a);assert.match(follow.trigger,/deterministic/);
+  alice.send({t:'workspace_start',instructions:'Implement our dash agreement'});
+  const work=await a.task();assert.ok(work.context.chat.some(m=>m.text==='Use a fixed 30-unit dash.'));
+  await chatMode(alice,'off');
+  assert.equal((await a.wait(m=>m.t==='workspace_chat_cancel')).id,follow.id);
+  chatReply(a,follow,'Late paused answer');
+  chatReply(b,other,'Bob can still talk.');await chatTask(b);
+  assert.equal((await upload(f,a,work,{status:'ready',summary:'Dash implemented'})).status,200);
+  await pause(60);assert.equal((await f.inspect()).chat.some(m=>m.text==='Late paused answer'),false);
+});
+
+test('mentioning a paused agent does not spend another agent’s compute; view-only cancels guest discussion',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  await chatMode(bob,'auto');
+  alice.send({t:'chat',text:'@alice-codex this agent is paused'});await pause(60);
+  assert.equal(b.ws.messages.some(m=>m.t==='workspace_chat'),false);
+  alice.send({t:'chat',text:'@bob-codex please discuss'});const job=await chatTask(b);
+  alice.send({t:'set_access',tier:'view',hostOnlySpend:true});
+  assert.equal((await b.wait(m=>m.t==='workspace_chat_cancel')).id,job.id);
+  chatReply(b,job,'Late guest reply');await pause(40);
+  assert.equal((await f.inspect()).chat.some(m=>m.text==='Late guest reply'),false);
+  await chatMode(bob,'off');
+});

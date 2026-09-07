@@ -1,0 +1,43 @@
+
+> roundtable@0.1.0 test
+> node --test
+
+✔ cancellation waits for its delayed turn ID and stops background terminals without cancelling a sibling turn (394.5635ms)
+✔ conversation preserves its thread and enforces read-only on every turn (23.989625ms)
+✔ new room hosts cannot use shared compute; operator-approved rooms can (145.8625ms)
+✔ room-scoped bridge works without shared authorization and cannot leak to another room (119.797583ms)
+✔ house compute is also denied to new rooms by default (76.599125ms)
+✔ view-only guests cannot mutate canvas, title, problem, agents, auto or access (180.728875ms)
+✔ late agent results cannot overwrite human edits, and snapshots stay immutable (155.570875ms)
+✔ stale human edits retain drafts and cannot target replacement blocks by index (180.238708ms)
+✔ busy and queued agents retain every explicit follow-up in order (145.704208ms)
+✔ auto replies received during a turn queue a follow-up with the latest conversation (1470.247167ms)
+✔ branch merge cannot overwrite newer parent work; retry succeeds (227.219958ms)
+✔ host-only spend also blocks merge for guests in open rooms (132.269625ms)
+✔ malformed messages and repeated joins cannot corrupt room membership (127.151375ms)
+✔ diff application requires current block identity and a room-scoped bridge (176.586917ms)
+✔ branches do not inherit shared compute authorization (130.414459ms)
+✔ room creation limits reject branching without terminating the server (98.506667ms)
+✔ friends run their own Codex concurrently even when host-only shared spending is enabled (206.52325ms)
+✔ member identity survives reconnection and a matching display name grants no ownership (138.822875ms)
+✔ pairing tokens are room-scoped and rotation revokes old connections and late results (154.42175ms)
+✔ preview files are bounded and sandboxed; traversal is rejected (124.663458ms)
+✔ integration is dispatched to the receiving person, not the author or room host (170.149084ms)
+✔ view-only owners can still stop their own active Codex and revoke its connection (153.852125ms)
+✔ personal conversation is owner opt-in, shared, authenticated, and bounded across agents (403.052458ms)
+✔ conversation queues follow-ups, runs beside work, passes discussion into tasks, and pause rejects late replies (296.882208ms)
+✔ mentioning a paused agent does not spend another agent’s compute; view-only cancels guest discussion (299.410292ms)
+✔ two independent Codex workspaces contribute different features into one game (971.779875ms)
+✔ conflicting contributions retain an integration branch without modifying the receiving checkout (854.909291ms)
+✔ failed checks and dirty target checkouts prevent integration (465.680541ms)
+✔ new files and self-contained preview assets travel with a contribution (594.182541ms)
+✔ preview collection refuses symlinks and task failure retains local work (367.179291ms)
+✔ owner cancellation just before integration leaves the target checkout unchanged (603.149875ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5371.49125

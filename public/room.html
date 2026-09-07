@@ -454,8 +454,14 @@ body.offline .hint{color:#C25E5E}
 }
 
 .work-mode #brain-panel{display:none!important}
-.work-mode #brain,.work-mode #btn-auto,.work-mode #btn-new-agent{display:none}
-.doc{width:52%;min-width:360px}
+.work-mode #brain,.work-mode #btn-auto,.work-mode #btn-new-agent,.work-mode .faces .agent,.work-mode .a-faces .agent{display:none}
+.doc{width:38%;min-width:320px}
+.conversation-bar{padding:12px 20px;border-bottom:1px solid #e8e6e1;font-size:12px;background:#faf9f6}
+.conversation-bar label{font-weight:600}.conversation-bar select{margin:0 8px;padding:5px;border:1px solid #ddd;border-radius:6px;background:white}
+.conversation-bar p{margin:6px 0;color:#777}
+#conversation-agents{display:flex;gap:6px;flex-wrap:wrap}
+#conversation-agents button{border:1px solid #ded8ed;background:#f1edf8;color:#58457e;border-radius:18px;padding:6px 10px;cursor:pointer}
+.msg.activity .text{font-size:12px;color:#777}
 #workspace-panel h2{margin:0 0 8px;font-size:22px}
 #workspace-panel p{font-size:13px;line-height:1.5}
 #workspace-panel button,.work-dialog button{border:1px solid #dededb;border-radius:7px;background:#fff;padding:8px 11px;cursor:pointer;color:#37352f}
@@ -498,6 +504,12 @@ body.offline .hint{color:#C25E5E}
 
   <main>
     <section class="chat">
+      <div class="conversation-bar">
+        <label for="conversation-mode">My Codex in the conversation</label>
+        <select id="conversation-mode" disabled><option value="off">Paused</option><option value="auto">Join the conversation</option><option value="mentions">Only when @mentioned</option></select>
+        <p id="conversation-help">Connect your Codex in Workspaces to bring it to the table.</p>
+        <div id="conversation-agents" aria-label="Agents at the table"></div>
+      </div>
       <div class="chat-scroll" id="chat"></div>
       <div id="brain-panel">
         <div class="bp-title">This table has no brain yet</div>
@@ -762,7 +774,7 @@ const send = m => {
 };
 const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak});
 function hintText(){
-  if(document.body.classList.contains('work-mode')) return canSpeak()?'Talk with the group here. Start project work with your own Codex in Workspaces.':'View-only — follow the group’s work and play their published builds.';
+  if(document.body.classList.contains('work-mode')) return canSpeak()?'Talk with people and their Codex here. Click an agent to @mention it; start implementation in Workspaces.':'View-only — follow the group’s work and play their published builds.';
   if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
   if(state.hostOnlySpend && !state.isHost) return 'Only the host can put agents to work here.';
   if(!state.agents.length) return 'No agents at the table — /agent Name: brief invites one.';
@@ -1155,13 +1167,14 @@ function renderChat(entry){
   if(entry.kind === 'branch'){ addBranchCard(entry); return; }
   if(entry.kind === 'system'){ addSystem(entry.text, entry.room); return; }
   const grouped = lastEntry &&
-    lastEntry.kind === entry.kind && lastEntry.author === entry.author &&
+    lastEntry.kind === entry.kind && lastEntry.author === entry.author && !!lastEntry.activity === !!entry.activity &&
     entry.ts && lastEntry.ts && (entry.ts - lastEntry.ts) < GROUP_WINDOW_MS;
   lastEntry = entry;
 
   const m = el('div','msg' + (entry.kind === 'agent' ? ' agent' : '') + (grouped ? ' cont' : '') + (entry.ctx ? ' ctx' : ''));
   if(entry.ctx) m.title = 'Context carried from the parent table';
-  if(entry.kind === 'agent') m.dataset.agent = entry.author;
+  if(entry.kind === 'agent' && !entry.workspaceOwnerId) m.dataset.agent = entry.author;
+  if(entry.activity)m.classList.add('activity');
   if(grouped){
     m.innerHTML = `
       <span class="gutter-ts">${fmtTime(entry.ts)}</span>
@@ -1170,7 +1183,7 @@ function renderChat(entry){
     m.innerHTML = `
       <div class="avatar" style="background:${esc(avatarBg(entry.color, entry.author))}">${esc((entry.author||'?')[0])}</div>
       <div class="body">
-        <div class="who">${esc(entry.author)}${entry.via && state.brains.length > 1 ? `<span class="via">via ${esc(entry.via)}</span>` : ''}<span class="ts">${fmtTime(entry.ts)}</span></div>
+        <div class="who">${esc(entry.author)}${entry.activity ? '<span class="via">work update</span>' : ''}${entry.via && state.brains.length > 1 ? `<span class="via">via ${esc(entry.via)}</span>` : ''}<span class="ts">${fmtTime(entry.ts)}</span></div>
         <div class="text">${richText(entry.text)}</div>
       </div>`;
   }

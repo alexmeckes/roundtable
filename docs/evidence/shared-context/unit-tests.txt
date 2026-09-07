@@ -1,0 +1,56 @@
+
+> roundtable@0.1.0 test
+> node --test
+
+✔ cancellation waits for its delayed turn ID and stops background terminals without cancelling a sibling turn (394.13875ms)
+✔ conversation preserves its thread and enforces read-only on every turn (25.809333ms)
+✔ dynamic context calls route only supported tools to the active turn (26.215458ms)
+✔ context keeps accepted knowledge separate from proposals, preserves history, and survives serialization (1.401833ms)
+✔ shared skill adoption belongs to a person and exact version, never installs tools (0.228042ms)
+✔ context validates links, evidence, bounds, and conversation attribution (0.316833ms)
+✔ ordinary folders support parallel document work without modifying source inputs (8.020375ms)
+✔ deliverables exclude private files and reject symlinks and oversized outputs (7.936291ms)
+✔ new room hosts cannot use shared compute; operator-approved rooms can (146.629125ms)
+✔ room-scoped bridge works without shared authorization and cannot leak to another room (125.216958ms)
+✔ house compute is also denied to new rooms by default (83.916708ms)
+✔ view-only guests cannot mutate canvas, title, problem, agents, auto or access (190.923292ms)
+✔ late agent results cannot overwrite human edits, and snapshots stay immutable (164.999042ms)
+✔ stale human edits retain drafts and cannot target replacement blocks by index (190.413959ms)
+✔ busy and queued agents retain every explicit follow-up in order (160.225458ms)
+✔ auto replies received during a turn queue a follow-up with the latest conversation (1487.226375ms)
+✔ branch merge cannot overwrite newer parent work; retry succeeds (224.1705ms)
+✔ host-only spend also blocks merge for guests in open rooms (138.6075ms)
+✔ malformed messages and repeated joins cannot corrupt room membership (121.372667ms)
+✔ diff application requires current block identity and a room-scoped bridge (175.2545ms)
+✔ branches do not inherit shared compute authorization (132.920375ms)
+✔ room creation limits reject branching without terminating the server (101.696584ms)
+✔ friends run their own Codex concurrently even when host-only shared spending is enabled (203.909958ms)
+✔ member identity survives reconnection and a matching display name grants no ownership (138.661292ms)
+✔ pairing tokens are room-scoped and rotation revokes old connections and late results (152.213167ms)
+✔ preview files are bounded and sandboxed; traversal is rejected (125.524167ms)
+✔ integration is dispatched to the receiving person, not the author or room host (166.174209ms)
+✔ view-only owners can still stop their own active Codex and revoke its connection (153.358125ms)
+✔ personal conversation is owner opt-in, shared, authenticated, and bounded across agents (400.8355ms)
+✔ conversation queues follow-ups, runs beside work, passes discussion into tasks, and pause rejects late replies (282.618084ms)
+✔ mentioning a paused agent does not spend another agent’s compute; view-only cancels guest discussion (288.653292ms)
+✔ specialists can join and accept owner work from chat, with separate conversation identities (219.445792ms)
+✔ specialist creation is bounded, owner pause cancels all its agents, and unsafe downloads are rejected (241.404625ms)
+✔ shared context edits preserve concurrent work, original attribution, and room permissions (175.90575ms)
+✔ agent context tools are room and run scoped, proposals need human acceptance, and cancellation revokes access (321.001416ms)
+✔ project selection finds a canonical root across pages and respects an explicit project (4.547291ms)
+✔ new project creation uses a stable canonical directory identity (1.306542ms)
+✔ discussion and work share one project while retaining separate execution directories (0.805167ms)
+✔ two independent Codex workspaces contribute different features into one game (1101.383125ms)
+✔ conflicting contributions retain an integration branch without modifying the receiving checkout (876.01ms)
+✔ failed checks and dirty target checkouts prevent integration (459.060459ms)
+✔ new files and self-contained preview assets travel with a contribution (572.491167ms)
+✔ preview collection refuses symlinks and task failure retains local work (362.865708ms)
+✔ owner cancellation just before integration leaves the target checkout unchanged (612.213792ms)
+ℹ tests 44
+ℹ suites 0
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6379.340583

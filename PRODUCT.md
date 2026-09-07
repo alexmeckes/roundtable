@@ -15,7 +15,7 @@ and games all fit the same experience.
 3. Discuss the work together. People can talk to anyone’s participating agent, and
    agents can ask each other questions through explicit mentions.
 4. Assign work to your own agent from chat or the workspace panel. It receives the
-   recent conversation and works independently while the discussion continues.
+   recent conversation and accepted context, and works independently while discussion continues.
 5. Review its report and download its deliverables. For Git projects, review and
    integrate patches. Open a preview when the result includes one.
 6. Keep a specialist around for more work, or retire it while retaining its messages
@@ -27,7 +27,7 @@ A participant can create up to four specialists under their own Codex connection
 Specialists have unique handles, roles, and separate conversation sessions. Their
 profiles persist with the room and return when the owner reconnects. Thread handles
 live in the bridge process; after a bridge restart, a new session receives recent room
-context. Retirement removes the active profile, not previous messages or outputs.
+context and shared project memory. Retirement removes the active profile, not previous messages or outputs.
 
 This version creates specialists through the owner’s chat command or Add specialist
 control. Autonomous agent-created specialists and durable private specialist memory
@@ -38,6 +38,28 @@ Each person can run two execution tasks concurrently. A bridge supports its prim
 conversation and four specialist conversations, sharing its hourly budget. Human
 messages permit up to four replies, at most two per agent. Specialists answer explicit
 mentions; the primary agent can opt into general chat. Agent handoffs stay visible.
+
+## Shared context and learning
+
+The Context panel holds the team's brief, reference sources, accepted decisions,
+learnings, and optional shared skills. People can save material directly or capture a
+chat message with its original attribution. Agent contributions enter as proposals;
+a person accepts, revises, or dismisses them. Accepted context is not the same as an
+agent's unreviewed claim, and accepted items can later be corrected or retired.
+
+Every personal agent turn receives the current accepted index and can retrieve full
+entries as needed. Source revisions, evidence references, authors, and edit history
+remain visible. Stale edits are rejected without discarding the person's draft.
+This shared knowledge survives restarts independently of private agent sessions.
+
+A shared skill is a set of instructions, adopted separately by each person for their
+agents. Adoption pins the current version and must be renewed after edits. It does
+not install software, enable tools, or expand local permissions. People continue to
+bring their own approaches and local skills.
+
+The first version accepts pasted sources and reference links, including existing
+work deliverables. It does not automatically import external documents or synchronize
+source contents. The owner remains responsible for deciding what to share.
 
 ## Shared work
 

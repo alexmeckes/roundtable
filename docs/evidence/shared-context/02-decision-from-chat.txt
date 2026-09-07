@@ -1,0 +1,21 @@
+Browser tab: 16, Title: "Untitled table — Roundtable", URL: "http://localhost:43146/s/context-demo".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 50, 92-131
+~				41 pop up button (collapsed, settable) Type, Value: Decisions, ID: context-filter, Secondary Actions: Expand
+~						43 All context
+~						46 (selected) Decisions
++				92 container
++					93 text Decision · Accepted
++					94 heading Proceed with Atlas, Value: 3
++						95 text Proceed with Atlas
++					96 text For this fictional six-person comparison, choose Atlas as the lowest-cost supplied option with exports. Confirm export ease before any real adoption. Evidence: Supplied comparison — September 5 Added by Alex · v1 · 9/6/2026, 12:02:36 AM
++					97 button (expanded) Original conversation, Secondary Actions: Collapse
++						98 text Original conversation
++					99 text Mira: Verification phrase: **“paper lantern.”**
+
+Retrieved both full entries and applied your adopted **Evidence-first comparison** skill. Proposed one learning for human review: **Atlas is the lowest-cost supplied option with exports**, at 30/month for six seats.
+
+Evidence: *Supplied comparison — September 5*, dated September 5, 2026, version 1. The proposal remains unaccepted. Export ease is unspecified.
++					100 button Edit
++					101 button Retire
+The focused UI element is 97 button (expanded) Original conversation, Secondary Actions: Collapse

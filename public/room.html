@@ -483,6 +483,10 @@ body.offline .hint{color:#C25E5E}
 @media(max-width:860px){.doc{width:100%;min-width:0}}
 #specialist-add{border:1px solid #ded8ed;border-radius:6px;padding:5px 9px;margin-bottom:8px;background:white;cursor:pointer}#specialist-form{display:grid;gap:12px}#specialist-form input,#specialist-form textarea,#workspace-agent,#pair-mode{font:inherit;padding:8px;border:1px solid #ddd;border-radius:6px}#specialist-role{min-height:100px}.work-actions a{font-size:13px;overflow-wrap:anywhere}
 [hidden]{display:none!important}
+
+#context-panel{padding:0 2px 24px}#context-panel label,#context-form label{display:block;font-size:12px;margin:14px 0 5px;color:var(--muted)}
+#context-panel input[type=search],#context-panel select,#context-form input,#context-form select,#context-form textarea{width:100%;box-sizing:border-box;font:inherit;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
+.context-intro,#context-empty{font-size:13px;color:var(--muted);line-height:1.6}.context-card{padding:16px;margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.context-card.proposed{border-color:#bba36b;background:#fffbf1}.context-card.retired{opacity:.65}.context-card h3{font-size:15px;margin:7px 0}.context-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;max-height:260px;overflow:auto}.context-meta,#context-count{font-size:11px;color:var(--muted);line-height:1.5}.context-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}.context-actions button,#context-save{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:var(--bg);cursor:pointer}.context-card details{font-size:12px;margin-top:12px}.context-save-chat{font:inherit;font-size:11px;color:var(--muted);background:none;border:0;padding:5px 0;cursor:pointer}.context-toggle input{width:auto}#context-form-error,#context-notice{font-size:12px;color:#a23939}#context-dialog{width:min(580px,90vw)}
 </style>
 </head>
 <body class="work-mode">
@@ -499,6 +503,7 @@ body.offline .hint{color:#C25E5E}
     <div class="faces" id="faces"></div>
     <button class="icon-btn" id="btn-new-agent" title="Invite a new agent">+</button>
     <button class="icon-btn" id="btn-auto" title="Auto-reply: agents chime in without being @mentioned">Auto</button>
+    <button class="icon-btn" id="btn-context">Context</button>
     <button class="icon-btn" id="btn-workspaces">Workspaces</button>
     <button class="icon-btn" id="btn-doc" title="Toggle the canvas">Canvas</button>
   </header>
@@ -537,6 +542,16 @@ body.offline .hint{color:#C25E5E}
         <span class="writing">agent writing…</span>
       </div>
       <div class="doc-scroll">
+<section id="context-panel" hidden>
+  <p class="context-intro">A shared brief, sources, decisions, and learnings. People review agent proposals before they become accepted context.</p>
+  <div class="context-actions"><button id="context-add">Add context</button><span id="context-count"></span></div>
+  <p id="context-notice" role="status"></p>
+  <label for="context-search">Find context</label><input id="context-search" type="search" placeholder="Search titles and details">
+  <label for="context-filter">Type</label><select id="context-filter"><option value="">All context</option value="brief">Brief</option><option value="source">Sources</option><option value="decision">Decisions</option><option value="learning">Learnings</option><option value="skill">Skills</option></select>
+  <label class="context-toggle"><input id="context-retired" type="checkbox"> Show retired</label>
+  <p id="context-empty">Add the shared brief or a source to give everyone a common starting point.</p>
+  <div id="context-items"></div>
+</section>
 <section id="workspace-panel">
   <h2>Work together</h2>
   <p id="my-workspace">Bring your Codex and a folder of work.</p>
@@ -667,6 +682,19 @@ body.offline .hint{color:#C25E5E}
   <button data-close-workspace class="work-close">Close</button><h2 id="play-title"></h2>
   <iframe id="workspace-preview" title="Shared preview" sandbox="allow-scripts allow-pointer-lock" allow="gamepad" referrerpolicy="no-referrer"></iframe>
 </dialog>
+<dialog id="context-dialog" class="work-dialog">
+  <button id="context-close" class="work-close">Close</button><h2 id="context-form-title">Add shared context</h2>
+  <form id="context-form">
+    <label for="context-kind">Context type</label><select id="context-kind"><option value="brief">Brief</option><option value="source">Source</option><option value="decision">Decision</option><option value="learning">Learning</option><option value="skill">Skill</option></select>
+    <label for="context-title">Title</label><input id="context-title" maxlength="120" required>
+    <label for="context-body">Details</label><textarea id="context-body" rows="7" maxlength="6000" required></textarea>
+    <label for="context-url">Source link (optional)</label><input id="context-url" type="url" maxlength="2000" placeholder="https://…">
+    <label for="context-refs">Evidence from this table (optional)</label><select id="context-refs" multiple size="3"></select>
+    <p class="context-meta">Skills are shared instructions. Each person chooses whether their agents use a version; no local tools or plugins are installed.</p>
+    <p id="context-form-error" role="alert"></p><button id="context-save">Save context</button>
+  </form>
+</dialog>
+<script src="/context.js"></script>
 <script src="/workspace.js"></script>
 
 <script>
@@ -768,6 +796,7 @@ function connect(){
   ws.addEventListener('close', () => {
     preservePendingCanvasEdits();
     workspaceUI.update(undefined,[]);
+    contextUI.disconnected();
     clog('socket closed; retrying in', retryDelay/1000 + 's');
     setConnected(false);
     setTimeout(connect, retryDelay);
@@ -783,7 +812,8 @@ const send = m => {
   clog('send dropped (socket not open):', m.t);
   return false;
 };
-const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak});
+const contextUI=createContextUI({send,roomId,getYou:()=>state.you,canSpeak});
+const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
 function hintText(){
   if(document.body.classList.contains('work-mode')) return canSpeak()?'Talk with people and their Codex here. Click an agent to @mention it; assign work with /work @handle instructions.':'View-only — follow the group’s work and review their shared results.';
   if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
@@ -894,6 +924,7 @@ function setAccess(tier, hostOnlySpend){
   document.querySelectorAll('#canvas .btext').forEach(n => { n.contentEditable = String(!mute); });
   $('btn-auto').disabled = !canManage();
   workspaceUI.update();
+  contextUI.update();
   $('chat-text').disabled = mute;
   $('btn-send').style.display = mute ? 'none' : '';
   $('chat-text').placeholder = mute ? 'View-only — the host is speaking' : 'Message the table…';
@@ -932,6 +963,7 @@ function onMessage(ev){
       if(m.hostKey) localStorage.setItem(HOST_KEY_STORE, m.hostKey);
       if(m.memberKey) localStorage.setItem(MEMBER_STORE,m.memberKey);
       workspaceUI.update(m.state.work || [],m.state.connections || []);
+      contextUI.update(m.state.sharedContext || {revision:0,entries:[],adoptions:{}});
       state.people = m.state.people;
       if(m.state.parent){
         $('h-parent').style.display = '';
@@ -967,6 +999,8 @@ function onMessage(ev){
       readCanvasDrafts().forEach(draft => renderChat({kind:'system', text:'Unsaved canvas draft (copy to recover):\n' + draft}));
       break;
     }
+    case 'context': contextUI.update(m.context); break;
+    case 'context_saved': case 'context_error': contextUI.result(m); break;
     case 'workspaces': workspaceUI.update(m.work,m.connections); break;
     case 'workspace_progress': workspaceUI.progress(m.id,m.message); break;
     case 'workspace_pair': workspaceUI.pair(m.token); break;
@@ -1198,6 +1232,7 @@ function renderChat(entry){
         <div class="text">${richText(entry.text)}</div>
       </div>`;
   }
+  if(entry.id){const save=el('button','context-save-chat');save.textContent='Save to context';save.disabled=!canSpeak();save.onclick=()=>contextUI.fromMessage(entry);m.querySelector('.body').append(save);}
   appendMsg(m);
 }
 // Branch events render as proper cards — a fork in the table's life deserves
@@ -1266,21 +1301,19 @@ $('chat-text').addEventListener('input', () => {
 const docOpenDefault = matchMedia('(min-width: 861px)').matches;
 $('doc').classList.toggle('closed', !docOpenDefault);
 $('btn-workspaces').classList.toggle('open', docOpenDefault);
-function showWorkPanel(work){
-  if(document.body.classList.contains('work-mode')===work && !$('doc').classList.contains('closed')){
-    $('doc').classList.add('closed');
-    $('btn-workspaces').classList.remove('open'); $('btn-doc').classList.remove('open');
-    return;
-  }
-  document.body.classList.toggle('work-mode',work);
-  $('hint').textContent=hintText();
-  $('panel-heading').textContent=work?'Workspaces':'Canvas';
-  $('workspace-panel').hidden=!work; $('canvas-panel').hidden=work;
+let activePanel='work';
+function showPanel(panel){
+  const closed=$('doc').classList.contains('closed');
+  if(activePanel===panel && !closed){$('doc').classList.add('closed');for(const id of ['btn-workspaces','btn-doc','btn-context'])$(id).classList.remove('open');return;}
+  activePanel=panel;document.body.classList.toggle('work-mode',panel!=='canvas');
+  $('hint').textContent=hintText();$('panel-heading').textContent={work:'Workspaces',canvas:'Canvas',context:'Context'}[panel];
+  $('workspace-panel').hidden=panel!=='work';$('canvas-panel').hidden=panel!=='canvas';$('context-panel').hidden=panel!=='context';
   $('doc').classList.remove('closed');
-  $('btn-workspaces').classList.toggle('open',work); $('btn-doc').classList.toggle('open',!work);
+  $('btn-workspaces').classList.toggle('open',panel==='work');$('btn-doc').classList.toggle('open',panel==='canvas');$('btn-context').classList.toggle('open',panel==='context');
 }
-$('btn-doc').addEventListener('click',()=>showWorkPanel(false));
-$('btn-workspaces').addEventListener('click',()=>showWorkPanel(true));
+$('btn-doc').addEventListener('click',()=>showPanel('canvas'));
+$('btn-workspaces').addEventListener('click',()=>showPanel('work'));
+$('btn-context').addEventListener('click',()=>showPanel('context'));
 
 let probT;
 $('d-problem').addEventListener('input', () => {

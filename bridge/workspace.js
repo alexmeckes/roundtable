@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
+import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
 import {FolderProject} from './folder.js';
 import { WorktreeProject } from './worktree.js';
@@ -21,13 +22,26 @@ if(!room || !projectPath || !token || !['http:','https:'].includes(url.protocol)
 const approach=approachFile?(await readFile(approachFile,'utf8')).slice(0,8000):'';
 const codex=new CodexAppServer({cwd:projectPath,command:codexBin});
 const Project=workspaceMode==='folder'?FolderProject:WorktreeProject;
-const project=new Project(projectPath,{check,preview,execute:params=>codex.run({...params,approach,model,effort})});
+const project=new Project(projectPath,{check,preview,execute:params=>codex.run({...params,approach,model,effort,contextTool:(name,args)=>requestContext(params.job,name,args,params.signal)})});
 const projectName=await project.initialize(); await codex.initialize();
 try {
   const threadProject=await codex.useProject({cwd:project.project,projectId:codexProjectId});
   console.log('Local Codex project: '+threadProject.name+' ('+threadProject.id+')');
 }catch(error){codex.close();throw error;}
 const jobs=new Map(),chatJobs=new Map();let ws,stopping=false;const chatThreads=new Map();
+const contextRequests=new Map();
+function requestContext(job,name,args,signal){
+  signal?.throwIfAborted();
+  if(ws?.readyState!==1)return Promise.reject(new Error('The table is disconnected.'));
+  const requestId=randomBytes(12).toString('base64url');
+  return new Promise((resolve,reject)=>{
+    const finish=(error,value)=>{clearTimeout(timer);signal?.removeEventListener('abort',abort);contextRequests.delete(requestId);error?reject(error):resolve(value);};
+    const abort=()=>finish(new Error('Stopped by owner'));
+    const timer=setTimeout(()=>finish(new Error('Shared context request timed out.')),20_000);
+    contextRequests.set(requestId,finish);signal?.addEventListener('abort',abort,{once:true});
+    ws.send(JSON.stringify({t:'workspace_context_request',room,id:job.id,requestId,action:name==='roundtable_context_read'?'read':'propose',args}));
+  });
+}
 let runStart=Date.now(),runs=0;
 async function post(job,result) {
   const response=await fetch(url.origin+'/api/rooms/'+room+'/work/'+job.id+'/result',{method:'POST',headers:{Authorization:'Bearer '+token,'X-Run-Token':job.runToken,'Content-Type':'application/json'},body:JSON.stringify(result),signal:AbortSignal.timeout(30_000)});
@@ -39,6 +53,7 @@ function connect(){
   ws.on('message',async raw=>{
     let msg;try{msg=JSON.parse(raw);}catch{return;}
     if(!msg || msg.room!==room)return;
+    if(msg.t==='workspace_context_result'){contextRequests.get(msg.requestId)?.(msg.error?new Error(msg.error):null,msg.result);return;}
     if(msg.t==='workspace_connected'){console.log('Your Codex is connected to '+url.origin+'/s/'+room+' for '+projectName);return;}
     if(msg.t==='workspace_cancel'){jobs.get(msg.id)?.abort();return;}
     if(msg.t==='workspace_chat_cancel'){chatJobs.get(msg.id)?.abort();return;}
@@ -49,7 +64,7 @@ function connect(){
       if(chatJobs.size>=5 || runs>=Number(process.env.ROUNDTABLE_BRIDGE_RUNS || 60)){reply({error:'Conversation busy or hourly budget exhausted.'});return;}
       runs++;const controller=new AbortController();chatJobs.set(msg.id,controller);
       try{
-        const text=await codex.run({cwd:project.project,job:msg,signal:controller.signal,approach,model,effort,conversation:true,sessionId:chatThreads.get(msg.agentId || 'primary'),onThread:id=>{chatThreads.set(msg.agentId || 'primary',id);}});
+        const text=await codex.run({cwd:project.project,job:msg,signal:controller.signal,approach,model,effort,conversation:true,sessionId:chatThreads.get(msg.agentId || 'primary'),onThread:id=>{chatThreads.set(msg.agentId || 'primary',id);},contextTool:(name,args)=>requestContext(msg,name,args,controller.signal)});
         if(!controller.signal.aborted)reply({text});
       }catch(error){if(!controller.signal.aborted)reply({error:error.message});}
       finally{chatJobs.delete(msg.id);}return;
@@ -84,6 +99,7 @@ function connect(){
   });
   ws.on('error',error=>console.error(error.message));
   ws.on('close',code=>{
+    for(const finish of [...contextRequests.values()])finish(new Error('The table disconnected.'));
     for(const controller of jobs.values())controller.abort();
     for(const controller of chatJobs.values())controller.abort();
     if(code===1008){console.error('Connection revoked or pairing invalid. Generate a new connection command in the room.');stop();return;}

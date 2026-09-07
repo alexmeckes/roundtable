@@ -1,0 +1,18 @@
+{
+  "model": "gpt-6-astra",
+  "effort": "low",
+  "runtime": "codex-cli 0.153.3",
+  "setup": "One local owner, two specialists; server and bridge restarted before Quinn joined.",
+  "proposalRequiredHumanAcceptance": true,
+  "sourceHistoryRetained": true,
+  "skillEditRequiredNewAdoption": true,
+  "freshAgentReadCurrentVersion": true,
+  "executionReadCurrentContext": true,
+  "artifactSavedAsSharedSource": true,
+  "deliverable": {
+    "file": "shared-context-brief.md",
+    "bytes": 1237,
+    "sha256": "1a70add8bf9ded5428d85088f22b7fc13ebf696580396a03602be97d408423c3",
+    "attachment": true
+  }
+}

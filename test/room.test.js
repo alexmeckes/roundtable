@@ -449,3 +449,53 @@ test('specialist creation is bounded, owner pause cancels all its agents, and un
   assert.equal((await upload(f,a,job,{status:'ready',deliverables:[{path:'result.html',data:Buffer.from('<script>bad()</script>').toString('base64')}]})).status,200);
   const output=await fetch(f.origin+'/api/rooms/room/work/'+job.id+'/deliverables/result.html');assert.match(output.headers.get('content-type'),/application\/octet-stream/);assert.match(output.headers.get('content-disposition'),/attachment/);
 });
+
+async function saveShared(client,value){
+  const requestId='save-'+Math.random();client.send({t:'context_save',requestId,...value});
+  await client.wait(m=>m.t==='context_saved' && m.requestId===requestId);
+  return (await client.wait(m=>m.t==='context' && m.context.entries.some(e=>e.title===value.title))).context.entries.find(e=>e.title===value.title);
+}
+
+test('shared context edits preserve concurrent work, original attribution, and room permissions',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  alice.send({t:'chat',text:'Use the supplied source, and verify its date.'});
+  const message=(await alice.wait(m=>m.t==='chat' && m.entry.author==='Alice')).entry;
+  const entry=await saveShared(alice,{kind:'decision',title:'Source policy',body:'Verify the date',chatId:message.id});
+  assert.equal(entry.origin.author,'Alice');assert.equal(entry.origin.text,message.text);
+  await bob.wait(m=>m.t==='context' && m.context.entries.length===1);
+  await saveShared(alice,{id:entry.id,version:entry.version,kind:'decision',title:'Source policy updated',body:'Check date and scope'});
+  bob.send({t:'context_save',requestId:'stale',id:entry.id,version:1,kind:'decision',title:'Stale policy',body:'Overwrite'});
+  assert.match((await bob.wait(m=>m.t==='context_error' && m.requestId==='stale')).message,/changed/);
+  const latest=(await f.inspect()).sharedContext.entries[0];assert.equal(latest.body,'Check date and scope');assert.equal(latest.history[0].body,'Verify the date');
+  alice.send({t:'set_access',tier:'view',hostOnlySpend:true});await bob.wait(m=>m.t==='access' && m.access==='view');
+  bob.send({t:'context_save',requestId:'view',kind:'source',title:'No',body:'Blocked'});
+  assert.match((await bob.wait(m=>m.t==='context_error' && m.requestId==='view')).message,/view-only/);
+  assert.equal((await f.inspect('another')).sharedContext.entries.length,0);
+});
+
+test('agent context tools are room and run scoped, proposals need human acceptance, and cancellation revokes access',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob'),a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  const source=await saveShared(alice,{kind:'source',title:'Supplied comparison',body:'Atlas costs 30; Beacon costs 20 but has no exports.'});
+  await chatMode(alice,'mentions');alice.send({t:'chat',text:'@alice-codex read our source and propose a finding'});const job=await chatTask(a);
+  assert.equal(job.context.shared.items[0].id,source.id);
+  async function context(bridge,action,args,id=job.id,room='room'){
+    const requestId='request-'+Math.random();bridge.send({t:'workspace_context_request',room,id,requestId,action,args});
+    return bridge.wait(m=>m.t==='workspace_context_result' && m.requestId===requestId);
+  }
+  assert.match((await context(b,'read',{ids:[source.id]})).error,/no longer active/);
+  assert.match((await context(a,'read',{},job.id,'another')).error,/connected table/);
+  assert.equal((await context(a,'read',{ids:[source.id]})).result.entries[0].body,source.body);
+  const result=await context(a,'propose',{kind:'learning',title:'Exports cost more',body:'The cheaper supplied option lacks exports.',refs:[source.id],status:'accepted'});
+  assert.equal(result.result.status,'proposed');const id=result.result.id;
+  assert.equal((await context(a,'read',{ids:[id]})).result.entries.length,0);
+  const proposal=(await f.inspect()).sharedContext.entries.find(e=>e.id===id);
+  assert.equal(proposal.createdBy.name,"Alice's Codex");assert.equal(proposal.createdBy.ownerName,'Alice');
+  alice.send({t:'context_status',id,version:1,status:'accepted',requestId:'accept'});await alice.wait(m=>m.t==='context_saved' && m.requestId==='accept');
+  assert.equal((await context(a,'read',{ids:[id]})).result.entries[0].status,'accepted');
+  alice.send({t:'workspace_start',instructions:'Use the accepted finding'});const work=await a.task();
+  assert.ok(work.context.shared.items.some(e=>e.id===id));
+  assert.equal((await context(a,'read',{ids:[id]},work.id)).result.entries[0].title,'Exports cost more');
+  await chatMode(alice,'off');assert.match((await context(a,'propose',{kind:'learning',title:'Late',body:'Late'})).error,/no longer active/);
+  alice.send({t:'workspace_cancel',id:work.id});await a.wait(m=>m.t==='workspace_cancel' && m.id===work.id);
+  assert.match((await context(a,'read',{},work.id)).error,/no longer active/);
+});

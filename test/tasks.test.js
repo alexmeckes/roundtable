@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {saveTask,validateTaskStart,syncTaskRun} from '../workspace/tasks.js';
+const fixture=()=>({members:[{id:'alice',name:'Alice',agentHandle:'alice-codex'},{id:'bob',name:'Bob',agentHandle:'bob-codex'}],specialists:[],chat:[{id:'chat',kind:'human',author:'Alice',text:'Compare the options'}],sharedContext:{entries:[{id:'source',status:'accepted'}]}});
+const alice={id:'alice'},bob={id:'bob'};
+const fields={title:'Compare options',details:'Write a brief',ownerId:'alice',agentId:'alice',dependencies:[],contextIds:['source']};
+test('task links preserve origin; stale edits, forged owners and cyclic dependencies are rejected',()=>{
+  const room=fixture(),a=saveTask(room,alice,{...fields,chatId:'chat'});
+  assert.equal(a.origin.text,'Compare the options');
+  const b=saveTask(room,bob,{...fields,title:'Recommend',dependencies:[a.id]});
+  assert.throws(()=>saveTask(room,alice,{...a,dependencies:[b.id]}),/cycle/);
+  assert.throws(()=>saveTask(room,alice,{...a,version:0}),/changed/);
+  assert.throws(()=>saveTask(room,alice,{...fields,ownerId:'unknown'}),/person/);
+  assert.throws(()=>saveTask(room,alice,{...fields,agentId:'bob'}),/belonging/);
+  assert.throws(()=>saveTask(room,alice,{...fields,contextIds:['outside']}),/references/);
+});
+test('only owner can start, dependencies gate execution, completion requires human review',()=>{
+  const room=fixture(),a=saveTask(room,alice,fields),b=saveTask(room,bob,{...fields,dependencies:[a.id]});
+  assert.throws(()=>validateTaskStart(room,bob,a),/owner/);
+  assert.throws(()=>validateTaskStart(room,alice,b),/prerequisite/);
+  a.runIds.push('run');syncTaskRun(room,{id:'run',taskId:a.id,status:'running'});
+  assert.equal(a.status,'working');assert.throws(()=>saveTask(room,alice,a),/Stop/);
+  syncTaskRun(room,{id:'run',taskId:a.id,status:'ready'});assert.equal(a.status,'needs_review');
+  assert.throws(()=>validateTaskStart(room,alice,b),/prerequisite/);
+  saveTask(room,bob,{...a,status:'done'});assert.equal(validateTaskStart(room,alice,b),b);
+  b.runIds.push('next');syncTaskRun(room,{id:'next',taskId:b.id,status:'running'});
+  assert.throws(()=>saveTask(room,alice,{...a,status:'planned'}),/dependent/);
+  syncTaskRun(room,{id:'next',taskId:b.id,status:'interrupted'});assert.equal(b.status,'blocked');
+  syncTaskRun(room,{id:'old',taskId:b.id,status:'ready'});assert.equal(b.status,'blocked');
+});

@@ -144,3 +144,38 @@ OS isolation of untrusted code. Outputs stay on the owner’s machine after arch
 room card. Source uploads, hosted compute, large files, and live coediting are not yet
 provided.
 
+
+## Shared tasks
+
+Open **Tasks**, or choose **Create task** under a conversation message. Give the
+task a title, instructions, owner, and one of that owner's agents. You can also
+link accepted context and up to ten prerequisite tasks. A task created from a
+message keeps its original author and text.
+
+Everyone who can speak can plan, assign, discuss, and review tasks. Assignment
+never starts another person's Codex: the owner chooses **Start my agent**. Work
+runs in the owner's existing isolated workspace, using the same concurrency limits.
+
+Tasks move through **Planned → Working → Needs review → Done**. Successful agent
+runs request human review; a person marks the task done. Failures, cancellation,
+disconnects, and server restarts leave active tasks **Blocked**, ready to retry.
+Reopen reviewed work as Planned to run another iteration. All runs stay linked.
+
+A prerequisite must be **Done** before dependent work can start. Reviewed text
+deliverables are supplied as reference inputs to the next run (up to 20 files,
+32 KB per file, 96 KB total). Larger files and binary formats receive download links. Dependencies
+cannot form cycles. Reopen dependent work before reopening a completed prerequisite
+that already has working or reviewed dependents. Two people editing the same task
+cannot silently overwrite each other: the stale editor keeps their draft and must
+reopen the current task.
+
+Open a task to download deliverables, review a patch, or discuss it. Task comments
+also appear in the main conversation, and @mentioned agent replies stay linked to
+the task. Agents receive the open task list alongside shared context; their work
+results update task status automatically. They cannot independently assign or start
+tasks on another person's behalf.
+
+The prototype retains up to 100 tasks and 48 execution cards per table. Runs linked
+to tasks cannot be archived, so their deliverables remain available. Unlinked
+execution cards can still be archived. Task history and deliverables persist on
+the server; private Codex conversation sessions still depend on the bridge process.

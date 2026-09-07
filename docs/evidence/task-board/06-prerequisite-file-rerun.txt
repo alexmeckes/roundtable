@@ -1,0 +1,69 @@
+Browser tab: 19, Title: "Untitled table — Roundtable", URL: "http://localhost:43147/s/task-board-demo".
+1 AXWebArea Untitled table — Roundtable, URL: localhost:43147/s/task-board-demo
+	2 container task-dialog
+		3 button Close, ID: task-close
+		4 heading Task details, Value: 2, ID: task-dialog-title
+			5 text Task details
+		6 container task-form
+			7 text Task title
+			8 text field (settable) Task title, Value: Prepare the decision brief, ID: task-title
+			9 text Instructions and expected result
+			10 text entry area (settable) Instructions and expected result, ID: task-details, Value: Read the reviewed prerequisite comparison.md supplied in the task context. Write decision-brief.md using that actual file, with a recommendation, cost difference, remaining uncertainty, and a source note that identifies the comparison.
+			11 text Owner
+			12 pop up button (collapsed, settable) Owner, Value: Alex, ID: task-owner, Secondary Actions: Expand
+				13 menu
+					14 Unassigned
+					15 (selected) Alex
+					16 Sam (test participant)
+			17 text Assigned agent
+			18 pop up button (collapsed, settable) Assigned agent, Value: Alex's Codex, ID: task-agent, Secondary Actions: Expand
+				19 menu
+					20 No agent
+					21 (selected) Alex's Codex
+					22 Mira
+			23 text Status
+			24 pop up button (collapsed, settable) Status, Value: Needs review, ID: task-status, Secondary Actions: Expand
+				25 menu
+					26 Planned
+					27 (disabled) Working
+					28 Blocked
+					29 (selected) Needs review
+					30 Done
+			31 text Waiting for (optional)
+			32 list Waiting for (optional), ID: task-dependencies
+				33 (selected) Compare the supplied tools
+				34 Draft an export acceptance checklist
+			35 text Shared context (optional)
+			36 list Shared context (optional), ID: task-context
+			37 button Save task, ID: task-save
+		38 container task-results
+			39 text ready · Created [decision-brief.md](decision-brief.md), recommending Atlas, explaining the $10/month premium, and identifying export coverage as the remaining uncertainty.
+
+Verified against the supplied conversation. The original comparison file was unavailable; the brief notes this limitation.
+			40 link Description: Download decision-brief.md, Value: localhost:43147/api/rooms/task-board-demo/work/WRjqjO4AnsfLKE7AWoLFlLG9bLaldmdJ/deliverables/decision-brief.md
+			41 text ready · Created [decision-brief.md](decision-brief.md) with the Atlas recommendation, $10/month premium, export coverage uncertainty, and source note.
+
+Verified against the complete comparison.md contents supplied in the task context; the artifact URL was unreachable.
+			42 link Description: Download decision-brief.md, Value: localhost:43147/api/rooms/task-board-demo/work/QrfEC69ZQH0iKwyEUA5UbDozCpm5FWYQ/deliverables/decision-brief.md
+		43 heading Task conversation, Value: 3
+			44 text Task conversation
+		45 container task-comments
+			46 text Table: Alex updated task: Prepare the decision brief — planned.
+			47 text Alex's Codex: I’m starting work: Prepare the decision brief
+Use the reviewed comparison to prepare a concise decision brief.
+			48 text Alex's Codex: Prepare the decision brief
+Use the reviewed comparison to prepare a concise deci — ready. Created [decision-brief.md](decision-brief.md), recommending Atlas, explaining the $10/month premium, and identifying export coverage as the remaining uncertainty.
+
+Verified against the supplied conversation. The original comparison file was unavailable; the brief notes this limitation.
+			49 text Table: Alex updated task: Prepare the decision brief — planned.
+			50 text Alex's Codex: I’m starting work: Prepare the decision brief
+Read the reviewed prerequisite comparison.md supplied in the task context. Write decision-brief.md using that actual file, with a recommendation, cost difference, remaining uncertainty, and a source note that identifies the comparison.
+			51 text Alex's Codex: Prepare the decision brief — ready. Created [decision-brief.md](decision-brief.md) with the Atlas recommendation, $10/month premium, export coverage uncertainty, and source note.
+
+Verified against the complete comparison.md contents supplied in the task context; the artifact URL was unreachable.
+		52 container task-comment-form
+			53 text Discuss this task
+			54 text entry area (settable) Discuss this task, ID: task-comment
+			55 button Send to conversation
+
+The focused UI element is 3 button Close, ID: task-close

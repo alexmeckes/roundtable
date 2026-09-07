@@ -486,7 +486,8 @@ body.offline .hint{color:#C25E5E}
 
 #context-panel{padding:0 2px 24px}#context-panel label,#context-form label{display:block;font-size:12px;margin:14px 0 5px;color:var(--muted)}
 #context-panel input[type=search],#context-panel select,#context-form input,#context-form select,#context-form textarea{width:100%;box-sizing:border-box;font:inherit;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
-.context-intro,#context-empty{font-size:13px;color:var(--muted);line-height:1.6}.context-card{padding:16px;margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.context-card.proposed{border-color:#bba36b;background:#fffbf1}.context-card.retired{opacity:.65}.context-card h3{font-size:15px;margin:7px 0}.context-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;max-height:260px;overflow:auto}.context-meta,#context-count{font-size:11px;color:var(--muted);line-height:1.5}.context-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}.context-actions button,#context-save{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:var(--bg);cursor:pointer}.context-card details{font-size:12px;margin-top:12px}.context-save-chat{font:inherit;font-size:11px;color:var(--muted);background:none;border:0;padding:5px 0;cursor:pointer}.context-toggle input{width:auto}#context-form-error,#context-notice{font-size:12px;color:#a23939}#context-dialog{width:min(580px,90vw)}
+.context-intro,#context-empty{font-size:13px;color:var(--muted);line-height:1.6}.context-card{padding:16px;margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.context-card.proposed{border-color:#bba36b;background:#fffbf1}.context-card.retired{opacity:.65}.context-card h3{font-size:15px;margin:7px 0}.context-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;max-height:260px;overflow:auto}.context-meta,#context-count{font-size:11px;color:var(--muted);line-height:1.5}.context-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}.context-actions button,#context-save{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:var(--bg);cursor:pointer}.context-card details{font-size:12px;margin-top:12px}.context-save-chat{font:inherit;font-size:11px;color:var(--muted);background:none;border:0;padding:5px 0;margin-right:9px;cursor:pointer}.context-toggle input{width:auto}#context-form-error,#context-notice{font-size:12px;color:#a23939}#context-dialog{width:min(580px,90vw)}
+#task-form,#task-comment-form{display:grid;gap:8px}#task-dialog{width:min(620px,90vw)}#task-form input,#task-form textarea,#task-form select,#task-comment{font:inherit;padding:9px;border:1px solid var(--line);border-radius:6px;width:100%;box-sizing:border-box}#task-form label,#task-comment-form label{margin-top:8px}.task-lane{margin:22px 0}.task-lane h3{font-size:13px;color:var(--muted)}.task-card{padding:14px;margin:8px 0;border:1px solid var(--line);border-radius:9px;background:var(--bg)}.task-card button,#task-add{padding:7px 10px;border:1px solid var(--line);background:white;border-radius:6px;cursor:pointer}.task-card button:first-child{text-align:left;font-weight:600;border:0;padding:0}.task-card button:disabled{opacity:.4;cursor:default}.task-waiting{font-size:12px;color:#916a20}#task-notice,#task-error{color:#a23939;font-size:13px}#task-results a{display:block;margin:10px 0}
 </style>
 </head>
 <body class="work-mode">
@@ -503,6 +504,7 @@ body.offline .hint{color:#C25E5E}
     <div class="faces" id="faces"></div>
     <button class="icon-btn" id="btn-new-agent" title="Invite a new agent">+</button>
     <button class="icon-btn" id="btn-auto" title="Auto-reply: agents chime in without being @mentioned">Auto</button>
+    <button class="icon-btn" id="btn-tasks">Tasks</button>
     <button class="icon-btn" id="btn-context">Context</button>
     <button class="icon-btn" id="btn-workspaces">Workspaces</button>
     <button class="icon-btn" id="btn-doc" title="Toggle the canvas">Canvas</button>
@@ -542,6 +544,10 @@ body.offline .hint{color:#C25E5E}
         <span class="writing">agent writing…</span>
       </div>
       <div class="doc-scroll">
+<section id="tasks-panel" hidden>
+  <p class="context-intro">Plan together, assign an owner and agent, and review results. Only the owner starts their Codex.</p>
+  <button id="task-add">New task</button><p id="task-notice" role="status"></p><div id="task-board"></div>
+</section>
 <section id="context-panel" hidden>
   <p class="context-intro">A shared brief, sources, decisions, and learnings. People review agent proposals before they become accepted context.</p>
   <div class="context-actions"><button id="context-add">Add context</button><span id="context-count"></span></div>
@@ -694,6 +700,22 @@ body.offline .hint{color:#C25E5E}
     <p id="context-form-error" role="alert"></p><button id="context-save">Save context</button>
   </form>
 </dialog>
+<dialog id="task-dialog" class="work-dialog">
+<button id="task-close" class="work-close">Close</button><h2 id="task-dialog-title">New task</h2>
+<form id="task-form">
+<label for="task-title">Task title</label><input id="task-title" maxlength="120" required>
+<label for="task-details">Instructions and expected result</label><textarea id="task-details" rows="4" maxlength="4000"></textarea>
+<label for="task-owner">Owner</label><select id="task-owner"></select>
+<label for="task-agent">Assigned agent</label><select id="task-agent"></select>
+<label for="task-status">Status</label><select id="task-status"></select>
+<label for="task-dependencies">Waiting for (optional)</label><select id="task-dependencies" multiple size="3"></select>
+<label for="task-context">Shared context (optional)</label><select id="task-context" multiple size="3"></select>
+<p id="task-origin" class="context-body"></p><p id="task-error" role="alert"></p><button id="task-save">Save task</button>
+</form>
+<div id="task-results"></div><h3>Task conversation</h3><div id="task-comments"></div>
+<form id="task-comment-form"><label for="task-comment">Discuss this task</label><textarea id="task-comment" maxlength="2000" placeholder="Ask a question or @mention an agent" required></textarea><button>Send to conversation</button></form>
+</dialog>
+<script src="/tasks.js"></script>
 <script src="/context.js"></script>
 <script src="/workspace.js"></script>
 
@@ -796,7 +818,7 @@ function connect(){
   ws.addEventListener('close', () => {
     preservePendingCanvasEdits();
     workspaceUI.update(undefined,[]);
-    contextUI.disconnected();
+    contextUI.disconnected();tasksUI.disconnected();
     clog('socket closed; retrying in', retryDelay/1000 + 's');
     setConnected(false);
     setTimeout(connect, retryDelay);
@@ -812,6 +834,7 @@ const send = m => {
   clog('send dropped (socket not open):', m.t);
   return false;
 };
+const tasksUI=createTasksUI({send,roomId,getYou:()=>state.you,canSpeak});
 const contextUI=createContextUI({send,roomId,getYou:()=>state.you,canSpeak});
 const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
 function hintText(){
@@ -924,7 +947,7 @@ function setAccess(tier, hostOnlySpend){
   document.querySelectorAll('#canvas .btext').forEach(n => { n.contentEditable = String(!mute); });
   $('btn-auto').disabled = !canManage();
   workspaceUI.update();
-  contextUI.update();
+  contextUI.update();tasksUI.update();
   $('chat-text').disabled = mute;
   $('btn-send').style.display = mute ? 'none' : '';
   $('chat-text').placeholder = mute ? 'View-only — the host is speaking' : 'Message the table…';
@@ -962,6 +985,7 @@ function onMessage(ev){
       $('arrival').classList.remove('open');
       if(m.hostKey) localStorage.setItem(HOST_KEY_STORE, m.hostKey);
       if(m.memberKey) localStorage.setItem(MEMBER_STORE,m.memberKey);
+      tasksUI.update(m.state);tasksUI.history(m.state.chat || []);
       workspaceUI.update(m.state.work || [],m.state.connections || []);
       contextUI.update(m.state.sharedContext || {revision:0,entries:[],adoptions:{}});
       state.people = m.state.people;
@@ -999,10 +1023,11 @@ function onMessage(ev){
       readCanvasDrafts().forEach(draft => renderChat({kind:'system', text:'Unsaved canvas draft (copy to recover):\n' + draft}));
       break;
     }
-    case 'context': contextUI.update(m.context); break;
+    case 'task_saved': case 'task_error': tasksUI.result(m);break;
+    case 'context': contextUI.update(m.context);tasksUI.update({sharedContext:m.context}); break;
     case 'context_saved': case 'context_error': contextUI.result(m); break;
-    case 'workspaces': workspaceUI.update(m.work,m.connections); break;
-    case 'workspace_progress': workspaceUI.progress(m.id,m.message); break;
+    case 'workspaces': workspaceUI.update(m.work,m.connections);tasksUI.update(m); break;
+    case 'workspace_progress': workspaceUI.progress(m.id,m.message);tasksUI.update(); break;
     case 'workspace_pair': workspaceUI.pair(m.token); break;
     case 'auto': setAuto(m.on); break;
     case 'access': setAccess(m.access, m.hostOnlySpend); break;
@@ -1209,6 +1234,7 @@ function appendMsg(node){
 }
 
 function renderChat(entry){
+  tasksUI.message(entry);
   if(entry.kind === 'branch'){ addBranchCard(entry); return; }
   if(entry.kind === 'system'){ addSystem(entry.text, entry.room); return; }
   const grouped = lastEntry &&
@@ -1232,6 +1258,8 @@ function renderChat(entry){
         <div class="text">${richText(entry.text)}</div>
       </div>`;
   }
+  if(entry.taskId){const link=el('button','context-save-chat');link.textContent='Open task';link.onclick=()=>tasksUI.open(entry.taskId);m.querySelector('.body').append(link);}
+  if(entry.id && ['human','agent'].includes(entry.kind)){const task=el('button','context-save-chat');task.textContent='Create task · ';task.disabled=!canSpeak();task.onclick=()=>tasksUI.fromMessage(entry);m.querySelector('.body').append(task);}
   if(entry.id){const save=el('button','context-save-chat');save.textContent='Save to context';save.disabled=!canSpeak();save.onclick=()=>contextUI.fromMessage(entry);m.querySelector('.body').append(save);}
   appendMsg(m);
 }
@@ -1304,15 +1332,16 @@ $('btn-workspaces').classList.toggle('open', docOpenDefault);
 let activePanel='work';
 function showPanel(panel){
   const closed=$('doc').classList.contains('closed');
-  if(activePanel===panel && !closed){$('doc').classList.add('closed');for(const id of ['btn-workspaces','btn-doc','btn-context'])$(id).classList.remove('open');return;}
+  if(activePanel===panel && !closed){$('doc').classList.add('closed');for(const id of ['btn-workspaces','btn-doc','btn-context','btn-tasks'])$(id).classList.remove('open');return;}
   activePanel=panel;document.body.classList.toggle('work-mode',panel!=='canvas');
-  $('hint').textContent=hintText();$('panel-heading').textContent={work:'Workspaces',canvas:'Canvas',context:'Context'}[panel];
-  $('workspace-panel').hidden=panel!=='work';$('canvas-panel').hidden=panel!=='canvas';$('context-panel').hidden=panel!=='context';
+  $('hint').textContent=hintText();$('panel-heading').textContent={work:'Workspaces',canvas:'Canvas',context:'Context',tasks:'Tasks'}[panel];
+  $('tasks-panel').hidden=panel!=='tasks';$('workspace-panel').hidden=panel!=='work';$('canvas-panel').hidden=panel!=='canvas';$('context-panel').hidden=panel!=='context';
   $('doc').classList.remove('closed');
-  $('btn-workspaces').classList.toggle('open',panel==='work');$('btn-doc').classList.toggle('open',panel==='canvas');$('btn-context').classList.toggle('open',panel==='context');
+  $('btn-workspaces').classList.toggle('open',panel==='work');$('btn-doc').classList.toggle('open',panel==='canvas');$('btn-context').classList.toggle('open',panel==='context');$('btn-tasks').classList.toggle('open',panel==='tasks');
 }
 $('btn-doc').addEventListener('click',()=>showPanel('canvas'));
 $('btn-workspaces').addEventListener('click',()=>showPanel('work'));
+$('btn-tasks').addEventListener('click',()=>showPanel('tasks'));
 $('btn-context').addEventListener('click',()=>showPanel('context'));
 
 let probT;

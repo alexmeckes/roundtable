@@ -2,6 +2,7 @@
 import { readFile } from 'node:fs/promises';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
+import {loadTaskInputs} from './task-inputs.js';
 import {FolderProject} from './folder.js';
 import { WorktreeProject } from './worktree.js';
 import { CodexAppServer } from './app-server.js';
@@ -86,7 +87,7 @@ function connect(){
         if(!response.ok)throw new Error('Contribution patch is unavailable');
         const patch=await response.text();if(Buffer.byteLength(patch)>1024*1024)throw new Error('Patch too large');
         result=await project.integrate(msg,patch,{signal:controller.signal,progress});
-      } else result=await project.run(msg,{signal:controller.signal,progress});
+      } else {msg.context=await loadTaskInputs(msg.context,url.origin,{signal:controller.signal});result=await project.run(msg,{signal:controller.signal,progress});}
       // The room has already revoked this run's upload capability on Stop.
       // Cleanup still completes locally; publishing again only produces a 403.
       if(controller.signal.aborted){console.log(msg.id+': '+result.status+' '+result.message);return;}

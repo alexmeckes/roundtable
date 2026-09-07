@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { resolve, join, extname } from 'node:path';
 import express from 'express';
+import {initTasks,taskPeople,taskAgents,taskSummary,saveTask,validateTaskStart,syncTaskRun} from './tasks.js';
 import {createConversation} from './conversation.js';
 import {initContext,contextSummary,readContext,createSharedContext} from './context.js';
 
@@ -22,11 +23,12 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     room.specialists ||= [];
     room.personalBridges ||= new Map();
     initContext(room);
+    initTasks(room);
   };
   const publicWork = room => room.work.map(({runToken, ...work}) => work);
   const agentView=b=>({agentId:b.agentId || b.ownerId,ownerId:b.ownerId,ownerName:b.name,name:b.agentName || `${b.name}'s Codex`,role:b.role || '',handle:b.handle,chatBusy:b.chatBusy,chatMode:b.chatMode});
   const connections = room => [...room.personalBridges.values()].map(b=>({ownerId:b.ownerId,name:b.name,project:b.project,approach:b.approach,handle:b.handle,chatMode:b.chatMode,chatBusy:b.chatBusy,workspaceMode:b.workspaceMode,agents:[agentView(b),...(b.specialists || []).map(agentView)]}));
-  const announce = room => { room.lastActivity=Date.now(); broadcast(room, {t:'workspaces', work:publicWork(room), connections:connections(room)}); persist(); };
+  const announce = room => { room.lastActivity=Date.now(); broadcast(room, {t:'workspaces', work:publicWork(room), connections:connections(room),tasks:room.tasks,taskPeople:taskPeople(room),taskAgents:taskAgents(room)}); persist(); };
   const conversation=createConversation({say,announce,allowRun});
   const artifactDir = (room, work) => join(artifactRoot, room.id, work.id);
   function joinMember(room, token, name) {
@@ -47,7 +49,7 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     if (p) clearTimeout(p.timer);
     pending.delete(work.id);
     work.status = status; work.message = message; work.updatedAt = Date.now();
-    announce(room);
+    syncTaskRun(room,work);announce(room);
   }
   function detach(ws) {
     for (const room of rooms.values()) {
@@ -77,7 +79,7 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     ws.send(JSON.stringify({t:'workspace_connected', room:room.id, ownerId:member.id}));
     announce(room); return true;
   }
-  function dispatch(room, you, instructions, source, agentId) {
+  function dispatch(room, you, instructions, source, agentId, task) {
     const bridge = room.personalBridges.get(you.id);
     if (!bridge || bridge.ws.readyState !== 1) throw new Error('Connect your Codex and project first.');
     const agent=agentId && agentId!==you.id?bridge.specialists?.find(a=>a.agentId===agentId):bridge;
@@ -85,8 +87,8 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     if(source && bridge.workspaceMode==='folder')throw new Error('Git integration requires a repository connection. Download the deliverable instead.');
     if (room.work.length >= 48) throw new Error('Archive a finished work card before starting another.');
     if (room.work.filter(w => w.ownerId === you.id && active(w.status)).length >= 2) throw new Error('Your two workspaces are busy. Other people can keep working.');
-    if (!allowRun(room)) return;
-    const work = {id:key(), ownerId:you.id, ownerName:you.name,agentId:agent.agentId || you.id,agentName:agent.agentName || `${you.name}'s Codex`, title:short(instructions,80), instructions:short(instructions,4000), status:source?'integrating':'running', sourceId:source?.id || null, createdAt:Date.now(), updatedAt:Date.now(), message:source?'Preparing integration in your project…':'Starting your Codex…'};
+    if (!allowRun(room)) throw new Error('The table run limit has been reached. Try again later.');
+    const work = {id:key(),taskId:task?.id || null, ownerId:you.id, ownerName:you.name,agentId:agent.agentId || you.id,agentName:agent.agentName || `${you.name}'s Codex`, title:task?.title || short(instructions,80), instructions:task?instructions:short(instructions,4000), status:source?'integrating':'running', sourceId:source?.id || null, createdAt:Date.now(), updatedAt:Date.now(), message:source?'Preparing integration in your project…':'Starting your Codex…'};
     const runToken = key();
     const timer = setTimeout(() => {
       bridge.ws.send(JSON.stringify({t:'workspace_cancel',room:room.id,id:work.id}));
@@ -94,11 +96,23 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     }, 30 * 60_000);
     timer.unref();
     pending.set(work.id, {ws:bridge.ws, runToken, timer});
-    room.work.push(work); announce(room);
-    conversation.activity(room,you.id,source?'I’m integrating '+source.title+'.':'I’m starting work: '+work.instructions,work.agentId);
-    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken,agentId:work.agentId,agentName:work.agentName,agentRole:agent.role || '', instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{shared:contextSummary(room,you.id),title:room.title, problem:room.problem, chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-30).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,agentName,title,status})=>({ownerName,agentName,title,status}))}}));
+    room.work.push(work);
+    if(task){task.runIds.push(work.id);syncTaskRun(room,work);}
+    announce(room);
+    conversation.activity(room,you.id,source?'I’m integrating '+source.title+'.':'I’m starting work: '+work.instructions,work.agentId,work.taskId);
+    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken,agentId:work.agentId,agentName:work.agentName,agentRole:agent.role || '', instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{dependencies:(task?.dependencies || []).map(id=>{const predecessor=room.tasks.find(t=>t.id===id),run=room.work.find(w=>w.id===predecessor.runIds.at(-1));return {id,title:predecessor.title,room:room.id,runId:run?.id,summary:run?.summary || predecessor.details,deliverables:run?.deliverables || []};}).filter(d=>d.runId),tasks:taskSummary(room),task:task || null,shared:contextSummary(room,you.id),title:room.title, problem:room.problem, chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-30).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,agentName,title,status})=>({ownerName,agentName,title,status}))}}));
   }
   function handle(ws, room, you, msg) {
+    if(msg.t?.startsWith('task_')){
+      try{
+        init(room);if(!canSpeak(room,you))throw new Error('This table is view-only.');
+        if(msg.t==='task_save'){const task=saveTask(room,you,msg);announce(room);say(room,{kind:'system',taskId:task.id,text:`${you.name} updated task: ${task.title} — ${task.status.replaceAll('_',' ')}.`});}
+        else if(msg.t==='task_start'){const task=validateTaskStart(room,you,msg);dispatch(room,you,task.title+'\n'+task.details,undefined,task.agentId,task);}
+        else throw new Error('Unknown task action.');
+        ws.send(JSON.stringify({t:'task_saved',requestId:msg.requestId}));
+      }catch(error){ws.send(JSON.stringify({t:'task_error',requestId:msg.requestId,message:error.message}));}
+      return true;
+    }
     if (!msg.t?.startsWith('workspace_')) return false;
     init(room);
     try {
@@ -153,6 +167,7 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
           pending.get(work.id)?.ws.send(JSON.stringify({t:'workspace_cancel',room:room.id,id:work.id}));
           fail(room,work,'interrupted','Stopped by its owner. Local branch retained.');
         } else if (msg.t === 'workspace_archive' && !active(work.status)) {
+          if(work.taskId)throw new Error('Task deliverables are retained with their task.');
           room.work = room.work.filter(w=>w!==work);
           rm(artifactDir(room,work),{recursive:true,force:true}).catch(()=>{}); announce(room);
         }
@@ -228,8 +243,8 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
         for(const asset of deliverables){const file=join(dir,'deliverables',asset.path);await mkdir(resolve(file,'..'),{recursive:true});await writeFile(file,asset.buffer);}
         if (pending.get(work.id)!==p) return res.sendStatus(409);
         Object.assign(work,{status:body.status,summary:short(body.summary,4000),message:short(body.message,500),branch:short(body.branch,120),baseCommit:short(body.baseCommit,64),headCommit:short(body.headCommit,64),files:Array.isArray(body.files)?body.files.slice(0,200).map(f=>short(f,240)):[],checks:short(body.checks,4000),deliverables:deliverables.map(a=>({path:a.path,bytes:a.buffer.length})),hasPatch:!!patch,hasPreview:seen.has('index.html'),updatedAt:Date.now()});
-        conversation.activity(room,work.ownerId,`${work.title} — ${work.status}. ${work.summary || work.message}`,work.agentId);
-        clearTimeout(p.timer); pending.delete(work.id); announce(room); res.json({ok:true});
+        conversation.activity(room,work.ownerId,`${work.title} — ${work.status}. ${work.summary || work.message}`,work.agentId,work.taskId);
+        clearTimeout(p.timer); pending.delete(work.id); syncTaskRun(room,work);announce(room); res.json({ok:true});
       } catch(error) { res.status(400).json({error:error.message}); }
     });
     app.get(route+'/deliverables/*',async(req,res)=>{
@@ -272,5 +287,5 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     }
     return true;
   }
-  return {init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation,command,sharedContext,contextRequest};
+  return {announce,init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation,command,sharedContext,contextRequest};
 }

@@ -20,6 +20,7 @@ import { dirname } from 'path';
 import { runHouseAgent, houseAvailable } from './agents/house.js';
 import { sanitizeCanvas, sanitizeActions, serializeCanvas } from './agents/prompt.js';
 import { createWorkspaces } from './workspace/server.js';
+import {taskPeople,taskAgents} from './workspace/tasks.js';
 import {contextSummary} from './workspace/context.js';
 
 const PORT = process.env.PORT || 3131;
@@ -234,6 +235,7 @@ function publicState(room) {
     work: workspace.publicWork(room),
     connections: workspace.connections(room),
     sharedContext: room.sharedContext,
+    tasks:room.tasks,taskPeople:taskPeople(room),taskAgents:taskAgents(room),
     title: room.title,
     branches: branchesOf(room),
     problem: room.problem,
@@ -325,7 +327,7 @@ function schedulePersist() {
       hostKey: r.hostKey, hostClaimed: r.hostClaimed,
       access: r.access, hostOnlySpend: r.hostOnlySpend,
       parent: r.parent || null,
-      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,specialists:r.specialists,sharedContext:r.sharedContext,
+      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,specialists:r.specialists,sharedContext:r.sharedContext,tasks:r.tasks,
       colorIdx: r.colorIdx, createdAt: r.createdAt, lastActivity: r.lastActivity,
     }));
     try {
@@ -360,7 +362,7 @@ function loadRooms() {
       hostOnlySpend: !!r.hostOnlySpend,
       parent: r.parent || null,
       agents: Array.isArray(r.agents) && r.agents.length ? r.agents : [{ ...DEFAULT_AGENT, color: AGENT_COLORS[0] }],
-      members:r.members || [], specialists:r.specialists || [],sharedContext:r.sharedContext, work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',message:'Server restarted. Local work is retained on its branch.'}:w), personalBridges:new Map(),
+      members:r.members || [], specialists:r.specialists || [],sharedContext:r.sharedContext,tasks:(r.tasks || []).map(t=>t.status==='working'?{...t,status:'blocked',version:t.version+1}:t), work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',message:'Server restarted. Local work is retained on its branch.'}:w), personalBridges:new Map(),
       chat: r.chat || [], autoT: null, queue: [], running: null, hops: 0,
       people: new Map(), bridges: new Map(),
       colorIdx: r.colorIdx || 0, createdAt: r.createdAt || Date.now(),
@@ -999,6 +1001,7 @@ wss.on('connection', (ws, req) => {
         state: publicState(room),
       }));
       broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ name, color }) => ({ name, color })) }, ws);
+      workspace.announce(room);
       say(room, { kind: 'system', text: `${you.name} pulled up a chair.` });
       return;
     }
@@ -1096,10 +1099,11 @@ wss.on('connection', (ws, req) => {
           tell(ws, 'Only the host manages agents at this table.');
           break;
         }
+        if(msg.taskId && !room.tasks.some(t=>t.id===msg.taskId)){tell(ws,'Task no longer exists.');break;}
         if (workspace.command(ws,room,you,text)) break;
         if (handleCommand(room, you, text)) break;
-        say(room, { author: you.name, kind: 'human', text, color: you.color });
-        const personalConversation=workspace.conversation.human(room,you,text);
+        say(room, { author: you.name, kind: 'human', text, taskId:msg.taskId || null, color: you.color });
+        const personalConversation=workspace.conversation.human(room,you,text,msg.taskId);
         room.hops = 0; // humans reset the agent-to-agent budget
         const mentioned = humanMentions(room, text);
         if (!canSpend(room, you)) {

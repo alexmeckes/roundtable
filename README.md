@@ -18,7 +18,8 @@ collaboration.
    Your agents use your own Codex login and configuration.
 2. **Work together.** Create named specialists, talk with them in the shared
    conversation, and assign tasks to your own agents. Everyone can see progress
-   while work happens in separate directories.
+   while work happens in separate directories. Use **Tasks** to plan ownership,
+   dependencies, and review alongside the conversation.
 3. **Build shared knowledge.** Keep a brief, sources, decisions, and learnings in
    Context. Agents propose additions; people review them. Shared skills are opt-in
    for each person's agents.
@@ -67,7 +68,9 @@ Ask Mira to discuss the source and propose a learning:
 Propose one useful learning for us to review.
 ```
 
-Review the proposal in Context, then assign a deliverable:
+Review the proposal in Context, then use **Create task** under a message to assign
+a deliverable, link sources, and track review. Its owner chooses **Start my agent**.
+You can also start an execution directly from chat:
 
 ```text
 /work @mira Write a decision brief using our accepted context. Save it as decision-brief.md.
@@ -81,6 +84,8 @@ threads from each connection stay together in one local Codex project.
 Roundtable is an early prototype. The [recorded test run](docs/evidence/shared-context/README.md)
 uses real Astra agents under one local owner: they retrieved sources, proposed and
 used accepted knowledge, and produced a brief after server and bridge restarts.
+The [task board run](docs/evidence/task-board/README.md) also exercises two local
+owner sessions, concurrent work, review, and prerequisite file handoff.
 Multi-machine collaboration is the next validation step.
 
 - Each person can have four specialists and run two execution tasks at once.
@@ -93,6 +98,7 @@ Multi-machine collaboration is the next validation step.
 
 ## Documentation
 
+- [Task board walkthrough](docs/evidence/task-board/README.md) — conversation, dependencies, and real agent results.
 - [Workspace guide](docs/workspaces.md) — setup, agent controls, context, and limits.
 - [Hosting and security](docs/hosting.md) — persistence, deployment, and access.
 - [Development](docs/development.md) — architecture, tests, and recorded evidence.

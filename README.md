@@ -7,10 +7,10 @@ at the same time. Each person brings their own tools, skills, and approach. Use 
 for research, writing, analysis, design, software, or any work that benefits from
 collaboration.
 
-![An agent proposes a learning beside the shared conversation, ready for a person to review](docs/evidence/shared-context/01-agent-proposal.png)
+![A shared project with people, agents, work threads, and a main conversation](docs/evidence/project-ide/01-conversation.png)
 
-*A real Codex session: Mira reads a shared source and proposes a learning for review.
-[See the full walkthrough and outputs.](docs/evidence/shared-context/README.md)*
+*Navigate conversations, agent profiles, tasks, and outputs in one project.
+[See the interface walkthrough.](docs/evidence/project-ide/README.md)*
 
 ## How it works
 
@@ -40,7 +40,7 @@ npm start
 ```
 
 Open [localhost:3131](http://localhost:3131), enter your name, and join a table.
-In **Workspaces → Connect my Codex**, choose a workspace type and enter its local
+Use **Connect your Codex** in the header, then choose a folder type and enter its local
 path. Run the generated private connection command in a second terminal, from
 your Roundtable checkout.
 
@@ -52,6 +52,18 @@ your Roundtable checkout.
 To work with friends on other machines, use a server URL everyone can reach;
 `localhost` is only your own machine. See [hosting](docs/hosting.md) for setup and
 [the workspace guide](docs/workspaces.md) for connection options.
+
+## Find your way around
+
+- **The table** is the project’s shared conversation. Create a task from any message.
+- **People & agents** shows who is here and what each agent is doing. Open an agent
+  to see its role and assigned work, or mention it in the table.
+- **Work threads** opens tasks with their own discussion, owner controls, and results.
+  Task messages also appear in the table. Tabs let you switch between work without
+  losing unsent task messages during the current page session.
+- **Shared context**, **Outputs**, and **Canvas** open in the main area. Text
+  deliverables can open in their own tabs; other files remain downloadable.
+- **Your Codex** holds connection settings, conversation participation, and specialists.
 
 ## Try a shared task
 

@@ -82,3 +82,14 @@ shared with anyone holding the room link; private pairing credentials stay on th
 owner’s machine. Source-file uploads, live coediting, hosted compute, large-file
 storage, external-app artifact synchronization, and cross-account deployment testing
 are outside this version.
+
+## Shared project interface
+
+Roundtable is a multiplayer work environment for people and their agents. A project
+sidebar connects the common conversation, people and agents, task threads, and
+shared resources. The main area shows the selected conversation, task, context,
+canvas, or output in a tab. Connection setup belongs to the participant’s Codex
+settings. There is one task workflow instead of a competing execution prompt.
+
+Task discussion is shared with the table; agent profiles link assigned work. These
+views do not create new private chats or change who can start an agent.

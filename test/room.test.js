@@ -303,6 +303,11 @@ test('member identity survives reconnection and a matching display name grants n
   assert.equal(returned.welcome.state.connections[0].ownerId,returned.welcome.you.id);
   const impostor=await f.person('room','Alice');
   assert.notEqual(impostor.welcome.you.id,returned.welcome.you.id);
+  // Identical display names must still map to separate sidebar owners.
+  assert.ok(impostor.welcome.state.people.some(p=>p.id===returned.welcome.you.id));
+  assert.ok(impostor.welcome.state.people.some(p=>p.id===impostor.welcome.you.id));
+  const presence=await returned.wait(m=>m.t==='presence' && m.people.some(p=>p.id===impostor.welcome.you.id));
+  assert.ok(presence.people.every(p=>Object.keys(p).every(k=>['id','name','color'].includes(k))));
   impostor.send({t:'workspace_start',instructions:'Spend Alice compute',ownerId:bridge.ownerId});
   await impostor.wait(m=>m.t==='chat' && m.entry.text.includes('Connect your Codex'));
   assert.equal(bridge.ws.messages.some(m=>m.t==='workspace_task'),false);

@@ -250,7 +250,7 @@ function publicState(room) {
     parent: room.parent || null,
     agents: publicAgents(room),
     brains: publicBrains(room),
-    people: [...room.people.values()].map(({ name, color }) => ({ name, color })),
+    people: [...room.people.values()].map(({ id, name, color }) => ({ id, name, color })),
   };
 }
 
@@ -941,7 +941,7 @@ wss.on('connection', (ws, req) => {
         room: String(msg.room || ''),
         exists: !!r,
         title: r ? r.title : 'New table',
-        people: r ? [...r.people.values()].map(({ name, color }) => ({ name, color })) : [],
+        people: r ? [...r.people.values()].map(({ id, name, color }) => ({ id, name, color })) : [],
         agents: r ? r.agents.map(({ name, color }) => ({ name, color })) : [],
         brains: r ? publicBrains(r).map((b) => b.name) : [],
         access: r ? r.access : DEFAULT_ACCESS,
@@ -1004,7 +1004,7 @@ wss.on('connection', (ws, req) => {
         hostKey: hostKeyToSend,
         state: publicState(room),
       }));
-      broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ name, color }) => ({ name, color })) }, ws);
+      broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ id, name, color }) => ({ id, name, color })) }, ws);
       workspace.announce(room);
       say(room, { kind: 'system', text: `${you.name} pulled up a chair.` });
       return;
@@ -1153,7 +1153,7 @@ wss.on('connection', (ws, req) => {
         if(member) member.name=nm;
         log(room.id, `rename: ${was} -> ${nm}`);
         ws.send(JSON.stringify({ t: 'you', you: { id:you.id, name: you.name, color: you.color, isHost: !!you.isHost } }));
-        broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ name, color }) => ({ name, color })) });
+        broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ id, name, color }) => ({ id, name, color })) });
         say(room, { kind: 'system', text: `${was} is now ${nm}.` });
         break;
       }
@@ -1253,7 +1253,7 @@ wss.on('connection', (ws, req) => {
     room.people.delete(ws);
     if (you) {
       log(room.id, `leave: ${you.name} (${room.people.size} people)`);
-      broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ name, color }) => ({ name, color })) });
+      broadcast(room, { t: 'presence', people: [...room.people.values()].map(({ id, name, color }) => ({ id, name, color })) });
       say(room, { kind: 'system', text: `${you.name} left the table.` });
     }
   });

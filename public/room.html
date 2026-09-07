@@ -459,17 +459,12 @@ body.offline .hint{color:#C25E5E}
 .conversation-bar{padding:12px 20px;border-bottom:1px solid #e8e6e1;font-size:12px;background:#faf9f6}
 .conversation-bar label{font-weight:600}.conversation-bar select{margin:0 8px;padding:5px;border:1px solid #ddd;border-radius:6px;background:white}
 .conversation-bar p{margin:6px 0;color:#777}
-#conversation-agents{display:flex;gap:6px;flex-wrap:wrap}
-#conversation-agents button{border:1px solid #ded8ed;background:#f1edf8;color:#58457e;border-radius:18px;padding:6px 10px;cursor:pointer}
 .msg.activity .text{font-size:12px;color:#777}
 #workspace-panel h2{margin:0 0 8px;font-size:22px}
 #workspace-panel p{font-size:13px;line-height:1.5}
 #workspace-panel button,.work-dialog button{border:1px solid #dededb;border-radius:7px;background:#fff;padding:8px 11px;cursor:pointer;color:#37352f}
 #workspace-panel button:disabled,.work-dialog button:disabled{opacity:.45;cursor:default}
-#workspace-start{background:#37352f!important;color:white!important}
-#workspace-form{display:grid;gap:8px;margin:22px 0}
-#workspace-form label,.work-dialog label{font-size:13px;font-weight:600}
-#workspace-task{min-height:90px;resize:vertical;border:1px solid #dededb;border-radius:8px;padding:12px;font:inherit;font-size:14px}
+.work-dialog label{font-size:13px;font-weight:600}
 .work-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .workspace-person{display:inline-block;padding:5px 9px;margin:10px 5px 0 0;background:#eef4ed;border-radius:20px;font-size:12px}
 .work-card{padding:16px;border:1px solid #e2e2df;border-radius:10px;margin:12px 0;background:white}
@@ -481,20 +476,22 @@ body.offline .hint{color:#C25E5E}
 .work-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#f5f5f3;border-radius:8px;font-size:12px;max-height:40vh;overflow:auto}
 .work-close{float:right}.work-play{width:95vw}#workspace-preview{width:100%;height:65vh;border:0;background:#111}
 @media(max-width:860px){.doc{width:100%;min-width:0}}
-#specialist-add{border:1px solid #ded8ed;border-radius:6px;padding:5px 9px;margin-bottom:8px;background:white;cursor:pointer}#specialist-form{display:grid;gap:12px}#specialist-form input,#specialist-form textarea,#workspace-agent,#pair-mode{font:inherit;padding:8px;border:1px solid #ddd;border-radius:6px}#specialist-role{min-height:100px}.work-actions a{font-size:13px;overflow-wrap:anywhere}
+#specialist-add{border:1px solid #ded8ed;border-radius:6px;padding:5px 9px;margin-bottom:8px;background:white;cursor:pointer}#specialist-form{display:grid;gap:12px}#specialist-form input,#specialist-form textarea,#pair-mode{font:inherit;padding:8px;border:1px solid #ddd;border-radius:6px}#specialist-role{min-height:100px}.work-actions a{font-size:13px;overflow-wrap:anywhere}
 [hidden]{display:none!important}
 
 #context-panel{padding:0 2px 24px}#context-panel label,#context-form label{display:block;font-size:12px;margin:14px 0 5px;color:var(--muted)}
 #context-panel input[type=search],#context-panel select,#context-form input,#context-form select,#context-form textarea{width:100%;box-sizing:border-box;font:inherit;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
 .context-intro,#context-empty{font-size:13px;color:var(--muted);line-height:1.6}.context-card{padding:16px;margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.context-card.proposed{border-color:#bba36b;background:#fffbf1}.context-card.retired{opacity:.65}.context-card h3{font-size:15px;margin:7px 0}.context-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;max-height:260px;overflow:auto}.context-meta,#context-count{font-size:11px;color:var(--muted);line-height:1.5}.context-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}.context-actions button,#context-save{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:var(--bg);cursor:pointer}.context-card details{font-size:12px;margin-top:12px}.context-save-chat{font:inherit;font-size:11px;color:var(--muted);background:none;border:0;padding:5px 0;margin-right:9px;cursor:pointer}.context-toggle input{width:auto}#context-form-error,#context-notice{font-size:12px;color:#a23939}#context-dialog{width:min(580px,90vw)}
-#task-form,#task-comment-form{display:grid;gap:8px}#task-dialog{width:min(620px,90vw)}#task-form input,#task-form textarea,#task-form select,#task-comment{font:inherit;padding:9px;border:1px solid var(--line);border-radius:6px;width:100%;box-sizing:border-box}#task-form label,#task-comment-form label{margin-top:8px}.task-lane{margin:22px 0}.task-lane h3{font-size:13px;color:var(--muted)}.task-card{padding:14px;margin:8px 0;border:1px solid var(--line);border-radius:9px;background:var(--bg)}.task-card button,#task-add{padding:7px 10px;border:1px solid var(--line);background:white;border-radius:6px;cursor:pointer}.task-card button:first-child{text-align:left;font-weight:600;border:0;padding:0}.task-card button:disabled{opacity:.4;cursor:default}.task-waiting{font-size:12px;color:#916a20}#task-notice,#task-error{color:#a23939;font-size:13px}#task-results a{display:block;margin:10px 0}
+#task-form{display:grid;gap:8px}#task-dialog{width:min(620px,90vw)}#task-form input,#task-form textarea,#task-form select{font:inherit;padding:9px;border:1px solid var(--line);border-radius:6px;width:100%;box-sizing:border-box}#task-form label{margin-top:8px}.task-lane{margin:22px 0}.task-lane h3{font-size:13px;color:var(--muted)}.task-card{padding:14px;margin:8px 0;border:1px solid var(--line);border-radius:9px;background:var(--bg)}.task-card button,#task-add{padding:7px 10px;border:1px solid var(--line);background:white;border-radius:6px;cursor:pointer}.task-card button:first-child{text-align:left;font-weight:600;border:0;padding:0}.task-card button:disabled{opacity:.4;cursor:default}.task-waiting{font-size:12px;color:#916a20}#task-notice,#task-error{color:#a23939;font-size:13px}
 #catchup-panel{padding:12px 20px;background:#f5f2e9;border-bottom:1px solid var(--line);font-size:13px;max-height:180px;overflow:auto}#catchup-items{display:flex;flex-wrap:wrap;gap:7px;margin:9px 0}#catchup-panel button{padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:white;cursor:pointer}#catchup-dismiss{margin-top:8px}
 </style>
+<link rel="stylesheet" href="/project.css">
 </head>
 <body class="work-mode">
 
 <div class="app">
   <header>
+    <button id="project-menu" aria-label="Toggle project navigation" aria-expanded="false">☰</button>
     <div id="h-title" contenteditable="true" spellcheck="false"></div>
     <a class="icon-btn" id="h-parent" style="display:none;text-decoration:none" title="Back to the table this was branched from"></a>
     <button class="icon-btn" id="h-merge" style="display:none" title="Fold this branch's work back into the parent table (one agent turn)">⇤ Merge back</button>
@@ -505,21 +502,30 @@ body.offline .hint{color:#C25E5E}
     <div class="faces" id="faces"></div>
     <button class="icon-btn" id="btn-new-agent" title="Invite a new agent">+</button>
     <button class="icon-btn" id="btn-auto" title="Auto-reply: agents chime in without being @mentioned">Auto</button>
-    <button class="icon-btn" id="btn-tasks">Tasks</button>
-    <button class="icon-btn" id="btn-context">Context</button>
-    <button class="icon-btn" id="btn-workspaces">Workspaces</button>
-    <button class="icon-btn" id="btn-doc" title="Toggle the canvas">Canvas</button>
+    <button class="icon-btn" id="connection-settings">Connect your Codex</button>
   </header>
 
-  <main>
+  <main class="project-layout">
+    <nav id="project-sidebar" aria-label="Project navigation">
+      <div class="sidebar-label">PROJECT</div>
+      <button id="nav-conversation" class="project-nav">◌ <span>The table</span></button>
+      <button id="btn-tasks" class="project-nav">☷ <span>Tasks</span><span id="nav-task-count" class="nav-count">0</span></button>
+      <button id="btn-context" class="project-nav">▤ <span>Shared context</span></button>
+      <button id="btn-workspaces" class="project-nav">↗ <span>Outputs</span></button>
+      <button id="btn-doc" class="project-nav">◇ <span>Canvas</span></button>
+      <div class="sidebar-label">PEOPLE &amp; AGENTS</div><div id="project-people"></div>
+      <div class="sidebar-label">WORK THREADS</div><div id="project-threads"></div>
+      <div class="sidebar-label">RESOURCES</div><div id="project-resources"></div>
+      <div class="sidebar-footer">Your agents. One shared project.</div>
+    </nav>
+    <div class="project-editor">
+    <div id="project-tabs" role="tablist" aria-label="Open project views"></div>
+    <p id="project-notice" role="alert" hidden></p>
+    <div class="project-content">
+
     <section class="chat">
-      <div class="conversation-bar">
-        <label for="conversation-mode">My Codex in the conversation</label>
-        <select id="conversation-mode" disabled><option value="off">Paused</option><option value="auto">Join the conversation</option><option value="mentions">Only when @mentioned</option></select>
-        <p id="conversation-help">Connect your Codex in Workspaces to bring it to the table.</p>
-        <button id="specialist-add" disabled>Add specialist</button>
-        <div id="conversation-agents" aria-label="Agents at the table"></div>
-      </div>
+      <div class="conversation-heading"><div><span class="eyebrow">PROJECT CONVERSATION</span><h1>The table</h1><p>Talk together. Bring agents in. Turn ideas into work.</p></div><button id="conversation-new-task" class="project-button">New task</button></div>
+      <div id="conversation-empty" class="project-empty"><span class="empty-symbol">◎</span><h2>A place to think and work together</h2><p>Start a conversation, connect your Codex, or add a brief in shared context. Everyone’s agents and work will appear in the sidebar.</p><button id="empty-connect" class="project-button">Connect your Codex</button></div>
       <section id="catchup-panel" hidden aria-label="While you were away"><details><summary id="catchup-summary"></summary><div id="catchup-items"></div></details><button id="catchup-dismiss">Mark caught up</button></section>
       <div class="chat-scroll" id="chat"></div>
       <div id="brain-panel">
@@ -542,7 +548,7 @@ body.offline .hint{color:#C25E5E}
 
     <aside class="doc" id="doc">
       <div class="doc-head">
-        <span id="panel-heading">Workspaces</span>
+        <span id="panel-heading">Outputs</span>
         <span class="writing">agent writing…</span>
       </div>
       <div class="doc-scroll">
@@ -560,19 +566,9 @@ body.offline .hint{color:#C25E5E}
   <p id="context-empty">Add the shared brief or a source to give everyone a common starting point.</p>
   <div id="context-items"></div>
 </section>
-<section id="workspace-panel">
-  <h2>Work together</h2>
-  <p id="my-workspace">Bring your Codex and a folder of work.</p>
-  <div class="work-actions"><button id="workspace-connect">Connect my Codex</button><button id="workspace-disconnect" hidden>Disconnect mine</button></div>
-  <div id="workspace-connections"></div>
-  <form id="workspace-form">
-    <label for="workspace-agent">Who should do this?</label><select id="workspace-agent"></select>
-    <label for="workspace-task">What are you working on?</label>
-    <textarea id="workspace-task" maxlength="4000" placeholder="Draft a proposal, compare options, analyze a spreadsheet, or improve the code."></textarea>
-    <button id="workspace-start" disabled>Start with my Codex</button>
-  </form>
-  <p id="workspace-empty">Work together on research, writing, design, data, or code. Results and deliverables appear here.</p>
-  <div id="specialist-roster"></div>
+<section id="workspace-panel" hidden>
+  <p class="context-intro">Shared outputs from everyone’s agents. Open a linked task to follow the discussion, or review and download a result here.</p>
+  <p id="workspace-empty" class="project-empty">No outputs yet. Create a task from the conversation and start your agent when you’re ready.</p>
   <div id="workspace-cards"></div>
 </section>
 
@@ -582,9 +578,24 @@ body.offline .hint{color:#C25E5E}
         <div id="canvas-empty">Agents lay out notes, code, and diffs here. Text blocks are editable when your table permissions allow it.</div>
       </div></div>
     </aside>
+    <section id="project-detail" class="project-detail" hidden aria-label="Selected work"></section>
+    </div></div>
   </main>
 </div>
 
+<dialog id="connection-dialog" class="work-dialog">
+<button data-close-workspace class="work-close">Close</button><h2>Your Codex</h2>
+<p>Bring your own agents, tools, and approach into this project.</p><p id="my-workspace"></p>
+<div class="work-actions"><button id="workspace-connect">Connect my Codex</button><button id="workspace-disconnect" hidden>Disconnect mine</button></div>
+      <div class="conversation-bar">
+        <label for="conversation-mode">My Codex in the conversation</label>
+        <select id="conversation-mode" disabled><option value="off">Paused</option><option value="auto">Join the conversation</option><option value="mentions">Only when @mentioned</option></select>
+        <p id="conversation-help">Connect your Codex to bring your agents into this project.</p>
+        <button id="specialist-add" disabled>Add specialist</button>
+
+      </div>
+<div id="specialist-roster"></div><details><summary>Project connections</summary><div id="workspace-connections"></div></details>
+</dialog>
 <!-- Arrival screen: the first thing a guest sees -->
 <div id="arrival">
   <div class="arrival-card">
@@ -664,7 +675,7 @@ body.offline .hint{color:#C25E5E}
   <button data-close-workspace class="work-close">Close</button>
   <h2>Connect your Codex</h2>
   <p>Use your own Codex login, instructions, skills, and tools. Run the command from your Roundtable checkout on your machine. Use an ordinary folder for documents and research, or a Git repository for code changes.</p>
-  <label for="pair-mode">Workspace type</label><select id="pair-mode"><option value="folder">Folder — documents, research, data, and other work</option><option value="git">Git repository — isolated branches and patch review</option></select>
+  <label for="pair-mode">Work on this machine</label><select id="pair-mode"><option value="folder">Folder — documents, research, data, and other work</option><option value="git">Git repository — isolated branches and patch review</option></select>
   <label for="pair-project">Local work folder</label><input id="pair-project" placeholder="/path/to/work">
   <label for="pair-check">Validation command (optional)</label><input id="pair-check" placeholder="npm ci && npm test && npm run build">
   <label for="pair-preview">Preview folder (optional)</label><input id="pair-preview" placeholder="dist">
@@ -714,9 +725,8 @@ body.offline .hint{color:#C25E5E}
 <label for="task-context">Shared context (optional)</label><select id="task-context" multiple size="3"></select>
 <p id="task-origin" class="context-body"></p><p id="task-error" role="alert"></p><button id="task-save">Save task</button>
 </form>
-<div id="task-results"></div><h3>Task conversation</h3><div id="task-comments"></div>
-<form id="task-comment-form"><label for="task-comment">Discuss this task</label><textarea id="task-comment" maxlength="2000" placeholder="Ask a question or @mention an agent" required></textarea><button>Send to conversation</button></form>
 </dialog>
+<script src="/project.js"></script>
 <script src="/catchup.js"></script>
 <script src="/tasks.js"></script>
 <script src="/context.js"></script>
@@ -837,12 +847,13 @@ const send = m => {
   clog('send dropped (socket not open):', m.t);
   return false;
 };
-const tasksUI=createTasksUI({send,roomId,getYou:()=>state.you,canSpeak});
-const catchupUI=createCatchupUI({send,openTask:id=>tasksUI.open(id),openContext:id=>{showPanel('context');contextUI.focus(id);}});
+const projectUI=createProjectUI({send,getYou:()=>state.you,canSpeak,openTaskEditor:id=>tasksUI.edit(id),taskCard:id=>tasksUI.card(id),openContext:id=>{showPanel('context');contextUI.focus(id);}});
+const tasksUI=createTasksUI({send,roomId,getYou:()=>state.you,canSpeak,openTask:id=>projectUI.open('task:'+id)});
+const catchupUI=createCatchupUI({send,isReading:()=>!document.querySelector('.chat').hidden,openTask:id=>tasksUI.open(id),openContext:id=>{showPanel('context');contextUI.focus(id);}});
 const contextUI=createContextUI({send,roomId,getYou:()=>state.you,canSpeak});
-const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
+const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,onUpdate:value=>projectUI.update(value),openTask:id=>tasksUI.open(id),saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
 function hintText(){
-  if(document.body.classList.contains('work-mode')) return canSpeak()?'Talk with people and their Codex here. Click an agent to @mention it; assign work with /work @handle instructions.':'View-only — follow the group’s work and review their shared results.';
+  if(document.body.classList.contains('work-mode')) return canSpeak()?'Message people and @mention agents. Turn a message into a task when you’re ready to start work.':'View-only — follow the group’s work and review their shared results.';
   if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
   if(state.hostOnlySpend && !state.isHost) return 'Only the host can put agents to work here.';
   if(!state.agents.length) return 'No agents at the table — /agent Name: brief invites one.';
@@ -989,7 +1000,7 @@ function onMessage(ev){
       $('arrival').classList.remove('open');
       if(m.hostKey) localStorage.setItem(HOST_KEY_STORE, m.hostKey);
       if(m.memberKey) localStorage.setItem(MEMBER_STORE,m.memberKey);
-      tasksUI.update(m.state);tasksUI.history(m.state.chat || []);
+      tasksUI.update(m.state);projectUI.update(m.state);
       workspaceUI.update(m.state.work || [],m.state.connections || [],m.state.workspaceRoster || m.state.connections || []);
       if(m.catchup)catchupUI.welcome(m.catchup);
       contextUI.update(m.state.sharedContext || {revision:0,entries:[],adoptions:{}});
@@ -1029,11 +1040,11 @@ function onMessage(ev){
       break;
     }
     case 'catchup':catchupUI.welcome(m.catchup);break;
-    case 'task_saved': case 'task_error': tasksUI.result(m);break;
-    case 'context': contextUI.update(m.context);tasksUI.update({sharedContext:m.context}); break;
+    case 'task_saved': case 'task_error': tasksUI.result(m);projectUI.notice(m.t==='task_error'?m.message:'');break;
+    case 'context': contextUI.update(m.context);tasksUI.update({sharedContext:m.context});projectUI.update({sharedContext:m.context}); break;
     case 'context_saved': case 'context_error': contextUI.result(m); break;
-    case 'workspaces': workspaceUI.update(m.work,m.connections,m.workspaceRoster || m.connections);tasksUI.update(m); break;
-    case 'workspace_progress': workspaceUI.progress(m.id,m.message);tasksUI.update(); break;
+    case 'workspaces': workspaceUI.update(m.work,m.connections,m.workspaceRoster || m.connections);tasksUI.update(m);projectUI.update(m); break;
+    case 'workspace_progress': workspaceUI.progress(m.id,m.message);tasksUI.update();projectUI.update({}); break;
     case 'workspace_pair': workspaceUI.pair(m.token); break;
     case 'auto': setAuto(m.on); break;
     case 'access': setAccess(m.access, m.hostOnlySpend); break;
@@ -1093,6 +1104,7 @@ $('h-title').addEventListener('blur', () => {
 });
 
 function renderFaces(){
+  projectUI.update({people:state.people});
   const f = $('faces'); f.innerHTML = '';
   for(const p of state.people){
     const isMe = p.name === state.you?.name;
@@ -1240,7 +1252,7 @@ function appendMsg(node){
 }
 
 function renderChat(entry){
-  tasksUI.message(entry);
+  projectUI.message(entry);
   if(entry.kind === 'branch'){ addBranchCard(entry); return; }
   if(entry.kind === 'system'){ addSystem(entry.text, entry.room); return; }
   const grouped = lastEntry &&
@@ -1332,23 +1344,18 @@ $('chat-text').addEventListener('input', () => {
 });
 
 /* ---------------- Doc panel ---------------- */
-const docOpenDefault = matchMedia('(min-width: 861px)').matches;
-$('doc').classList.toggle('closed', !docOpenDefault);
-$('btn-workspaces').classList.toggle('open', docOpenDefault);
-let activePanel='work';
-function showPanel(panel){
-  const closed=$('doc').classList.contains('closed');
-  if(activePanel===panel && !closed){$('doc').classList.add('closed');for(const id of ['btn-workspaces','btn-doc','btn-context','btn-tasks'])$(id).classList.remove('open');return;}
-  activePanel=panel;document.body.classList.toggle('work-mode',panel!=='canvas');
-  $('hint').textContent=hintText();$('panel-heading').textContent={work:'Workspaces',canvas:'Canvas',context:'Context',tasks:'Tasks'}[panel];
-  $('tasks-panel').hidden=panel!=='tasks';$('workspace-panel').hidden=panel!=='work';$('canvas-panel').hidden=panel!=='canvas';$('context-panel').hidden=panel!=='context';
-  $('doc').classList.remove('closed');
-  $('btn-workspaces').classList.toggle('open',panel==='work');$('btn-doc').classList.toggle('open',panel==='canvas');$('btn-context').classList.toggle('open',panel==='context');$('btn-tasks').classList.toggle('open',panel==='tasks');
-}
+function showPanel(panel){projectUI.open(panel==='work'?'outputs':panel);}
 $('btn-doc').addEventListener('click',()=>showPanel('canvas'));
 $('btn-workspaces').addEventListener('click',()=>showPanel('work'));
 $('btn-tasks').addEventListener('click',()=>showPanel('tasks'));
 $('btn-context').addEventListener('click',()=>showPanel('context'));
+$('project-menu').onclick=()=>{const open=document.body.classList.toggle('sidebar-open');$('project-menu').setAttribute('aria-expanded',String(open));};
+document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.body.classList.remove('sidebar-open');$('project-menu').setAttribute('aria-expanded','false');}});
+$('nav-conversation').onclick=()=>projectUI.open('conversation');
+$('connection-settings').onclick=()=>workspaceUI.settings();
+$('empty-connect').onclick=()=>$('workspace-connect').click();
+$('conversation-new-task').onclick=()=>$('task-add').click();
+projectUI.open('conversation');
 
 let probT;
 $('d-problem').addEventListener('input', () => {

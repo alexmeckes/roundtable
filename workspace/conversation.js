@@ -39,9 +39,13 @@ export function createConversation({say,announce,allowRun}) {
     chain.remaining--;chain.visits.set(identity(bridge),(chain.visits.get(identity(bridge))||0)+1);
     queue.push({text,chain});queues.set(identity(bridge),queue);drain(room,bridge);
   }
-  function human(room,you,text,taskId){
+  function human(room,you,text,taskId,feedback=()=>{}){
     const agents=enabled(room),direct=participants(room).filter(b=>mention(text,b.handle));
     const targets=direct.length?direct.filter(b=>agents.includes(b)):agents.filter(b=>b.chatMode==='auto').slice(0,2);
+    if(!targets.length && room.personalBridges.size){
+      const handles=agents.map(b=>'@'+b.handle).slice(0,4).join(', ');
+      feedback(direct.length?'The mentioned agent is paused or reconnecting. Its owner can change its reply mode.':handles?'Message posted. To get an agent reply, mention '+handles+', or set your Codex to reply to the room.':'Message posted. No agents are listening yet; their owners can enable replies beside the message box.');
+    }
     const chain={remaining:4,visits:new Map(),taskId};for(const b of targets)enqueue(room,b,`${you.name}: ${text}`,chain);
     return room.personalBridges.size>0;
   }

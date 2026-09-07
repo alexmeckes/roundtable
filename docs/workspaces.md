@@ -14,15 +14,42 @@ npm ci
 npm start
 ```
 
-Open <http://localhost:3131>, join a room, and share its link. Select **Connect my
-Codex**, choose **Folder** or **Git repository**, and enter a local path. Run the
-private command from a Roundtable checkout. For ordinary work it looks like:
+Open <http://localhost:3131> and join a room. Click **Connect your Codex**, then
+reuse the project folder of the Codex thread that launched Roundtable. If there is
+no launching Codex thread, choose a folder in the native picker. A standalone
+launcher can also set `ROUNDTABLE_PROJECT=/path/to/project`. Roundtable detects your installed CLI and
+existing login, selects folder or Git mode, and launches the bridge. Your agent
+joins the conversation when mentioned; execution tasks still require their owner
+to start them. An existing explicit pause remains paused.
+
+The connection is remembered for this room, member, server address, and local
+Codex profile. Clicking Connect again reuses its folder. Restarting the local
+server restores enabled connections; it does not start interrupted tasks.
+**Your Codex → Disconnect mine** stops the bridge and disables automatic restore.
+**Change folder** disconnects the current bridge and opens setup for another folder.
+
+Under **Advanced**, you can enter a path instead of using the picker, override the
+folder type, or set validation and preview options. Automatic detection selects Git
+only for a repository root with a committed baseline; a subfolder defaults to folder
+mode. If Codex is missing, follow the linked [official installation guide](https://learn.chatgpt.com/docs/cli).
+If it needs a login, **Sign in to Codex** starts its browser sign-in flow.
+
+### Connecting from another machine
+
+Share a server URL everyone can reach. The built-in manager controls only the
+machine running Roundtable and is unavailable to remote browsers. On a hosted table,
+**Connect your Codex** opens manual setup: choose the folder type, enter its local
+path, and run the private command from a Roundtable checkout on your own machine:
 
 ```bash
 ROUNDTABLE_PAIR_TOKEN='<private token from your room>' node bridge/workspace.js \
   'https://your-roundtable.example/s/room-id' \
   --project '/path/to/work' --workspace-mode folder
 ```
+
+A standalone companion for one-click connections to hosted tables is not included.
+
+### Folder and repository behavior
 
 Folder mode reads reference inputs from your existing directory and writes each task
 into a fresh sibling `.<folder>-roundtable/<task-id>` directory. No Git setup is needed.

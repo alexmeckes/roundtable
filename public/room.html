@@ -538,10 +538,12 @@ body.offline .hint{color:#C25E5E}
         <div class="bp-wait">Waiting for a brain to connect…</div>
       </div>
       <div class="composer">
+        <div id="conversation-controls"><div id="conversation-mentions" aria-label="Mention an agent"></div><label id="composer-mode-label" hidden>My Codex replies <select id="composer-mode"><option value="mentions">Only when mentioned</option><option value="auto">To the room</option><option value="off">Paused</option></select></label></div>
         <div class="composer-box">
           <textarea id="chat-text" placeholder="Message the table…" rows="1"></textarea>
           <button id="btn-send">Send</button>
         </div>
+        <div id="conversation-feedback" role="status" hidden></div>
         <div class="hint" id="hint">@agent to put the agent to work, or just talk.</div>
       </div>
     </section>
@@ -671,6 +673,22 @@ body.offline .hint{color:#C25E5E}
   </div>
 </div>
 
+<dialog id="local-connect" class="work-dialog">
+  <button id="local-close" class="work-close">Close</button><h2>Bring your Codex</h2>
+  <p>Your login, tools, and approach stay on this machine. Use your Codex project or choose a folder. Your agents can join when mentioned. You decide when they start tasks.</p>
+  <p id="local-runtime" class="local-runtime" role="status"></p><p id="local-saved" class="work-meta"></p>
+  <p id="local-message" role="status" aria-live="polite"></p>
+  <div class="work-actions"><button id="local-current" hidden>Use Codex project</button><button id="local-reconnect" hidden>Reconnect</button><button id="local-choose">Choose a folder &amp; connect</button><button id="local-login" hidden>Sign in to Codex</button></div>
+  <a id="local-install" href="https://learn.chatgpt.com/docs/cli" target="_blank" rel="noopener noreferrer" hidden>Install Codex</a>
+  <details id="local-advanced"><summary>Advanced</summary>
+    <label for="local-path">Folder path (optional)</label><input id="local-path" placeholder="Or choose with the folder picker">
+    <label for="local-mode">Folder type</label><select id="local-mode"><option value="auto">Detect automatically</option><option value="folder">Folder — documents, research, data</option><option value="git">Git repository — branches and patch review</option></select>
+    <label for="local-check">Validation command (optional)</label><input id="local-check" placeholder="npm test">
+    <label for="local-preview">Preview folder (optional)</label><input id="local-preview" placeholder="dist">
+    <p class="work-meta">Connections are remembered on this machine and restored with Roundtable. Disconnect your Codex to turn off automatic reconnection. Changing folders requires disconnecting first.</p>
+  </details>
+  <div class="local-footer"><button id="local-refresh">Check setup again</button><button id="local-manual">Manual setup</button></div>
+</dialog>
 <dialog id="workspace-pair" class="work-dialog">
   <button data-close-workspace class="work-close">Close</button>
   <h2>Connect your Codex</h2>
@@ -726,6 +744,7 @@ body.offline .hint{color:#C25E5E}
 <p id="task-origin" class="context-body"></p><p id="task-error" role="alert"></p><button id="task-save">Save task</button>
 </form>
 </dialog>
+<script src="/local-connection.js"></script>
 <script src="/project.js"></script>
 <script src="/catchup.js"></script>
 <script src="/tasks.js"></script>
@@ -851,9 +870,10 @@ const projectUI=createProjectUI({send,getYou:()=>state.you,canSpeak,openTaskEdit
 const tasksUI=createTasksUI({send,roomId,getYou:()=>state.you,canSpeak,openTask:id=>projectUI.open('task:'+id)});
 const catchupUI=createCatchupUI({send,isReading:()=>!document.querySelector('.chat').hidden,openTask:id=>tasksUI.open(id),openContext:id=>{showPanel('context');contextUI.focus(id);}});
 const contextUI=createContextUI({send,roomId,getYou:()=>state.you,canSpeak});
-const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,onUpdate:value=>projectUI.update(value),openTask:id=>tasksUI.open(id),saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
+const localConnectionUI=createLocalConnectionUI({roomId,getMemberKey:()=>localStorage.getItem(MEMBER_STORE),manual:()=>workspaceUI.manualConnect()});
+const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,openConnection:options=>localConnectionUI.open(options),onUpdate:value=>projectUI.update(value),openTask:id=>tasksUI.open(id),saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
 function hintText(){
-  if(document.body.classList.contains('work-mode')) return canSpeak()?'Message people and @mention agents. Turn a message into a task when you’re ready to start work.':'View-only — follow the group’s work and review their shared results.';
+  if(document.body.classList.contains('work-mode')) return canSpeak()?projectUI.conversationHint():'View-only — follow the group’s work and review their shared results.';
   if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
   if(state.hostOnlySpend && !state.isHost) return 'Only the host can put agents to work here.';
   if(!state.agents.length) return 'No agents at the table — /agent Name: brief invites one.';
@@ -1045,6 +1065,7 @@ function onMessage(ev){
     case 'context_saved': case 'context_error': contextUI.result(m); break;
     case 'workspaces': workspaceUI.update(m.work,m.connections,m.workspaceRoster || m.connections);tasksUI.update(m);projectUI.update(m); break;
     case 'workspace_progress': workspaceUI.progress(m.id,m.message);tasksUI.update();projectUI.update({}); break;
+    case 'conversation_feedback': if(m.taskId)projectUI.notice(m.text);else projectUI.feedback(m.text);break;
     case 'workspace_pair': workspaceUI.pair(m.token); break;
     case 'auto': setAuto(m.on); break;
     case 'access': setAccess(m.access, m.hostOnlySpend); break;
@@ -1332,7 +1353,7 @@ function sendChat(){
   const text = t.value.trim();
   if(!text) return;
   if(!send({t:'chat', text})) return; // offline: keep the draft, banner explains
-  t.value = '';
+  t.value = '';t.dispatchEvent(new Event('input'));
   $('btn-send').classList.remove('ready');
 }
 $('btn-send').addEventListener('click', sendChat);

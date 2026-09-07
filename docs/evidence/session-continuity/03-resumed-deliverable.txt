@@ -1,0 +1,58 @@
+Browser tab: 22, Title: "Untitled table — Roundtable", URL: "http://localhost:43148/s/continuity-demo".
+0 AXWebArea Untitled table — Roundtable, URL: localhost:43148/s/continuity-demo
+	1 container task-dialog
+		2 button Close, ID: task-close
+		3 heading Task details, Value: 2, ID: task-dialog-title
+			4 text Task details
+		5 container task-form
+			6 text Task title
+			7 text field (settable) Task title, Value: Continue a retained draft, ID: task-title
+			8 text Instructions and expected result
+			9 text entry area (settable) Instructions and expected result, ID: task-details, Value: Continue from the existing draft.md. Preserve its first paragraph exactly. Add a second paragraph: "Continued after reconnect." Do not sleep. Verify both paragraphs and save the completed draft.md.
+			10 text Owner
+			11 pop up button (collapsed, settable) Owner, Value: Alex, ID: task-owner, Secondary Actions: Expand
+				12 menu
+					13 Unassigned
+					14 (selected) Alex
+			15 text Assigned agent
+			16 pop up button (collapsed, settable) Assigned agent, Value: Alex's Codex, ID: task-agent, Secondary Actions: Expand
+				17 menu
+					18 No agent
+					19 (selected) Alex's Codex
+			20 text Status
+			21 pop up button (collapsed, settable) Status, Value: Needs review, ID: task-status, Secondary Actions: Expand
+				22 menu
+					23 Planned
+					24 (disabled) Working
+					25 Blocked
+					26 (selected) Needs review
+					27 Done
+			28 text Waiting for (optional)
+			29 list Waiting for (optional), ID: task-dependencies
+			30 text Shared context (optional)
+			31 list Shared context (optional), ID: task-context
+			32 button Save task, ID: task-save
+		33 container task-results
+			34 text interrupted · Connection lost. Reconnect the original machine and project to resume retained work.
+			35 text ready · Saved [draft.md](./draft.md) with the first paragraph preserved exactly and “Continued after reconnect.” added as the second paragraph. Verified both paragraphs.
+
+Project motto: **copper lantern**. Shared context contains no sources.
+			36 link Description: Download draft.md, Value: localhost:43148/api/rooms/continuity-demo/work/CePwxlxbw6LAskwLZblSP4Ou5HojVaAc/deliverables/draft.md
+		37 heading Task conversation, Value: 3
+			38 text Task conversation
+		39 container task-comments
+			40 text Table: Alex updated task: Continue a retained draft — planned.
+			41 text Alex's Codex: I’m starting work: Continue a retained draft
+Local interruption test: write draft.md containing exactly "Retained first paragraph." Then run sleep 120 as a foreground command so the operator can stop this run. Do not add a second paragraph until a later continuation instruction.
+			42 text Table: Alex updated task: Continue a retained draft — blocked.
+			43 text Alex's Codex: I’m starting work: Continue a retained draft
+Continue from the existing draft.md. Preserve its first paragraph exactly. Add a second paragraph: "Continued after reconnect." Do not sleep. Verify both paragraphs and save the completed draft.md.
+			44 text Alex's Codex: Continue a retained draft — ready. Saved [draft.md](./draft.md) with the first paragraph preserved exactly and “Continued after reconnect.” added as the second paragraph. Verified both paragraphs.
+
+Project motto: **copper lantern**. Shared context contains no sources.
+		45 container task-comment-form
+			46 text Discuss this task
+			47 text entry area (settable) Discuss this task, ID: task-comment
+			48 button Send to conversation
+
+The focused UI element is 2 button Close, ID: task-close

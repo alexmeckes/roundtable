@@ -24,3 +24,13 @@ test('deliverables exclude private files and reject symlinks and oversized outpu
   await symlink(join(root,'report.md'),join(root,'alias.md'));await assert.rejects(collectDeliverables(root),/symlinks/);await rm(join(root,'alias.md'));
   await writeFile(join(root,'big.bin'),Buffer.alloc(5*1024*1024));await assert.rejects(collectDeliverables(root),/exceed/);
 });
+
+test('resuming a folder task retains partial outputs in its original directory',async t=>{
+  const root=await mkdtemp(join(tmpdir(),'rt-resume-folder-'));t.after(()=>rm(root,{recursive:true,force:true}));
+  let saved;const initial=new FolderProject(root,{execute:async({cwd})=>{await writeFile(join(cwd,'partial.md'),'Retained draft');throw new Error('Interrupted');}});
+  await initial.initialize();t.after(()=>rm(initial.root,{recursive:true,force:true}));
+  assert.equal((await initial.run({id:'first-run-id'},{checkpoint:async record=>{saved=record;}})).status,'failed');
+  const resumed=new FolderProject(root,{execute:async({cwd})=>{assert.equal(cwd,saved.cwd);assert.equal(await readFile(join(cwd,'partial.md'),'utf8'),'Retained draft');await writeFile(join(cwd,'finished.md'),'Completed');return 'Finished';}});await resumed.initialize();
+  const result=await resumed.run({id:'second-run-id',localResume:saved});assert.equal(result.status,'ready');assert.equal(result.deliverables.length,2);
+  const outside=await resumed.run({id:'invalid-resume',localResume:{cwd:root}});assert.equal(outside.status,'failed');assert.match(outside.message,/outside/);
+});

@@ -1,5 +1,5 @@
 import {mkdir,realpath,lstat,readdir,readFile} from 'node:fs/promises';
-import {resolve,join,basename} from 'node:path';
+import {resolve,join,basename,dirname} from 'node:path';
 import {WorktreeProject} from './worktree.js';
 import {safeDeliverable} from '../workspace/assets.js';
 
@@ -12,11 +12,15 @@ export class FolderProject extends WorktreeProject {
     this.root ||= resolve(this.project,'..','.'+basename(this.project)+'-roundtable');
     await mkdir(this.root,{recursive:true});return basename(this.project);
   }
-  async run(job,{signal,progress=()=>{}}={}){
+  async run(job,{signal,progress=()=>{},checkpoint=async()=>{}}={}){
     let cwd;
     try{
       if(!/^[A-Za-z0-9_-]{8,80}$/.test(job.id))throw new Error('Invalid workspace ID');
-      cwd=join(this.root,job.id);await mkdir(cwd);signal?.throwIfAborted();
+      if(job.localResume){
+        cwd=await realpath(job.localResume.cwd);const root=await realpath(this.root);
+        if(dirname(cwd)!==root || (await lstat(job.localResume.cwd)).isSymbolicLink())throw new Error('Saved output folder is outside this project.');
+      }else {cwd=join(this.root,job.id);await mkdir(cwd);}
+      await checkpoint({cwd});signal?.throwIfAborted();
       progress('Working in a separate output folder…');
       const summary=await this.execute({cwd,job:{...job,sourceDirectory:this.project,workspaceMode:'folder'},signal,progress});
       signal?.throwIfAborted();const checks=await this.checks(cwd,signal);signal?.throwIfAborted();

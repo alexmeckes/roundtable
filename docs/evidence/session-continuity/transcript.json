@@ -1,0 +1,83 @@
+[
+  {
+    "kind": "system",
+    "text": "Alex pulled up a chair.",
+    "ts": 1788779278537
+  },
+  {
+    "kind": "system",
+    "text": "Alex invited their Codex into the conversation. Mention @alex-codex.",
+    "ts": 1788779297332
+  },
+  {
+    "kind": "human",
+    "text": "@alex-codex For this local continuity test, remember our project motto: copper lantern. Reply briefly with the motto.",
+    "author": "Alex",
+    "taskId": null,
+    "ts": 1788779297361
+  },
+  {
+    "kind": "agent",
+    "text": "copper lantern",
+    "author": "Alex's Codex",
+    "taskId": null,
+    "ts": 1788779304303
+  },
+  {
+    "kind": "system",
+    "text": "Alex updated task: Continue a retained draft — planned.",
+    "taskId": "Ewp4hskmqvfjH-LL",
+    "ts": 1788779314836
+  },
+  {
+    "kind": "agent",
+    "text": "I’m starting work: Continue a retained draft\nLocal interruption test: write draft.md containing exactly \"Retained first paragraph.\" Then run sleep 120 as a foreground command so the operator can stop this run. Do not add a second paragraph until a later continuation instruction.",
+    "author": "Alex's Codex",
+    "taskId": "Ewp4hskmqvfjH-LL",
+    "ts": 1788779315104
+  },
+  {
+    "kind": "human",
+    "text": "@alex-codex We restarted your local bridge. What was our project motto? Also retrieve our shared context with roundtable_context_read and tell me whether any sources are present.",
+    "author": "Alex",
+    "taskId": null,
+    "ts": 1788779408459
+  },
+  {
+    "kind": "system",
+    "text": "Alex updated task: Continue a retained draft — blocked.",
+    "taskId": "Ewp4hskmqvfjH-LL",
+    "ts": 1788779408995
+  },
+  {
+    "kind": "agent",
+    "text": "I’m starting work: Continue a retained draft\nContinue from the existing draft.md. Preserve its first paragraph exactly. Add a second paragraph: \"Continued after reconnect.\" Do not sleep. Verify both paragraphs and save the completed draft.md.",
+    "author": "Alex's Codex",
+    "taskId": "Ewp4hskmqvfjH-LL",
+    "ts": 1788779409264
+  },
+  {
+    "kind": "agent",
+    "text": "Our project motto is **copper lantern**. I retrieved the shared context: revision 0, with no entries or sources present.",
+    "author": "Alex's Codex",
+    "taskId": null,
+    "ts": 1788779420232
+  },
+  {
+    "kind": "agent",
+    "text": "Continue a retained draft — ready. Saved [draft.md](./draft.md) with the first paragraph preserved exactly and “Continued after reconnect.” added as the second paragraph. Verified both paragraphs.\n\nProject motto: **copper lantern**. Shared context contains no sources.",
+    "author": "Alex's Codex",
+    "taskId": "Ewp4hskmqvfjH-LL",
+    "ts": 1788779431821
+  },
+  {
+    "kind": "system",
+    "text": "Alex left the table.",
+    "ts": 1788779434023
+  },
+  {
+    "kind": "system",
+    "text": "Alex pulled up a chair.",
+    "ts": 1788779486801
+  }
+]

@@ -26,11 +26,11 @@ and games all fit the same experience.
 A participant can create up to four specialists under their own Codex connection.
 Specialists have unique handles, roles, and separate conversation sessions. Their
 profiles persist with the room and return when the owner reconnects. Thread handles
-live in the bridge process; after a bridge restart, a new session receives recent room
+are saved locally and restored after a bridge restart. Each new turn also receives recent room
 context and shared project memory. Retirement removes the active profile, not previous messages or outputs.
 
 This version creates specialists through the owner’s chat command or Add specialist
-control. Autonomous agent-created specialists and durable private specialist memory
+control. Autonomous agent-created specialists
 are future work. Room participants can discuss with an opted-in agent; only its owner
 can assign execution, retire it, or stop its tasks. There is no mandatory lead agent.
 

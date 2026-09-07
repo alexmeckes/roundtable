@@ -27,8 +27,21 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
   };
   const publicWork = room => room.work.map(({runToken, ...work}) => work);
   const agentView=b=>({agentId:b.agentId || b.ownerId,ownerId:b.ownerId,ownerName:b.name,name:b.agentName || `${b.name}'s Codex`,role:b.role || '',handle:b.handle,chatBusy:b.chatBusy,chatMode:b.chatMode});
-  const connections = room => [...room.personalBridges.values()].map(b=>({ownerId:b.ownerId,name:b.name,project:b.project,approach:b.approach,handle:b.handle,chatMode:b.chatMode,chatBusy:b.chatBusy,workspaceMode:b.workspaceMode,agents:[agentView(b),...(b.specialists || []).map(agentView)]}));
-  const announce = room => { room.lastActivity=Date.now(); broadcast(room, {t:'workspaces', work:publicWork(room), connections:connections(room),tasks:room.tasks,taskPeople:taskPeople(room),taskAgents:taskAgents(room)}); persist(); };
+  const connections = room => [...room.personalBridges.values()].map(b=>({ownerId:b.ownerId,name:b.name,project:b.project,approach:b.approach,handle:b.handle,chatMode:b.chatMode,chatBusy:b.chatBusy,workspaceMode:b.workspaceMode,ready:b.ready!==false,supportsContinuity:!!b.supportsContinuity,resumableRuns:b.resumableRuns || [],savedConversations:b.savedConversations || [],agents:[agentView(b),...(b.specialists || []).map(agentView)]}));
+  const roster=room=>room.members.filter(m=>m.workspaceProfile).map(m=>{
+    const live=connections(room).find(c=>c.ownerId===m.id),profile=m.workspaceProfile;
+    return live?{...live,connected:true,lastConnectedAt:profile.lastConnectedAt}:{ownerId:m.id,name:m.name,...profile,connected:false,ready:false,chatMode:'off',agents:taskAgents(room).filter(a=>a.ownerId===m.id).map(a=>({agentId:a.id,ownerId:m.id,ownerName:m.name,name:a.name,handle:a.handle,chatMode:'off'}))};
+  });
+  function ready(ws,room,msg){
+    const bridge=[...room.personalBridges.values()].find(b=>b.ws===ws);if(!bridge?.supportsContinuity)return;
+    const owned=[bridge.ownerId,...(bridge.specialists || []).map(a=>a.agentId)];
+    bridge.savedConversations=Array.isArray(msg.savedConversations)?msg.savedConversations.filter(id=>owned.includes(id)).slice(0,5):[];
+    bridge.resumableRuns=Array.isArray(msg.resumableRuns)?msg.resumableRuns.filter(id=>room.work.some(w=>w.id===id && w.ownerId===bridge.ownerId)).slice(-48):[];
+    bridge.ready=true;
+    const member=room.members.find(m=>m.id===bridge.ownerId);member.workspaceProfile.savedConversations=bridge.savedConversations;
+    announce(room);
+  }
+  const announce = room => { room.lastActivity=Date.now(); broadcast(room, {t:'workspaces', work:publicWork(room), connections:connections(room),workspaceRoster:roster(room),tasks:room.tasks,taskPeople:taskPeople(room),taskAgents:taskAgents(room)}); persist(); };
   const conversation=createConversation({say,announce,allowRun});
   const artifactDir = (room, work) => join(artifactRoot, room.id, work.id);
   function joinMember(room, token, name) {
@@ -54,10 +67,10 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
   function detach(ws) {
     for (const room of rooms.values()) {
       init(room);
-      for (const [id, bridge] of room.personalBridges) if (bridge.ws === ws) {conversation.stop(bridge);room.personalBridges.delete(id);}
+      for (const [id, bridge] of room.personalBridges) if (bridge.ws === ws) {conversation.stop(bridge);const member=room.members.find(m=>m.id===id);if(member?.workspaceProfile)member.workspaceProfile.lastDisconnectedAt=Date.now();room.personalBridges.delete(id);}
       let changed = false;
       for (const work of room.work) if (pending.get(work.id)?.ws === ws) {
-        fail(room, work, 'interrupted', 'Connection lost. Local work is retained on its branch; start a new task when reconnected.'); changed = true;
+        fail(room, work, 'interrupted', 'Connection lost. Reconnect the original machine and project to resume retained work.'); changed = true;
       }
       if (changed || ws.workspaceRoom === room.id) announce(room);
     }
@@ -73,22 +86,23 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
       const base=(member.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,20)||'friend')+'-codex';
       member.agentHandle=room.members.some(m=>m.agentHandle===base) || room.specialists.some(a=>a.handle===base)?base+'-'+member.id.slice(0,4).toLowerCase():base;
     }
-    room.personalBridges.set(member.id, {ws, ownerId:member.id, name:member.name, project:short(meta.project,80), workspaceMode:meta.workspaceMode==='folder'?'folder':'git', approach:short(meta.approach,500),handle:member.agentHandle,chatMode:member.chatMode||'off',chatBusy:false});
+    member.workspaceProfile={...member.workspaceProfile,project:short(meta.project,80),workspaceMode:meta.workspaceMode==='folder'?'folder':'git',lastConnectedAt:Date.now()};
+    room.personalBridges.set(member.id, {ws,ready:meta.supportsContinuity!==true,supportsContinuity:meta.supportsContinuity===true, ownerId:member.id, name:member.name, project:short(meta.project,80), workspaceMode:meta.workspaceMode==='folder'?'folder':'git', approach:short(meta.approach,500),handle:member.agentHandle,chatMode:member.chatMode||'off',chatBusy:false});
     const parent=room.personalBridges.get(member.id);
     parent.specialists=room.specialists.filter(s=>s.ownerId===member.id).map(s=>({...s,ws,name:member.name,chatMode:'mentions',chatBusy:false}));
     ws.send(JSON.stringify({t:'workspace_connected', room:room.id, ownerId:member.id}));
     announce(room); return true;
   }
-  function dispatch(room, you, instructions, source, agentId, task) {
+  function dispatch(room, you, instructions, source, agentId, task, resumeFrom) {
     const bridge = room.personalBridges.get(you.id);
-    if (!bridge || bridge.ws.readyState !== 1) throw new Error('Connect your Codex and project first.');
+    if (!bridge || bridge.ws.readyState !== 1 || bridge.ready===false) throw new Error('Connect your Codex and project first.');
     const agent=agentId && agentId!==you.id?bridge.specialists?.find(a=>a.agentId===agentId):bridge;
     if(!agent)throw new Error('Choose one of your own active agents.');
     if(source && bridge.workspaceMode==='folder')throw new Error('Git integration requires a repository connection. Download the deliverable instead.');
     if (room.work.length >= 48) throw new Error('Archive a finished work card before starting another.');
     if (room.work.filter(w => w.ownerId === you.id && active(w.status)).length >= 2) throw new Error('Your two workspaces are busy. Other people can keep working.');
     if (!allowRun(room)) throw new Error('The table run limit has been reached. Try again later.');
-    const work = {id:key(),taskId:task?.id || null, ownerId:you.id, ownerName:you.name,agentId:agent.agentId || you.id,agentName:agent.agentName || `${you.name}'s Codex`, title:task?.title || short(instructions,80), instructions:task?instructions:short(instructions,4000), status:source?'integrating':'running', sourceId:source?.id || null, createdAt:Date.now(), updatedAt:Date.now(), message:source?'Preparing integration in your project…':'Starting your Codex…'};
+    const work = {id:key(),resumeFromId:resumeFrom?.id || null,taskId:task?.id || null, ownerId:you.id, ownerName:you.name,agentId:agent.agentId || you.id,agentName:agent.agentName || `${you.name}'s Codex`, title:task?.title || short(instructions,80), instructions:task?instructions:short(instructions,4000), status:source?'integrating':'running', sourceId:source?.id || null, createdAt:Date.now(), updatedAt:Date.now(), message:source?'Preparing integration in your project…':'Starting your Codex…'};
     const runToken = key();
     const timer = setTimeout(() => {
       bridge.ws.send(JSON.stringify({t:'workspace_cancel',room:room.id,id:work.id}));
@@ -99,15 +113,25 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     room.work.push(work);
     if(task){task.runIds.push(work.id);syncTaskRun(room,work);}
     announce(room);
-    conversation.activity(room,you.id,source?'I’m integrating '+source.title+'.':'I’m starting work: '+work.instructions,work.agentId,work.taskId);
-    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken,agentId:work.agentId,agentName:work.agentName,agentRole:agent.role || '', instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{dependencies:(task?.dependencies || []).map(id=>{const predecessor=room.tasks.find(t=>t.id===id),run=room.work.find(w=>w.id===predecessor.runIds.at(-1));return {id,title:predecessor.title,room:room.id,runId:run?.id,summary:run?.summary || predecessor.details,deliverables:run?.deliverables || []};}).filter(d=>d.runId),tasks:taskSummary(room),task:task || null,shared:contextSummary(room,you.id),title:room.title, problem:room.problem, chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-30).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,agentName,title,status})=>({ownerName,agentName,title,status}))}}));
+    conversation.activity(room,you.id,source?'I’m integrating '+source.title+'.':(resumeFrom?'I’m resuming work: ':'I’m starting work: ')+work.instructions,work.agentId,work.taskId);
+    bridge.ws.send(JSON.stringify({t:source?'workspace_integrate':'workspace_task', room:room.id, id:work.id, runToken,taskId:task?.id || null,resumeFromId:resumeFrom?.id || null,agentId:work.agentId,agentName:work.agentName,agentRole:agent.role || '', instructions:work.instructions, sourceId:source?.id, baseCommit:source?.baseCommit, context:{dependencies:(task?.dependencies || []).map(id=>{const predecessor=room.tasks.find(t=>t.id===id),run=room.work.find(w=>w.id===predecessor.runIds.at(-1));return {id,title:predecessor.title,room:room.id,runId:run?.id,summary:run?.summary || predecessor.details,deliverables:run?.deliverables || []};}).filter(d=>d.runId),tasks:taskSummary(room),task:task || null,shared:contextSummary(room,you.id),title:room.title, problem:room.problem, chat:room.chat.filter(m=>['human','agent'].includes(m.kind)).slice(-30).map(({author,text})=>({author,text})), others:room.work.filter(w=>w.id!==work.id).slice(-12).map(({ownerName,agentName,title,status})=>({ownerName,agentName,title,status}))}}));
   }
   function handle(ws, room, you, msg) {
     if(msg.t?.startsWith('task_')){
       try{
         init(room);if(!canSpeak(room,you))throw new Error('This table is view-only.');
         if(msg.t==='task_save'){const task=saveTask(room,you,msg);announce(room);say(room,{kind:'system',taskId:task.id,text:`${you.name} updated task: ${task.title} — ${task.status.replaceAll('_',' ')}.`});}
-        else if(msg.t==='task_start'){const task=validateTaskStart(room,you,msg);dispatch(room,you,task.title+'\n'+task.details,undefined,task.agentId,task);}
+        else if(msg.t==='task_start' || msg.t==='task_resume'){
+          const task=validateTaskStart(room,you,msg);let prior;
+          if(msg.t==='task_resume'){
+            const bridge=room.personalBridges.get(you.id);
+            prior=room.work.find(w=>w.id===task.runIds.at(-1));
+            for(let i=0;i<48 && prior?.resumeFromId && !bridge?.resumableRuns?.includes(prior.id);i++)prior=room.work.find(w=>w.id===prior.resumeFromId);
+            if(task.status!=='blocked' || !prior || !['failed','interrupted'].includes(prior.status) || prior.ownerId!==you.id || prior.agentId!==task.agentId || prior.sourceId)throw new Error('Resume requires an interrupted run by the same owner and agent.');
+            if(!bridge?.resumableRuns?.includes(prior.id))throw new Error('Reconnect the original machine and project to resume, or choose Start fresh.');
+          }
+          dispatch(room,you,task.title+'\n'+task.details,undefined,task.agentId,task,prior);
+        }
         else throw new Error('Unknown task action.');
         ws.send(JSON.stringify({t:'task_saved',requestId:msg.requestId}));
       }catch(error){ws.send(JSON.stringify({t:'task_error',requestId:msg.requestId,message:error.message}));}
@@ -120,7 +144,7 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
       const member = room.members.find(m => m.id === you.id);
       if (!member) throw new Error('Rejoin the table to connect your workspace.');
       if(msg.t==='workspace_specialist_create'){
-        const bridge=room.personalBridges.get(you.id);if(!bridge)throw new Error('Connect your Codex first.');
+        const bridge=room.personalBridges.get(you.id);if(!bridge || bridge.ready===false)throw new Error('Connect your Codex first.');
         const name=short(msg.name,40).trim(),role=short(msg.role,1000).trim();
         if(!name || !role)throw new Error('Give the specialist a name and a role.');
         if(bridge.specialists.length>=4 || room.specialists.length>=48)throw new Error('Specialist limit reached. Retire a specialist first.');
@@ -287,5 +311,5 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     }
     return true;
   }
-  return {announce,init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation,command,sharedContext,contextRequest};
+  return {ready,roster,announce,init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation,command,sharedContext,contextRequest};
 }

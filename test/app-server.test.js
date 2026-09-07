@@ -115,3 +115,34 @@ test('dynamic context calls route only supported tools to the active turn',async
   assert.deepEqual(calls,[{name:'roundtable_context_read',args:{ids:['source']}}]);
   assert.deepEqual(result.start.dynamicTools.map(t=>t.name),['roundtable_context_read','roundtable_context_propose']);
 });
+
+test('a new app-server process resumes the saved thread before starting a read-only turn',async()=>{
+  const server=Object.create(CodexAppServer.prototype);server.loadedThreads=new Set();server.turns=new Map();
+  const calls=[];let persisted=false;
+  server.rpc=async(method,params)=>{
+    calls.push({method,params});
+    if(method==='thread/resume')return {thread:{id:'saved-thread'}};
+    if(method==='turn/start'){
+      assert.equal(persisted,true);queueMicrotask(()=>server.turns.get(params.threadId).resolve('Remembered'));
+      return {turn:{id:'continued-turn'}};
+    }
+    throw new Error('Unexpected call: '+method);
+  };
+  const result=await server.run({cwd:'/original/project',conversation:true,sessionId:'saved-thread',job:{agentName:'Mira',trigger:'Continue'},onThread:async()=>{await Promise.resolve();persisted=true;}});
+  assert.equal(result,'Remembered');assert.deepEqual(calls.map(c=>c.method),['thread/resume','turn/start']);
+  assert.equal(calls[0].params.sandbox,'read-only');assert.equal(calls[0].params.approvalPolicy,'never');assert.equal(calls[1].params.sandboxPolicy.type,'readOnly');
+});
+
+test('missing saved threads fail without silently replacing the conversation',async()=>{
+  const server=Object.create(CodexAppServer.prototype);server.loadedThreads=new Set();const calls=[];
+  server.rpc=async(method)=>{calls.push(method);throw new Error('Saved thread not found');};
+  await assert.rejects(server.run({cwd:'/original/project',conversation:true,sessionId:'missing',job:{}}),/not found/);
+  assert.deepEqual(calls,['thread/resume']);
+});
+
+test('resume refuses a saved thread that is still running elsewhere',async()=>{
+  const server=Object.create(CodexAppServer.prototype);server.loadedThreads=new Set();
+  const calls=[];server.rpc=async method=>{calls.push(method);return {thread:{id:'saved',status:{type:'active',activeFlags:[]}}};};
+  await assert.rejects(server.run({cwd:'/project',sessionId:'saved',job:{}}),/still active/);
+  assert.deepEqual(calls,['thread/resume']);
+});

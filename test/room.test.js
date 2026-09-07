@@ -265,11 +265,11 @@ test('room creation limits reject branching without terminating the server', asy
   assert.equal((await host.wait(m=>m.t==='preview')).title,'Still running');
 });
 
-async function personalBridge(f,person,room='room') {
+async function personalBridge(f,person,room='room',meta={}) {
   person.send({t:'workspace_pair'});
   const {token}=await person.wait(m=>m.t==='workspace_pair');
   const bridge=await f.connect();
-  bridge.send({t:'workspace_bridge_join',room,token,project:'game',approach:'My own approach'});
+  bridge.send({t:'workspace_bridge_join',room,token,project:'game',approach:'My own approach',...meta});
   const connected=await bridge.wait(m=>m.t==='workspace_connected');
   return {...bridge,token,ownerId:connected.ownerId,task:()=>bridge.wait(m=>['workspace_task','workspace_integrate'].includes(m.t))};
 }
@@ -539,4 +539,44 @@ test('shared task board routes concurrent owners, links discussion, reviews resu
   assert.equal(state.tasks.find(task=>task.id===second.id).status,'blocked');
   assert.equal(state.tasks.find(task=>task.id===first.id).origin.chatId,message.entry.id);
   assert.equal(await (await fetch(resumed.origin+'/api/rooms/room/work/'+ar.id+'/deliverables/comparison.md')).text(),'Compared sources');
+});
+
+test('continuity handshake gates execution, resumes owned checkpoints, and retains offline roster',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const bridge=await personalBridge(f,alice,'room',{supportsContinuity:true});
+  alice.send({t:'task_save',title:'Retain the draft',details:'Write a draft',ownerId:bridge.ownerId,agentId:bridge.ownerId,status:'planned'});
+  await alice.wait(m=>m.t==='task_saved');let task=(await f.inspect()).tasks[0];
+  alice.send({t:'task_start',id:task.id,version:task.version});assert.match((await alice.wait(m=>m.t==='task_error')).message,/Connect/);
+  bridge.send({t:'workspace_ready',room:'room',savedConversations:[bridge.ownerId,'another-owner'],resumableRuns:[]});
+  await alice.wait(m=>m.t==='workspaces' && m.connections[0]?.ready);
+  alice.send({t:'task_start',id:task.id,version:task.version});const run=await bridge.task();assert.equal(run.taskId,task.id);
+  bridge.send({t:'workspace_ready',room:'room',savedConversations:[bridge.ownerId],resumableRuns:[run.id]});
+  await alice.wait(m=>m.t==='workspaces' && m.connections[0]?.resumableRuns.includes(run.id));
+  alice.send({t:'workspace_cancel',id:run.id});await bridge.wait(m=>m.t==='workspace_cancel');
+  task=(await f.inspect()).tasks[0];assert.equal(task.status,'blocked');
+  bob.send({t:'task_resume',id:task.id,version:task.version});assert.match((await bob.wait(m=>m.t==='task_error')).message,/owner/);
+  alice.send({t:'task_resume',id:task.id,version:task.version});const resumed=await bridge.task();assert.equal(resumed.resumeFromId,run.id);assert.equal(resumed.taskId,task.id);assert.equal(resumed.localResume,undefined);
+  assert.equal((await upload(f,bridge,resumed,{status:'failed',message:'Previous run is still stopping.'})).status,200);
+  task=(await f.inspect()).tasks[0];alice.send({t:'task_resume',id:task.id,version:task.version});const retry=await bridge.task();assert.equal(retry.resumeFromId,run.id);
+  assert.equal((await upload(f,bridge,retry,{status:'ready',summary:'Continued retained draft'})).status,200);
+  const closed=once(bridge.ws,'close');bridge.ws.close();await closed;
+  await alice.wait(m=>m.t==='workspaces' && m.connections.length===0);
+  const state=await f.inspect();assert.equal(state.workspaceRoster[0].connected,false);assert.equal(state.workspaceRoster[0].agents[0].name,"Alice's Codex");
+  assert.deepEqual(state.workspaceRoster[0].savedConversations,[bridge.ownerId]);
+});
+
+test('returning members receive changes since their acknowledged visit without affecting another member',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  alice.send({t:'catchup_seen',through:alice.welcome.asOf});
+  const departed=once(alice.ws,'close');alice.ws.close();await departed;
+  bob.send({t:'task_save',title:'Review the brief',details:'Check it',ownerId:bob.welcome.you.id,status:'needs_review'});await bob.wait(m=>m.t==='task_saved');
+  bob.send({t:'context_save',kind:'decision',title:'Use Atlas',body:'Atlas meets the export requirement.'});await bob.wait(m=>m.t==='context_saved');
+  bob.send({t:'chat',text:'The review is ready.'});await bob.wait(m=>m.t==='chat' && m.entry.text==='The review is ready.');
+  const returned=await f.person('room','Alice',alice.welcome.hostKey,alice.welcome.memberKey);
+  assert.equal(returned.welcome.catchup.taskCount,1);assert.equal(returned.welcome.catchup.contextCount,1);assert.equal(returned.welcome.catchup.messageCount,1);
+  returned.send({t:'catchup_seen',through:Date.now()+100000});returned.send({t:'catchup_request'});
+  assert.equal((await returned.wait(m=>m.t==='catchup')).catchup.taskCount,1);
+  returned.send({t:'catchup_seen',through:returned.welcome.asOf});returned.send({t:'catchup_request'});
+  assert.equal((await returned.wait(m=>m.t==='catchup')).catchup.taskCount,0);
+  bob.send({t:'catchup_request'});assert.equal((await bob.wait(m=>m.t==='catchup')).catchup.taskCount,1);
 });

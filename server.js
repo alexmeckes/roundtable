@@ -20,6 +20,7 @@ import { dirname } from 'path';
 import { runHouseAgent, houseAvailable } from './agents/house.js';
 import { sanitizeCanvas, sanitizeActions, serializeCanvas } from './agents/prompt.js';
 import { createWorkspaces } from './workspace/server.js';
+import {catchupSummary,markSeen} from './workspace/catchup.js';
 import {taskPeople,taskAgents} from './workspace/tasks.js';
 import {contextSummary} from './workspace/context.js';
 
@@ -234,6 +235,7 @@ function publicState(room) {
     id: room.id,
     work: workspace.publicWork(room),
     connections: workspace.connections(room),
+    workspaceRoster:workspace.roster(room),
     sharedContext: room.sharedContext,
     tasks:room.tasks,taskPeople:taskPeople(room),taskAgents:taskAgents(room),
     title: room.title,
@@ -268,9 +270,9 @@ const ACCESS_BLURB = {
 };
 
 function broadcast(room, msg, except) {
-  const data = JSON.stringify(msg);
+  const asOf=Date.now(),data = JSON.stringify({...msg,asOf});
   for (const ws of room.people.keys()) {
-    if (ws !== except && ws.readyState === 1) ws.send(data);
+    if (ws !== except && ws.readyState === 1) {ws.deliveredThrough=asOf;ws.send(data);}
   }
 }
 
@@ -362,7 +364,7 @@ function loadRooms() {
       hostOnlySpend: !!r.hostOnlySpend,
       parent: r.parent || null,
       agents: Array.isArray(r.agents) && r.agents.length ? r.agents : [{ ...DEFAULT_AGENT, color: AGENT_COLORS[0] }],
-      members:r.members || [], specialists:r.specialists || [],sharedContext:r.sharedContext,tasks:(r.tasks || []).map(t=>t.status==='working'?{...t,status:'blocked',version:t.version+1}:t), work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',message:'Server restarted. Local work is retained on its branch.'}:w), personalBridges:new Map(),
+      members:r.members || [], specialists:r.specialists || [],sharedContext:r.sharedContext,tasks:(r.tasks || []).map(t=>t.status==='working'?{...t,status:'blocked',version:t.version+1,updatedAt:Date.now()}:t), work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',updatedAt:Date.now(),message:'Server restarted. Reconnect the original machine and project to resume retained work.'}:w), personalBridges:new Map(),
       chat: r.chat || [], autoT: null, queue: [], running: null, hops: 0,
       people: new Map(), bridges: new Map(),
       colorIdx: r.colorIdx || 0, createdAt: r.createdAt || Date.now(),
@@ -993,8 +995,10 @@ wss.on('connection', (ws, req) => {
       }
       room.people.set(ws, you);
       log(room.id, `join: ${you.name}${you.isHost ? ' (host)' : ''} (${room.people.size} people)`);
+      const catchup=catchupSummary(room,membership.member);ws.deliveredThrough=catchup.through;
+      membership.member.lastSeenAt ||= catchup.through;
       ws.send(JSON.stringify({
-        t: 'welcome',
+        t: 'welcome',catchup,asOf:catchup.through,
         you: { id:you.id, name: you.name, color: you.color, isHost: !!you.isHost },
         memberKey:membership.memberKey,
         hostKey: hostKeyToSend,
@@ -1042,6 +1046,7 @@ wss.on('connection', (ws, req) => {
 
     if (isBridge) {
       if (ws.workspaceRoom) {
+        if (msg.t === 'workspace_ready') workspace.ready(ws,room,msg);
         if (msg.t === 'workspace_progress') workspace.progress(ws,room,msg);
         if (msg.t === 'workspace_chat_result') workspace.conversation.result(ws,room,msg);
         if (msg.t === 'workspace_context_request') workspace.contextRequest(ws,room,msg);
@@ -1079,6 +1084,8 @@ wss.on('connection', (ws, req) => {
 
     const you = room.people.get(ws);
     if (!you) return;
+    if(msg.t==='catchup_request'){const member=room.members.find(m=>m.id===you.id);if(member){const catchup=catchupSummary(room,member);ws.deliveredThrough=catchup.through;ws.send(JSON.stringify({t:'catchup',catchup,asOf:catchup.through}));}return;}
+    if(msg.t==='catchup_seen'){const member=room.members.find(m=>m.id===you.id);if(member && markSeen(member,msg.through,ws.deliveredThrough || 0))schedulePersist();return;}
     if (workspace.sharedContext.handle(ws,room,you,msg)) return;
     if (workspace.handle(ws,room,you,msg)) return;
     if (['edit_title', 'edit_problem', 'edit_block', 'merge'].includes(msg.t) && !canSpeak(room, you)) {

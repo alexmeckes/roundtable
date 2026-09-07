@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, readFile, readdir, lstat, realpath, writeFile } from 'node:fs/promises';
-import { resolve, join, relative, basename } from 'node:path';
+import { resolve, join, relative, basename, dirname } from 'node:path';
 import { safeAsset } from '../workspace/assets.js';
 const exec = promisify(execFile);
 const childEnv=()=>Object.fromEntries(Object.entries(process.env).filter(([key])=>!['ROUNDTABLE_PAIR_TOKEN','ROUNDTABLE_BRIDGE_SECRET'].includes(key)));
@@ -28,6 +28,13 @@ export class WorktreeProject {
     const cwd=join(this.root,id);
     await git(this.project,'worktree','add','-b',branch,cwd,baseCommit);
     return {cwd,baseCommit,branch};
+  }
+  async resumeTree(record){
+    const root=await realpath(this.root),cwd=await realpath(record.cwd);
+    if((await lstat(record.cwd)).isSymbolicLink() || dirname(cwd)!==root)throw new Error('Saved workspace is outside this project.');
+    if(!/^[a-f0-9]{40,64}$/.test(record.baseCommit) || await git(cwd,'symbolic-ref','--short','HEAD')!==record.branch)throw new Error('Saved worktree changed. Inspect it before starting fresh.');
+    await git(cwd,'merge-base','--is-ancestor',record.baseCommit,'HEAD');
+    return {cwd,branch:record.branch,baseCommit:record.baseCommit};
   }
   async checks(cwd,signal) {
     if(!this.check) return 'Not configured — review and test this contribution before use.';
@@ -81,10 +88,11 @@ export class WorktreeProject {
     if(!result.some(f=>f.path==='index.html')) throw new Error('Preview directory must contain index.html.');
     return result;
   }
-  async run(job,{signal,progress=()=>{}}={}) {
+  async run(job,{signal,progress=()=>{},checkpoint=async()=>{}}={}) {
     let tree;
     try {
-      tree=await this.worktree(job.id);
+      tree=job.localResume?await this.resumeTree(job.localResume):await this.worktree(job.id);
+      await checkpoint(tree);
       progress('Working on '+tree.branch);
       const summary=await this.execute({cwd:tree.cwd,job,signal,progress});
       signal?.throwIfAborted();

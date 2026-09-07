@@ -1,0 +1,89 @@
+{
+  "date": "2026-09-07",
+  "scope": "One local owner; real Codex. No shared or multi-machine testing.",
+  "conversationThreadUnchanged": true,
+  "taskThreadUnchanged": true,
+  "outputDirectoryUnchanged": true,
+  "conversationKey": "61d45b49d9dceb3754c2",
+  "taskKey": "9ec45e21debe858e22cd",
+  "threads": [
+    {
+      "threadKey": "61d45b49d9dceb3754c2",
+      "model": "gpt-6-astra",
+      "turns": [
+        {
+          "status": "completed",
+          "messages": [
+            "copper lantern"
+          ],
+          "contextCalls": []
+        },
+        {
+          "status": "completed",
+          "messages": [
+            "I’ll check the shared context for sources.",
+            "Our project motto is **copper lantern**. I retrieved the shared context: revision 0, with no entries or sources present."
+          ],
+          "contextCalls": [
+            {
+              "tool": "roundtable_context_read",
+              "success": true,
+              "status": "completed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "threadKey": "9ec45e21debe858e22cd",
+      "model": "gpt-6-astra",
+      "turns": [
+        {
+          "status": "interrupted",
+          "messages": [
+            "I’ll check for existing instructions and the draft, write the exact sentence, then start `sleep 120` for the interruption test."
+          ],
+          "contextCalls": [
+            {
+              "tool": "roundtable_context_read",
+              "success": true,
+              "status": "completed"
+            }
+          ]
+        },
+        {
+          "status": "completed",
+          "messages": [
+            "I’ll inspect the retained draft, append the second paragraph, and verify both paragraphs. I’ll also check the shared context; our project motto is “copper lantern.”",
+            "Saved [draft.md](./draft.md) with the first paragraph preserved exactly and “Continued after reconnect.” added as the second paragraph. Verified both paragraphs.\n\nProject motto: **copper lantern**. Shared context contains no sources."
+          ],
+          "contextCalls": [
+            {
+              "tool": "roundtable_context_read",
+              "success": true,
+              "status": "completed"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "work": [
+    {
+      "id": "HZPP93CqvCLxzTy9IRhsPiWkwvkvlPKD",
+      "resumeFromId": null,
+      "status": "interrupted",
+      "taskId": "Ewp4hskmqvfjH-LL",
+      "createdAt": 1788779315104,
+      "updatedAt": 1788779374713
+    },
+    {
+      "id": "CePwxlxbw6LAskwLZblSP4Ou5HojVaAc",
+      "resumeFromId": "HZPP93CqvCLxzTy9IRhsPiWkwvkvlPKD",
+      "status": "ready",
+      "taskId": "Ewp4hskmqvfjH-LL",
+      "createdAt": 1788779409263,
+      "updatedAt": 1788779431821
+    }
+  ]
+}

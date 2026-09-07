@@ -1,0 +1,99 @@
+Browser tab: 15, Title: "Untitled table — Roundtable", URL: "http://localhost:43145/s/general-work".
+1 AXWebArea Untitled table — Roundtable, URL: localhost:43145/s/general-work
+	2 container
+		32 container Value: Untitled table, ID: h-title
+			33 text Untitled table
+		3 button Share, Help: Share this table, ID: h-link
+		34 text A
+		4 button Workspaces, ID: btn-workspaces
+		5 button Canvas, Help: Toggle the canvas, ID: btn-doc
+	6 container
+		7 text My Codex in the conversation
+		8 pop up button (collapsed, settable) My Codex in the conversation, Value: Only when @mentioned, ID: conversation-mode, Secondary Actions: Expand
+			9 menu
+				10 (disabled) Paused
+				11 (disabled) Join the conversation
+				12 (disabled) Only when @mentioned
+		35 text Room messages use your Codex. Replies are bounded; pause here anytime. Discussion is read-only. Assign work with /work @handle instructions or choose an agent in Workspaces.
+		14 button Add specialist, ID: specialist-add
+		15 container Description: Agents at the table, ID: conversation-agents
+			36 button Alex's Codex · @alex-codex, Help: @alex-codex · Alex · General collaborator
+			37 button Mira · Alex’s agent · @mira, Help: @mira · Alex · Compare supplied options and explain the recommendation. Use brief.md and options.csv as the source of truth.
+			38 button Quinn · Alex’s agent · @quinn, Help: @quinn · Alex · Check numerical comparisons and produce concise tables from the supplied data.
+		39 container chat
+			40 text Alex pulled up a chair.
+			41 text Mira joined — Alex's specialist. Compare supplied options and explain the recommendation. Use brief.md and options.csv as the source of truth. Mention @mira; its owner can assign work with /work @mira instructions.
+			42 container
+				43 text M Mira Alex’s agent 11:09 PM I’m Mira. I’ll compare the options against brief.md and options.csv, explain the tradeoffs, and recommend the best fit.
+			44 text Quinn joined — Alex's specialist. Check numerical comparisons and produce concise tables from the supplied data. Mention @quinn; its owner can assign work with /work @quinn instructions.
+			45 container
+				46 text Q Quinn Alex’s agent 11:09 PM I’m Quinn. I’ll check numerical comparisons against the supplied CSV and summarize the results in concise tables grounded in the brief.
+			47 container
+				48 text A Alex 11:10 PM @mira We need a fictional knowledge tool for six people. Supplied options: Atlas costs 30/month for 6 seats and exports; Beacon costs 20/month for 6 seats without exports; Cedar costs 45/month for 10 seats with exports. Prefer low cost and easy exports. Recommend one and ask Quinn to check cost per used seat. Discuss only for now.
+			49 container
+				50 text M Mira Alex’s agent 11:10 PM Alex, I recommend Atlas at 30/month: it covers all six people and is the cheapest option with exports. Beacon saves 10/month but lacks exports; Cedar costs 15/month more for four seats we don’t need. Export ease isn’t specified.
+
+@quinn Please check monthly cost per used seat for six people: Atlas 5, Beacon 3.33, and Cedar 7.50.
+			51 container
+				52 text Q Quinn Alex’s agent 11:10 PM @mira All three calculations are correct, using six occupied seats:
+
+| Option | Monthly cost | Cost per used seat | Exports |
+|---|---:|---:|---|
+| Atlas | 30 | 5.00 | Yes |
+| Beacon | 20 | 3.33 | No |
+| Cedar | 45 | 7.50 | Yes |
+
+Beacon is rounded to two decimals. Atlas is the lowest-cost option with exports; export ease remains unspecified.
+			53 container
+				54 text M Mira Alex’s agent work update 11:11 PM I’m starting work: Write decision-brief.md from our discussion. Read the supplied brief.md and options.csv to verify the facts. State the recommendation, tradeoffs, and the remaining uncertainty about export ease. Save only decision-brief.md in your task directory.
+			55 container
+				56 text Q Quinn Alex’s agent work update 11:11 PM I’m starting work: Create comparison.csv from options.csv using our agreed six-person comparison. Include name, monthly_cost, used_seats, cost_per_used_seat, export, and recommended. Verify the math; save only comparison.csv in your task directory.
+			57 container
+				58 text M Mira Alex’s agent work update 11:11 PM Write decision-brief.md from our discussion. Read the supplied brief.md and opti — ready. Created [decision-brief.md](decision-brief.md), recommending Atlas and explaining tradeoffs and uncertainty about export ease.
+
+Verified facts and per-used-seat costs against the supplied CSV. Only the requested deliverable was created.
+			59 container
+				60 text Q Quinn Alex’s agent work update 11:12 PM Create comparison.csv from options.csv using our agreed six-person comparison. I — ready. Created [comparison.csv](comparison.csv) with all requested columns. Verified costs per used seat: Atlas 5.00, Beacon 3.33, Cedar 7.50. Atlas is marked recommended as the lowest-cost option with exports.
+			61 text Alex came and went.
+		16 text entry area (settable) chat-text
+		17 button Send, ID: btn-send
+		62 text Talk with people and their Codex here. Click an agent to @mention it; assign work with /work @handle instructions.
+		19 container doc
+			20 text Workspaces
+			21 container workspace-panel
+				22 heading Work together, Value: 2
+					23 text Work together
+				63 text inputs · Your Codex is connected
+				25 button Reconnect my Codex, ID: workspace-connect
+				64 button Disconnect mine, ID: workspace-disconnect
+				65 text Alex · inputs
+				26 container workspace-form
+					27 text Who should do this?
+					28 pop up button (collapsed, settable) Who should do this?, Value: Alex's Codex, ID: workspace-agent, Secondary Actions: Expand
+						66 menu
+							67 (selected) Alex's Codex
+							68 Mira
+							69 Quinn
+					29 text What are you working on?
+					30 text entry area (settable) What are you working on?, ID: workspace-task
+					31 button Start with my Codex, ID: workspace-start
+				70 container specialist-roster
+					71 text Mira · Compare supplied options and explain the recommendation. Use brief.md and options.csv as the source of truth.
+					72 button Retire Mira
+					73 text Quinn · Check numerical comparisons and produce concise tables from the supplied data.
+					74 button Retire Quinn
+				75 container workspace-cards
+					76 container
+						77 heading Write decision-brief.md from our discussion. Read the supplied brief.md and opti, Value: 3
+							78 text Write decision-brief.md from our discussion. Read the supplied brief.md and opti
+						79 text Mira · Alex · ready Results ready for review and download. Source folder unchanged by the bridge. Created [decision-brief.md](decision-brief.md), recommending Atlas and explaining tradeoffs and uncertainty about export ease. Verified facts and per-used-seat costs against the supplied CSV. Only the requested deliverable was created. 1 deliverable(s)
+						80 link Description: Download decision-brief.md, Value: localhost:43145/api/rooms/general-work/work/2vp2BadfbPvl299ZMtnH3bbyBrqrz16f/deliverables/decision-brief.md
+						81 button Archive
+					82 container
+						83 heading Create comparison.csv from options.csv using our agreed six-person comparison. I, Value: 3
+							84 text Create comparison.csv from options.csv using our agreed six-person comparison. I
+						85 text Quinn · Alex · ready Results ready for review and download. Source folder unchanged by the bridge. Created [comparison.csv](comparison.csv) with all requested columns. Verified costs per used seat: Atlas 5.00, Beacon 3.33, Cedar 7.50. Atlas is marked recommended as the lowest-cost option with exports. 1 deliverable(s)
+						86 link Description: Download comparison.csv, Value: localhost:43145/api/rooms/general-work/work/0ABNh2RMKBMudYX3Y6YC_A-MKWzQhxgR/deliverables/comparison.csv
+						87 button Archive
+
+The focused UI element is 1 AXWebArea Untitled table — Roundtable, URL: localhost:43145/s/general-work

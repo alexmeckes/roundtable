@@ -1,0 +1,29 @@
+Browser tab: 15, Title: "Untitled table — Roundtable", URL: "http://localhost:43145/s/general-work".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 76-78, 80-97
++		80 text Room messages use your Codex. Replies are bounded; pause here anytime. Discussion is read-only. Assign work with /work @handle instructions or choose an agent in Workspaces.
++			81 button Alex's Codex · @alex-codex, Help: @alex-codex · Alex · General collaborator
++			82 button Quinn · Alex’s agent · @quinn, Help: @quinn · Alex · Check numerical comparisons and produce concise tables from the supplied data.
++			83 container
++				84 text A Alex 11:15 PM @quinn Mira has retired from this table. Confirm the recommended option from our earlier discussion in one sentence; do not create files or hand off to anyone.
++			85 container
++				86 text Q Quinn Alex’s agent 11:15 PM Alex, we recommend Atlas at 30/month for six people (5.00 per used seat), the lowest-cost option with exports, though export ease remains unverified.
++				87 text inputs · Your Codex is connected
++				88 text Alex · inputs
++							89 (selected) Alex's Codex
++							90 Quinn
++					91 text Quinn · Check numerical comparisons and produce concise tables from the supplied data.
++					92 button Retire Quinn
++					93 container
++						94 heading Write decision-brief.md from our discussion. Read the supplied brief.md and opti, Value: 3
++							95 text Write decision-brief.md from our discussion. Read the supplied brief.md and opti
++						96 text Mira · Alex · ready Results ready for review and download. Source folder unchanged by the bridge. Created [decision-brief.md](decision-brief.md), recommending Atlas and explaining tradeoffs and uncertainty about export ease. Verified facts and per-used-seat costs against the supplied CSV. Only the requested deliverable was created. 1 deliverable(s)
++						97 link Description: Download decision-brief.md, Value: localhost:43145/api/rooms/general-work/work/2vp2BadfbPvl299ZMtnH3bbyBrqrz16f/deliverables/decision-brief.md
++						98 button Archive
++					99 container
++						100 heading Create comparison.csv from options.csv using our agreed six-person comparison. I, Value: 3
++							101 text Create comparison.csv from options.csv using our agreed six-person comparison. I
++						102 text Quinn · Alex · ready Results ready for review and download. Source folder unchanged by the bridge. Created [comparison.csv](comparison.csv) with all requested columns. Verified costs per used seat: Atlas 5.00, Beacon 3.33, Cedar 7.50. Atlas is marked recommended as the lowest-cost option with exports. 1 deliverable(s)
++						103 link Description: Download comparison.csv, Value: localhost:43145/api/rooms/general-work/work/0ABNh2RMKBMudYX3Y6YC_A-MKWzQhxgR/deliverables/comparison.csv
++						104 button Archive
+The focused UI element is 17 button Send, ID: btn-send

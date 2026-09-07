@@ -1,0 +1,29 @@
+{
+  "capturedAt": "2026-09-06T03:20:05.012428+00:00",
+  "model": "gpt-6-astra",
+  "effort": "low",
+  "runtime": "codex-cli 0.153.3",
+  "setup": "One local owner connection with two independent specialist sessions; ordinary input folder, no Git.",
+  "parallelTasks": true,
+  "profilesRestoredAfterServerRestart": true,
+  "retiredSpecialistResultsRetained": true,
+  "remainingSpecialistRespondedAfterRetirement": true,
+  "inputCsvUnchanged": true,
+  "noOutputsInSourceFolder": true,
+  "deliverables": [
+    {
+      "agent": "Mira",
+      "file": "decision-brief.md",
+      "bytes": 1066,
+      "sha256": "ffa1ec07db07dc1e114e120ccbf37bc4aed4b9495579e932bc06f15eaebb1219",
+      "attachment": true
+    },
+    {
+      "agent": "Quinn",
+      "file": "comparison.csv",
+      "bytes": 137,
+      "sha256": "5e94221a7ad17c44e792aedfeac048557f1c5a74a7af97f3ec1d2fdaaa096fac",
+      "attachment": true
+    }
+  ]
+}

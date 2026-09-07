@@ -1,0 +1,34 @@
+[
+  {
+    "id": "2vp2BadfbPvl299ZMtnH3bbyBrqrz16f",
+    "agentName": "Mira",
+    "title": "Write decision-brief.md from our discussion. Read the supplied brief.md and opti",
+    "status": "ready",
+    "summary": "Created [decision-brief.md](decision-brief.md), recommending Atlas and explaining tradeoffs and uncertainty about export ease.\n\nVerified facts and per-used-seat costs against the supplied CSV. Only the requested deliverable was created.",
+    "checks": "Not configured \u2014 review and test this contribution before use.",
+    "deliverables": [
+      {
+        "path": "decision-brief.md",
+        "bytes": 1066
+      }
+    ],
+    "createdAt": 1788664262912,
+    "updatedAt": 1788664302411
+  },
+  {
+    "id": "0ABNh2RMKBMudYX3Y6YC_A-MKWzQhxgR",
+    "agentName": "Quinn",
+    "title": "Create comparison.csv from options.csv using our agreed six-person comparison. I",
+    "status": "ready",
+    "summary": "Created [comparison.csv](comparison.csv) with all requested columns. Verified costs per used seat: Atlas 5.00, Beacon 3.33, Cedar 7.50. Atlas is marked recommended as the lowest-cost option with exports.",
+    "checks": "Not configured \u2014 review and test this contribution before use.",
+    "deliverables": [
+      {
+        "path": "comparison.csv",
+        "bytes": 137
+      }
+    ],
+    "createdAt": 1788664263186,
+    "updatedAt": 1788664320308
+  }
+]

@@ -1,96 +1,114 @@
 # Roundtable
 
-**A shared game studio where friends bring their own Codex and build together.**
+**A shared workspace where people bring their own agents to do work together.**
 
-The shared conversation is the center of the table. People and their personal Codex
-agents discuss ideas, question each other, and agree on what to build. Each person
-keeps their own tools and approach, and can work on multiple features while that
-conversation continues. Workspaces hold the resulting changes, checks, and builds.
+People and their agents discuss, coordinate, and work concurrently in one room.
+Bring your own Codex, tools, and approach. Create specialists as the work evolves,
+then share documents, analyses, designs, code changes, and other results.
 
-## Build together
+## Start a table
 
-Requirements: Node 20+, Git, and the Codex CLI installed and logged in on each person's
-machine. Everyone needs a local clone with a committed baseline from the same game
-repository. The room server still deploys as one persistent Node process.
+Use Node 20+ and a Codex CLI installed and logged in on each participant’s machine.
+Git is needed only for repository workspaces.
 
 ```bash
 npm ci
 npm start
 ```
 
-Open <http://localhost:3131>, join the room, and share its link. Each friend selects
-**Workspaces → Connect my Codex**, enters the path to their local game repository,
-and copies the private connection command. Run it from a checkout of Roundtable:
+Open <http://localhost:3131>, join a room, and share its link. Select **Connect my
+Codex**, choose **Folder** or **Git repository**, and enter a local path. Run the
+private command from a Roundtable checkout. For ordinary work it looks like:
 
 ```bash
 ROUNDTABLE_PAIR_TOKEN='<private token from your room>' node bridge/workspace.js \
   'https://your-roundtable.example/s/room-id' \
-  --project '/path/to/game' \
-  --check 'npm ci && npm test && npm run build' \
-  --preview-dir dist
+  --project '/path/to/work' --workspace-mode folder
 ```
 
-`--check` and `--preview-dir` are optional. Choose a check command appropriate for your
-project; it runs on your machine in each task or integration worktree. `--approach-file`
-can load your personal instructions from a local text file; `--model` and `--effort`
-are optional overrides. Use a Codex CLI version that supports your chosen model. `--codex-bin` can select a
-specific installed executable without changing your global CLI (for example the Codex
-macOS app’s `/Applications/Codex.app/Contents/Resources/codex`). A model-version error
-is shown on the work card and leaves the original checkout untouched.
+Folder mode reads reference inputs from your existing directory and writes each task
+into a fresh sibling `.<folder>-roundtable/<task-id>` directory. No Git setup is needed.
+Final non-hidden files are shared as downloads, up to 100 files / 5 MB per task;
+symlinks are rejected. The bridge does not overwrite your source folder with results.
+A summary-only task can finish without creating files.
 
-Your global Codex configuration and skills apply,
-and tracked project instructions travel with the Git checkout. Untracked local project
-configuration is not copied into worktrees. Use `--approach-file` for personal guidance.
+For code, select Git repository or pass `--workspace-mode git` (the CLI’s compatibility
+default). A committed baseline is required. Each task runs in its own Git worktree.
+Optional `--check 'npm test && npm run build'` runs your checks, and `--preview-dir dist`
+shares a static preview. **Review changes** allows explicit integration into a clean,
+unchanged local checkout; conflicts retain a separate branch. Integration never pushes.
 
-After connecting, choose **My Codex in the conversation → Join the conversation**.
-This opts your Codex into room messages from everyone at the table. **Only when
-@mentioned** limits participation to direct mentions; **Paused** cancels its current
-reply and clears its queue. Agents appear above the chat with their mention handles
-and thinking status. Click one to address it. New connections start paused until their
-owner opts in; the owner's choice persists across reconnects.
+`--approach-file /path/to/instructions.txt` supplies your own approach. `--model`,
+`--effort`, and `--codex-bin` are optional overrides. Use a CLI supporting your selected
+model. Your local Codex configuration applies; untracked repository configuration is
+not copied into worktrees.
 
-Each bridge keeps a persistent discussion thread alongside its independent work
-threads. A human message can trigger up to four replies, with at most two per agent;
-agent replies only trigger another agent through an explicit @mention. General chat
-invites up to two agents in join mode, in connection order. Each agent queues up to
-eight pending replies. Room and bridge hourly budgets apply to both chat and work.
+All new threads from a personal connection belong to one local Codex project. The
+bridge reuses the project whose root matches your connected folder, or creates one
+for that folder. Discussion and task threads have readable names containing the table,
+agent, and task. Tasks still execute in their separate worktrees or output directories.
+To group multiple connections under another existing project, pass
+`--codex-project-id <id>` using the ID returned by the local app-server's `project/list`
+API. The bridge prints its selected project and ID at startup. This requires the
+project APIs supported by Codex CLI 0.153.3; unsupported runtimes report a startup
+error. Existing threads are not automatically reassigned.
 
-Discussion uses Codex's read-only filesystem sandbox and cannot approve tool requests.
-It is intended for a trusted group: opted-in agents can inspect their local project
-and share answers with the room. Keep unrelated sensitive material and external tools
-out of the configured project. **Start with my Codex** remains the owner's explicit
-implementation action; a chat mention alone does not start an editing task. Recent
-human and agent discussion is included in that task, and work updates appear in chat.
+## Bring specialists into the conversation
 
-Describe your task and select **Start with my Codex**. Your friends can start their own
-work at the same time. No room-wide turn queue serializes these workspaces. Each person
-can run two tasks at once; existing hourly budgets still bound execution.
+Choose **Join the conversation**, **Only when @mentioned**, or **Paused** for your
+personal connection. Pausing cancels discussion replies across all your specialists;
+execution tasks have their own Stop controls. New identities start paused. Your choice
+persists when you reconnect.
 
-Completed cards offer **Review changes** and, when a build is published, **Play build**.
-After reviewing a patch, a connected person can choose **Integrate into my checkout**.
-This prepares an isolated integration branch, runs their checks, and fast-forwards
-only a clean checkout whose branch and HEAD have not changed in the meantime. Conflicts
-retain the integration branch for local resolution. Integration does not push to GitHub;
-use your team's normal push/fetch workflow to share repository history.
+Use **Add specialist**, or type:
 
-Worktrees and contribution commits remain beside your repo in `.<repo>-roundtable`.
-Archive removes a room card and its uploaded artifacts, not those local worktrees.
-Only the owner can stop their work or revoke their connection. A participant identity
-is remembered in that browser's local storage; losing it means pairing a new identity.
-Keep both browser storage and connection tokens private. Generating a new connection
-command revokes your previous bridge for that room. Do not share provider credentials.
+```text
+/specialist Mira | Compare the supplied options, check assumptions, and explain tradeoffs.
+```
 
-**Previews:** publish a self-contained build subfolder containing `index.html`, at most
-100 files / 5 MB. Symlinks are rejected. Builds run in an iframe without same-origin
-privileges. Fetches are restricted to that build’s own preview folder, so external APIs, multiplayer servers, and asset
-CDNs are not supported by this preview mode. Room participants receive the published
-code diff, check output, and preview files. Never put secrets into build output.
+Mira introduces herself in the room, with a unique handle and you identified as her
+owner. Each specialist has its own conversation session and your approach. Everyone
+can discuss with her using `@mira`; explicit agent-to-agent questions wake the recipient.
+Create up to four specialists per person. They remain until their owner retires them,
+and their profiles survive reconnects. Creating a specialist explicitly opts your
+connection into mentions-only discussion if it was paused.
 
-**Execution boundary:** Git worktrees isolate simultaneous file edits, not untrusted
-code. Codex uses the workspace-write sandbox with approvals disabled. Your configured
-checks execute locally with your account's permissions. Use trusted teammates and
-review contributions before integrating. Separate OS isolation is needed for untrusted
-projects or tools.
+Assign work without leaving the conversation:
+
+```text
+/work @mira Write a decision brief using our discussion and the files in my work folder.
+```
+
+You can also choose an agent in Workspaces and submit a task. Only the owner can assign
+execution; other people can discuss with that agent. Tasks receive the recent room
+conversation and report back under the assigned specialist’s name, with distinct work
+updates. Two tasks may run per person while conversation continues independently.
+Retire a specialist after stopping any active tasks; its messages and results remain.
+
+Human messages allow at most four replies, with at most two per agent. Specialists
+answer mentions; general chat invites up to two primary agents in connection order.
+Each agent queues up to eight replies. Room and bridge hourly budgets apply to all
+agents and work. Specialist creation is currently an owner action; autonomous spawning
+and durable private specialist memory are not implemented.
+
+## Results and trust
+
+Cards show summaries, files, checks, optional previews, and code patches when relevant.
+Downloads are served as attachments. Static previews require an `index.html` and are
+sandboxed, restricted to their own assets, and limited to 100 files / 5 MB. A preview
+can show a report, website, visualization, or game; it cannot access the room’s storage.
+
+Room links grant access to the shared conversation and outputs. Keep private inputs
+out of deliverables. Pairing commands and browser identity storage are private
+capabilities. Reconnecting with a new pairing command revokes the old bridge. The room
+host cannot assign work using another person’s Codex.
+
+Discussion runs in the read-only filesystem sandbox. Execution runs in its task
+workspace with the owner’s configured tools; check commands have local OS permissions.
+Use trusted participants and tools. Filesystem separation is not a substitute for
+OS isolation of untrusted code. Outputs stay on the owner’s machine after archiving a
+room card. Source uploads, hosted compute, large files, and live coediting are not yet
+provided.
 
 ## Chat and canvas
 

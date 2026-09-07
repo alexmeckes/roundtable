@@ -1,0 +1,26 @@
+{
+  "capturedAt": "2026-09-06T03:46:10.010Z",
+  "runtime": "codex-cli 0.153.3",
+  "model": "gpt-6-astra",
+  "project": {
+    "id": "01a06e66-5a95-7c81-a824-41e1fd9820bc",
+    "name": "roundtable"
+  },
+  "threads": [
+    {
+      "id": "01a074d2-b148-7ce2-87ef-15f0b0b60af9",
+      "projectId": "01a06e66-5a95-7c81-a824-41e1fd9820bc",
+      "name": "Roundtable · grouping-check · Mira · conversation",
+      "cwd": "/private/var/folders/qj/8hf63fb90v3gsk726drqfxlr0000gn/T/roundtable-grouping-GP1wOZ/inputs"
+    },
+    {
+      "id": "01a074d2-b14f-7480-872d-aab46b7b205d",
+      "projectId": "01a06e66-5a95-7c81-a824-41e1fd9820bc",
+      "name": "Roundtable · grouping-check · Quinn · Reply with exactly: Grouping check passed. Do not use tools or modify files.",
+      "cwd": "/private/var/folders/qj/8hf63fb90v3gsk726drqfxlr0000gn/T/roundtable-grouping-GP1wOZ/output"
+    }
+  ],
+  "sharedProject": true,
+  "separateDirectories": true,
+  "projectListIncludesBoth": true
+}

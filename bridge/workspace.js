@@ -1,24 +1,33 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import WebSocket from 'ws';
+import {FolderProject} from './folder.js';
 import { WorktreeProject } from './worktree.js';
 import { CodexAppServer } from './app-server.js';
 
 const args=process.argv.slice(2);
 function option(name,fallback='') {const i=args.indexOf(name);if(i<0)return fallback;const value=args[i+1];if(!value || value.startsWith('--'))throw new Error(name+' requires a value');args.splice(i,2);return value;}
+const workspaceMode=option('--workspace-mode','git');
+if(!['git','folder'].includes(workspaceMode))throw new Error('Workspace mode must be git or folder.');
 const codexBin=option('--codex-bin','codex');
+const codexProjectId=option('--codex-project-id');
 const projectPath=option('--project'),check=option('--check'),preview=option('--preview-dir'),approachFile=option('--approach-file'),model=option('--model',null),effort=option('--effort',null);
 const url=new URL(args[0] || 'http://invalid');
 const room=url.pathname.match(/^\/s\/([A-Za-z0-9_-]{1,80})\/?$/)?.[1];
 const token=process.env.ROUNDTABLE_PAIR_TOKEN;
 if(!room || !projectPath || !token || !['http:','https:'].includes(url.protocol)) {
-  console.error('Usage: ROUNDTABLE_PAIR_TOKEN=<from Connect my Codex> node bridge/workspace.js <room-url> --project /path/to/game [--check "npm test && npm run build"] [--preview-dir dist] [--approach-file path] [--model model] [--effort effort] [--codex-bin path]');process.exit(1);
+  console.error('Usage: ROUNDTABLE_PAIR_TOKEN=<from Connect my Codex> node bridge/workspace.js <room-url> --project /path/to/work [--workspace-mode folder|git] [--codex-project-id id] [--check "validation command"] [--preview-dir dist] [--approach-file path] [--model model] [--effort effort] [--codex-bin path]');process.exit(1);
 }
 const approach=approachFile?(await readFile(approachFile,'utf8')).slice(0,8000):'';
 const codex=new CodexAppServer({cwd:projectPath,command:codexBin});
-const project=new WorktreeProject(projectPath,{check,preview,execute:params=>codex.run({...params,approach,model,effort})});
+const Project=workspaceMode==='folder'?FolderProject:WorktreeProject;
+const project=new Project(projectPath,{check,preview,execute:params=>codex.run({...params,approach,model,effort})});
 const projectName=await project.initialize(); await codex.initialize();
-const jobs=new Map(),chatJobs=new Map();let ws,stopping=false,chatThread=null;
+try {
+  const threadProject=await codex.useProject({cwd:project.project,projectId:codexProjectId});
+  console.log('Local Codex project: '+threadProject.name+' ('+threadProject.id+')');
+}catch(error){codex.close();throw error;}
+const jobs=new Map(),chatJobs=new Map();let ws,stopping=false;const chatThreads=new Map();
 let runStart=Date.now(),runs=0;
 async function post(job,result) {
   const response=await fetch(url.origin+'/api/rooms/'+room+'/work/'+job.id+'/result',{method:'POST',headers:{Authorization:'Bearer '+token,'X-Run-Token':job.runToken,'Content-Type':'application/json'},body:JSON.stringify(result),signal:AbortSignal.timeout(30_000)});
@@ -26,7 +35,7 @@ async function post(job,result) {
 }
 function connect(){
   ws=new WebSocket(url.origin.replace(/^http/,'ws'));
-  ws.on('open',()=>ws.send(JSON.stringify({t:'workspace_bridge_join',room,token,project:projectName,approach:approach?'Custom approach + local Codex configuration':'Local Codex configuration'})));
+  ws.on('open',()=>ws.send(JSON.stringify({t:'workspace_bridge_join',room,token,project:projectName,workspaceMode,approach:approach?'Custom approach + local Codex configuration':'Local Codex configuration'})));
   ws.on('message',async raw=>{
     let msg;try{msg=JSON.parse(raw);}catch{return;}
     if(!msg || msg.room!==room)return;
@@ -37,10 +46,10 @@ function connect(){
       const connection=ws;
       const reply=result=>{if(connection.readyState===1)connection.send(JSON.stringify({t:'workspace_chat_result',room,id:msg.id,...result}));};
       if(Date.now()-runStart>3600_000){runStart=Date.now();runs=0;}
-      if(chatJobs.size || runs>=Number(process.env.ROUNDTABLE_BRIDGE_RUNS || 60)){reply({error:'Conversation busy or hourly budget exhausted.'});return;}
+      if(chatJobs.size>=5 || runs>=Number(process.env.ROUNDTABLE_BRIDGE_RUNS || 60)){reply({error:'Conversation busy or hourly budget exhausted.'});return;}
       runs++;const controller=new AbortController();chatJobs.set(msg.id,controller);
       try{
-        const text=await codex.run({cwd:project.project,job:msg,signal:controller.signal,approach,model,effort,conversation:true,sessionId:chatThread,onThread:id=>{chatThread=id;}});
+        const text=await codex.run({cwd:project.project,job:msg,signal:controller.signal,approach,model,effort,conversation:true,sessionId:chatThreads.get(msg.agentId || 'primary'),onThread:id=>{chatThreads.set(msg.agentId || 'primary',id);}});
         if(!controller.signal.aborted)reply({text});
       }catch(error){if(!controller.signal.aborted)reply({error:error.message});}
       finally{chatJobs.delete(msg.id);}return;

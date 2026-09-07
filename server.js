@@ -16,7 +16,9 @@ import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import { randomBytes } from 'crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
+import {LocalConnections} from './local/manager.js';
+import {mountLocalConnections} from './local/routes.js';
 import { runHouseAgent, houseAvailable } from './agents/house.js';
 import { sanitizeCanvas, sanitizeActions, serializeCanvas } from './agents/prompt.js';
 import { createWorkspaces } from './workspace/server.js';
@@ -322,8 +324,10 @@ const roomHasContent = (r) =>
 let persistT = null;
 function schedulePersist() {
   if (persistT) return;
-  persistT = setTimeout(() => {
-    persistT = null;
+  persistT = setTimeout(flushPersist,1000);
+}
+function flushPersist(){
+    if(persistT)clearTimeout(persistT);persistT = null;
     const data = [...rooms.values()].filter(roomHasContent).map((r) => ({
       id: r.id, title: r.title, problem: r.problem, canvas: r.canvas, canvasRevision: r.canvasRevision, auto: r.auto,
       hostKey: r.hostKey, hostClaimed: r.hostClaimed,
@@ -339,7 +343,6 @@ function schedulePersist() {
     } catch (err) {
       log('-', `persist FAILED: ${err.message}`);
     }
-  }, 1000);
 }
 
 function loadRooms() {
@@ -807,7 +810,11 @@ function detachBridgeWs(ws) {
 
 /* ---------------- HTTP ---------------- */
 
-const workspace = createWorkspaces({rooms,broadcast,persist:schedulePersist,tell,canSpeak,allowRun,say,dataDir:dirname(DATA_FILE)});
+let localManager;
+const workspace = createWorkspaces({rooms,broadcast,persist:schedulePersist,tell,canSpeak,allowRun,say,dataDir:dirname(DATA_FILE),onDisconnect:(room,owner)=>{void localManager?.revoke(room,owner).catch(()=>log('-','Could not update local connection settings.'));}});
+const localEnabled=process.env.ROUNDTABLE_LOCAL_LAUNCHER!=='0' && process.env.NODE_ENV!=='production' && PROXY_HOPS===0;
+if(localEnabled){localManager=new LocalConnections({file:join(dirname(DATA_FILE),'local-connections.json'),rooms,workspace});try{await localManager.load();}catch(error){log('-',error.message);localManager=null;}}
+
 const app = express();
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -815,6 +822,7 @@ app.use((_req, res, next) => {
   res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
   next();
 });
+mountLocalConnections(app,{manager:localManager,rooms,canSpeak,enabled:!!localManager});
 workspace.mount(app);
 app.use(express.static('public'));
 
@@ -1263,6 +1271,7 @@ loadRooms();
 
 server.listen(PORT, () => {
   console.log(`Roundtable listening on http://localhost:${server.address().port}`);
+  void localManager?.restore(server.address().port);
   console.log(`Attach a brain to a room: node bridge/codex.js http://localhost:${server.address().port}/s/<room>`);
   console.log(`Rooms authorized for shared compute: ${[...SHARED_ROOMS].join(', ') || 'none'}`);
   if (houseAvailable()) {
@@ -1271,3 +1280,12 @@ server.listen(PORT, () => {
     console.log('No ANTHROPIC_API_KEY: brains come from bridges only.');
   }
 });
+
+let shuttingDown=false;
+async function shutdown(){
+  if(shuttingDown)return;shuttingDown=true;
+  await localManager?.close();
+  for(const ws of wss.clients){workspace.detach(ws);ws.terminate();}
+  flushPersist();server.close();process.exit(0);
+}
+process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);

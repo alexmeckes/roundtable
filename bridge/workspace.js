@@ -23,6 +23,7 @@ if(!room || !projectPath || !token || !['http:','https:'].includes(url.protocol)
 }
 const approach=approachFile?(await readFile(approachFile,'utf8')).slice(0,8000):'';
 const codex=new CodexAppServer({cwd:projectPath,command:codexBin});
+process.on('exit',()=>codex.close());
 const Project=workspaceMode==='folder'?FolderProject:WorktreeProject;
 const project=new Project(projectPath,{check,preview,execute:params=>codex.run({...params,sessionId:params.job.localResume?.threadId,approach,model,effort,onThread:async threadId=>{await sessions.saveRun(params.job.id,{threadId});publishSessions();},contextTool:(name,args)=>requestContext(params.job,name,args,params.signal)})});
 const projectName=await project.initialize(); await codex.initialize();
@@ -30,6 +31,7 @@ try {
   const threadProject=await codex.useProject({cwd:project.project,projectId:codexProjectId});
   console.log('Local Codex project: '+threadProject.name+' ('+threadProject.id+')');
 }catch(error){codex.close();throw error;}
+const notify=message=>{if(process.connected)process.send(message,()=>{});};
 const jobs=new Map(),chatJobs=new Map();let ws,stopping=false;let sessions,sessionOwner,sessionReady=Promise.resolve();
 codex.process.once('exit',()=>{if(!stopping){console.error('Codex runtime exited. Reconnect to restore saved sessions.');stop();}});
 const contextRequests=new Map();
@@ -64,7 +66,7 @@ function connect(){
         sessionOwner=msg.ownerId;
         sessions ||= await SessionStore.open({origin:url.origin,room,ownerId:msg.ownerId,project:project.project,workspaceMode,projectId:codex.projectId});
         if(stopping){await sessions.close();return;}
-        publishSessions();console.log('Your Codex is connected to '+url.origin+'/s/'+room+' for '+projectName+'. Saved conversations: '+Object.keys(sessions.data.conversations).length);
+        publishSessions();notify({type:'roundtable-ready',room,ownerId:msg.ownerId});console.log('Your Codex is connected to '+url.origin+'/s/'+room+' for '+projectName+'. Saved conversations: '+Object.keys(sessions.data.conversations).length);
       })();
       try{await sessionReady;}catch(error){console.error(error.message);stop();}return;
     }
@@ -121,6 +123,7 @@ function connect(){
   });
   ws.on('error',error=>console.error(error.message));
   ws.on('close',code=>{
+    notify({type:code===1008?'roundtable-revoked':'roundtable-offline',room});
     for(const finish of [...contextRequests.values()])finish(new Error('The table disconnected.'));
     for(const controller of jobs.values())controller.abort();
     for(const controller of chatJobs.values())controller.abort();
@@ -131,7 +134,8 @@ function connect(){
 async function stop(){
   if(stopping)return;stopping=true;const active=[...jobs.values(),...chatJobs.values()];for(const c of active)c.abort();ws?.close();
   const timeout=setTimeout(()=>codex.close(),35000);
-  try{await Promise.allSettled(active.map(c=>c.finished));await sessionReady.catch(()=>{});}finally{clearTimeout(timeout);codex.close();await sessions?.close().catch(console.error);}
+  try{await Promise.allSettled(active.map(c=>c.finished));await sessionReady.catch(()=>{});}finally{clearTimeout(timeout);codex.close();await sessions?.close().catch(console.error);if(process.connected)process.disconnect();}
 }
 process.on('SIGINT',stop);process.on('SIGTERM',stop);
+process.on('disconnect',()=>{stop();});
 connect();

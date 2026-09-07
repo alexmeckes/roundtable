@@ -11,7 +11,7 @@ npm test
 ```
 
 The automated suite uses simulated bridges and does not spend model usage. The
-[latest recorded run](evidence/shared-context/unit-tests.txt) passed 44 tests,
+[latest recorded run](evidence/local-connection/unit-tests.txt) passed 68 tests,
 covering authorization, concurrent work, cancellation, downloads, Git integration,
 context history, proposal approval, and skill adoption.
 
@@ -27,6 +27,7 @@ Codex locally; the browser displays shared conversation, context, work, and canv
 | Area | Files |
 | --- | --- |
 | Room state, WebSockets, permissions, persistence | [`server.js`](../server.js) |
+| Local launch, saved connections, CLI and folder detection | [`local/manager.js`](../local/manager.js), [`local/runtime.js`](../local/runtime.js), [`local/routes.js`](../local/routes.js) |
 | Personal pairing, work dispatch, downloads | [`workspace/server.js`](../workspace/server.js) |
 | Agent conversation queues and handoffs | [`workspace/conversation.js`](../workspace/conversation.js) |
 | Context revisions, proposals, retrieval, skill adoption | [`workspace/context.js`](../workspace/context.js) |
@@ -93,3 +94,41 @@ the same room snapshots as the task and conversation views. `public/tasks.js` ow
 task editing and execution controls; the shell reuses its task card in the selected
 thread. Presence includes the existing public member ID so identical display names
 remain distinct. See [project UI evidence](evidence/project-ide/README.md).
+
+
+## Local connection manager
+
+`public/local-connection.js` discovers the manager on the same origin. The local
+routes require an actual loopback socket, exact HTTP loopback Origin/Host/port,
+JSON, no forwarded headers, and an authenticated, currently joined member who can
+participate. Browser-supplied owner IDs and executable paths are never used. There
+is no cross-origin discovery or connection to another user's desktop. The manager
+is disabled for `NODE_ENV=production`, nonzero proxy hops, or
+`ROUNDTABLE_LOCAL_LAUNCHER=0`; remote browsers retain manual pairing.
+
+A folder selection expires after five minutes and belongs to one owner. The manager
+launches a child bridge with argument arrays and a private pairing token in its
+environment. It waits for the bridge's IPC readiness notification, caps managed
+connections at four, prevents duplicate launches, and bounds restart attempts.
+Closing setup cancels pending startup. Disconnect revokes pairing and stops the
+child; orderly server shutdown stops children and flushes room state. POSIX cleanup
+also terminates leftover processes in the bridge's own process group.
+
+`local-connections.json`, beside the room data file, stores canonical folders and
+connection preferences with mode 0600, without raw pairing tokens. Keep the data
+directory private. Saved connections are scoped to server address, room, member,
+and local Codex profile. Restart restores only enabled connections for this server
+port/profile. Task resumption remains an explicit owner action.
+
+The Mac picker uses AppKit through JXA; Windows uses a native folder dialog and
+Linux uses Zenity when available. The path input works without a picker. Only macOS
+has been exercised with a real CLI in this change; Windows and Linux need live
+validation. See the [connection evidence](evidence/local-connection/README.md).
+
+When `CODEX_THREAD_ID` identifies the launching thread, discovery reads only its
+metadata with `thread/read` and `includeTurns: false`, uses its canonical `cwd`, and
+closes the discovery runtime. It does not infer a project from the Codex executable
+or installation directory. `ROUNDTABLE_PROJECT` explicitly supplies a project for
+standalone launchers. Browser requests cannot supply the thread ID or override this
+suggestion. A saved connection takes precedence; failed discovery falls back to
+the folder picker. This follows the launch context, not later tab switches in Codex.

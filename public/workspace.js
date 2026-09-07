@@ -1,5 +1,5 @@
 /* Personal workspaces: the room shares progress; each owner controls execution. */
-function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact,onUpdate,openTask}) {
+function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact,onUpdate,openTask,openConnection}) {
   const $=id=>document.getElementById(id);
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   let work=[],connections=[],roster=[],pairToken=null;
@@ -18,7 +18,7 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact,onUpdate,op
     $('connection-settings').textContent=mine()?'Your Codex · '+(mine().ready===false?'reconnecting':'connected'):'Connect your Codex';
     $('connection-settings').disabled=!mine() && !canSpeak();
     $('workspace-connect').disabled=!canSpeak();
-    $('workspace-connect').textContent=mine()?'Reconnect my Codex':'Connect my Codex';
+    $('workspace-connect').textContent=mine()?'Change folder':'Connect my Codex';
     $('workspace-disconnect').hidden=!mine();
     $('workspace-connections').replaceChildren(...roster.map(c=>node('span',c.name+' · '+c.project+' · '+(!c.connected?'Offline'+(c.lastDisconnectedAt?' · last connected '+new Date(c.lastDisconnectedAt).toLocaleString():''):c.ready===false?'Reconnecting':work.some(w=>w.ownerId===c.ownerId && ['running','integrating'].includes(w.status))?'Working':'Connected')+(c.savedConversations?.length?' · '+c.savedConversations.length+' saved conversation(s)':''),'workspace-person')));
     const cards=work.map(job=>{
@@ -74,10 +74,14 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact,onUpdate,op
   $('conversation-mode').addEventListener('change',()=>send({t:'workspace_chat_mode',mode:$('conversation-mode').value}));
   $('workspace-play').addEventListener('close',()=>{$('workspace-preview').src='about:blank';});
   document.querySelectorAll('[data-close-workspace]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
-  $('workspace-connect').addEventListener('click',()=>{
+  function manualConnect(){
     $('connection-dialog').close();pairToken=null;$('pair-copy').textContent='Copy command';
     $('pair-command').textContent='Preparing your connection…';
     $('workspace-pair').showModal();send({t:'workspace_pair'});
+  }
+  $('workspace-connect').addEventListener('click',async()=>{
+    const changing=!!mine();if(changing)send({t:'workspace_disconnect'});
+    $('connection-dialog').close();if(!await openConnection({autoConnect:!changing}))manualConnect();
   });
   $('workspace-disconnect').addEventListener('click',()=>send({t:'workspace_disconnect'}));
   const quote=value=>"'"+value.replace(/'/g,"'\\''")+"'";
@@ -95,6 +99,7 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact,onUpdate,op
     try{await navigator.clipboard.writeText($('pair-command').textContent);$('pair-copy').textContent='Copied';}catch{$('pair-copy').textContent='Select and copy the command above';}
   });
   return {
+    manualConnect,
     settings(){if(mine())$('connection-dialog').showModal();else $('workspace-connect').click();},
     update(nextWork=work,nextConnections=connections,nextRoster=roster){work=nextWork;connections=nextConnections;roster=nextRoster;render();},
     progress(id,message){const el=[...document.querySelectorAll('[data-work-id]')].find(n=>n.dataset.workId===id);if(el)el.textContent=message;const job=work.find(w=>w.id===id);if(job)job.message=message;},

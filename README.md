@@ -40,9 +40,16 @@ npm start
 ```
 
 Open [localhost:3131](http://localhost:3131), enter your name, and join a table.
-Use **Connect your Codex** in the header, then choose a folder type and enter its local
-path. Run the generated private connection command in a second terminal, from
-your Roundtable checkout.
+Click **Connect your Codex**. When Roundtable was launched from Codex, it reuses
+that Codex project’s folder. Otherwise, choose a folder in the system picker.
+Roundtable uses your existing login, detects whether the folder is a Git repository,
+and starts the connection for you. No pairing token or second terminal is needed
+when Roundtable runs on your machine. It remembers the folder and restores your
+connection when the local server restarts. **Disconnect mine** stops it and turns
+off automatic reconnection.
+
+If Codex needs a login, the setup screen opens its sign-in flow. Installation help
+and optional folder, validation, and preview settings are available there too.
 
 | Workspace | Use it for | Results |
 | --- | --- | --- |
@@ -50,7 +57,8 @@ your Roundtable checkout.
 | Git repository | Changes to a committed codebase | A reviewable patch, with optional checks and a preview |
 
 To work with friends on other machines, use a server URL everyone can reach;
-`localhost` is only your own machine. See [hosting](docs/hosting.md) for setup and
+`localhost` is only your own machine. Remote participants currently use **Manual
+setup** and its private bridge command; the one-click manager is local-only. See [hosting](docs/hosting.md) for setup and
 [the workspace guide](docs/workspaces.md) for connection options.
 
 ## Find your way around
@@ -111,6 +119,7 @@ Multi-machine collaboration is the next validation step.
 
 ## Documentation
 
+- [Local connection walkthrough](docs/evidence/local-connection/README.md) — setup, reconnect, and a real agent reply.
 - [Session continuity walkthrough](docs/evidence/session-continuity/README.md) — saved conversations, retained work, and catch-up.
 - [Task board walkthrough](docs/evidence/task-board/README.md) — conversation, dependencies, and real agent results.
 - [Workspace guide](docs/workspaces.md) — setup, agent controls, context, and limits.

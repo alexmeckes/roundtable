@@ -13,7 +13,7 @@ const active = status => ['running', 'integrating'].includes(status);
 export {safeAsset} from './assets.js';
 import {safeAsset,safeDeliverable,MIME} from './assets.js';
 
-export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, allowRun, say, dataDir}) {
+export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, allowRun, say, dataDir, onDisconnect=()=>{}}) {
   const pending = new Map();
   const sharedContext=createSharedContext({broadcast,persist,tell,canSpeak,say});
   const artifactRoot = resolve(dataDir, 'workspaces');
@@ -56,6 +56,11 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
   }
   function authenticate(room, token) {
     return token && room?.members?.find(m => m.bridgeHash === hash(token));
+  }
+  function pair(room,ownerId){
+    const member=room.members.find(m=>m.id===ownerId);if(!member)throw new Error('Rejoin the table first.');
+    const old=room.personalBridges.get(ownerId);if(old){detach(old.ws);old.ws.close(1008,'connection revoked');}
+    const token=key();member.bridgeHash=hash(token);announce(room);return token;
   }
   function fail(room, work, status, message) {
     const p = pending.get(work.id);
@@ -169,14 +174,9 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
         member.chatMode=bridge.chatMode=msg.mode;announce(room);
         say(room,{kind:'system',text:msg.mode==='off'?`${you.name} paused their Codex in chat.`:`${you.name} invited their Codex into the conversation. Mention @${bridge.handle}.`});
       } else if (msg.t === 'workspace_pair' || msg.t === 'workspace_disconnect') {
-        const old = room.personalBridges.get(you.id);
-        if (old) { detach(old.ws); old.ws.close(1008,'connection revoked'); }
-        delete member.bridgeHash;
-        if (msg.t === 'workspace_pair') {
-          const token = key(); member.bridgeHash = hash(token);
-          ws.send(JSON.stringify({t:'workspace_pair',token}));
-        }
-        announce(room);
+        onDisconnect(room.id,you.id);
+        if(msg.t==='workspace_pair')ws.send(JSON.stringify({t:'workspace_pair',token:pair(room,you.id)}));
+        else {const old=room.personalBridges.get(you.id);if(old){detach(old.ws);old.ws.close(1008,'connection revoked');}delete member.bridgeHash;announce(room);}
       } else if (msg.t === 'workspace_start') {
         if (!String(msg.instructions || '').trim()) throw new Error('Describe the work you want your Codex to do.');
         dispatch(room,you,msg.instructions,undefined,msg.agentId);
@@ -311,5 +311,5 @@ export function createWorkspaces({rooms, broadcast, persist, tell, canSpeak, all
     }
     return true;
   }
-  return {ready,roster,announce,init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation,command,sharedContext,contextRequest};
+  return {pair,ready,roster,announce,init,joinMember,attach,detach,handle,progress,mount,publicWork,connections,conversation,command,sharedContext,contextRequest};
 }

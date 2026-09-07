@@ -585,3 +585,18 @@ test('returning members receive changes since their acknowledged visit without a
   assert.equal((await returned.wait(m=>m.t==='catchup')).catchup.taskCount,0);
   bob.send({t:'catchup_request'});assert.equal((await bob.wait(m=>m.t==='catchup')).catchup.taskCount,1);
 });
+
+test('messages without a listening target get private guidance with real handles',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const a=await personalBridge(f,alice);await chatMode(alice,'mentions');
+  alice.send({t:'chat',text:'@hello'});
+  const feedback=await alice.wait(m=>m.t==='conversation_feedback');
+  assert.match(feedback.text,/@alice-codex/);assert.match(feedback.text,/Message posted/);
+  assert.equal(bob.ws.messages.some(m=>m.t==='conversation_feedback'),false);
+  assert.equal(a.ws.messages.some(m=>m.t==='workspace_chat'),false);
+  alice.send({t:'chat',text:'@alice-codex hello'});const job=await chatTask(a);chatReply(a,job,'Hello Alice.');
+  await alice.wait(m=>m.t==='chat' && m.entry.text==='Hello Alice.');
+  await chatMode(alice,'off');
+  alice.send({t:'chat',text:'@alice-codex hello again'});
+  assert.match((await alice.wait(m=>m.t==='conversation_feedback')).text,/paused or reconnecting/);
+});

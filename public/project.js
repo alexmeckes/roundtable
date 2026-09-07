@@ -10,6 +10,31 @@ function createProjectUI({send,getYou,canSpeak,openTaskEditor,taskCard,openConte
   const threadSend=node('button','Send to task');threadSend.type='submit';threadForm.append(threadInput,threadSend);$('project-detail').append(detailBody,threadForm);
   threadForm.onsubmit=e=>{e.preventDefault();const taskId=active.slice(5),text=threadInput.value.trim();if(active.startsWith('task:') && text && canSpeak() && send({t:'chat',taskId,text})){drafts.delete(active);threadInput.value='';}};
   const allAgents=()=>data.workspaceRoster.flatMap(c=>(c.agents || []).map(a=>({...a,connected:c.connected!==false,ready:c.ready!==false,chatMode:c.chatMode==='off'?'off':a.chatMode})));
+  const listening=()=>allAgents().filter(a=>a.connected && a.ready && a.chatMode && a.chatMode!=='off');
+  function conversationHint(){
+    const agents=listening(),auto=agents.filter(a=>a.chatMode==='auto');
+    if(auto.length)return auto.slice(0,2).map(a=>a.name).join(' and ')+' can reply to the room. Mention an agent to direct your message.';
+    if(agents.length)return 'Agents reply only when mentioned. Select a handle above, or let your Codex reply to the room.';
+    return allAgents().some(a=>a.connected)?'Your agents are paused or reconnecting. Choose a reply mode above.':'Connect your Codex to bring an agent into this conversation.';
+  }
+  function feedback(text){$('conversation-feedback').textContent=text || '';$('conversation-feedback').hidden=!text;}
+  function mentionAgent(a){
+    const input=$('chat-text'),start=input.selectionStart,end=input.selectionEnd,before=input.value.slice(0,start),match=before.match(/(^|\s)@[a-z0-9_-]*$/i);
+    if(match)input.setRangeText('@'+a.handle+' ',start-match[0].length+match[1].length,end,'end');
+    else input.setRangeText((before && !/\s$/.test(before)?' ':'')+'@'+a.handle+' ',start,end,'end');
+    input.dispatchEvent(new Event('input'));input.focus();
+  }
+  function renderComposer(){
+    const agents=allAgents(),input=$('chat-text'),fragment=input.value.slice(0,input.selectionStart).match(/(?:^|\s)@([a-z0-9_-]*)$/i)?.[1],matches=fragment===undefined?agents:agents.filter(a=>a.handle.toLowerCase().startsWith(fragment.toLowerCase()));
+    $('conversation-mentions').replaceChildren(...(matches.length?matches:agents).slice(0,8).map(a=>{
+      const b=button('@'+a.handle,()=>mentionAgent(a),'mention-choice');b.disabled=!a.connected || !a.ready || a.chatMode==='off' || !canSpeak();b.title=a.name+' · '+(a.chatMode==='off'?'Paused':a.chatMode==='auto'?'Replies to the room':'Replies when mentioned');return b;
+    }));
+    const own=data.connections.find(c=>c.ownerId===getYou()?.id);
+    $('composer-mode-label').hidden=!own;$('composer-mode').value=own?.chatMode || 'off';$('composer-mode').disabled=!own || (!canSpeak() && own.chatMode==='off');
+    if(!document.body.classList.contains('offline'))$('hint').textContent=fragment!==undefined && !matches.length?'No agent named @'+fragment+'. Select one of the handles above.':conversationHint();
+  }
+  $('composer-mode').onchange=()=>send({t:'workspace_chat_mode',mode:$('composer-mode').value});
+  $('chat-text').addEventListener('input',()=>{feedback('');renderComposer();});
   const task=id=>data.tasks.find(t=>t.id===id);
   const agent=id=>allAgents().find(a=>a.agentId===id);
   function title(key){return {conversation:'The table',tasks:'Tasks',context:'Shared context',outputs:'Outputs',canvas:'Canvas'}[key] || (key.startsWith('task:')?task(key.slice(5))?.title:key.startsWith('agent:')?agent(key.slice(6))?.name:key.startsWith('file:')?key.split(':').slice(2).join(':'):null) || 'Unavailable';}
@@ -33,6 +58,7 @@ function createProjectUI({send,getYou,canSpeak,openTaskEditor,taskCard,openConte
     }));
   }
   function renderNavigation(){
+    renderComposer();
     for(const [id,key] of Object.entries({'nav-conversation':'conversation','btn-tasks':'tasks','btn-context':'context','btn-workspaces':'outputs','btn-doc':'canvas'})){$(id).classList.toggle('selected',active===key);$(id).setAttribute('aria-current',active===key?'page':'false');}
     $('nav-task-count').textContent=data.tasks.filter(t=>t.status!=='done').length;
     const people=new Map(data.taskPeople.map(p=>[p.id,p]));for(const p of data.people)if(p.id)people.set(p.id,p);
@@ -42,8 +68,8 @@ function createProjectUI({send,getYou,canSpeak,openTaskEditor,taskCard,openConte
       group.append(node('div',(online?'● ':'○ ')+p.name+(p.id===getYou()?.id?' · you':''),'person-name'));
       for(const a of allAgents().filter(a=>a.ownerId===p.id)){
         const busy=data.work.some(w=>w.agentId===a.agentId && ['running','integrating'].includes(w.status));
-        const status=!a.connected?'offline':!a.ready?'reconnecting':busy?'working':a.chatBusy?'thinking':a.chatMode==='off'?'paused':'available';
-        const b=button(a.name,()=>open('agent:'+a.agentId),'agent-nav'+(active==='agent:'+a.agentId?' selected':''));b.append(node('span',status,'agent-status '+status));group.append(b);
+        const status=!a.connected?'offline':!a.ready?'reconnecting':busy?'working':a.chatBusy?'thinking':a.chatMode==='off'?'paused':a.chatMode==='mentions'?'mention to reply':'listening';
+        const b=button(a.name,()=>open('agent:'+a.agentId),'agent-nav'+(active==='agent:'+a.agentId?' selected':''));b.append(node('span','@'+a.handle,'agent-handle'),node('span',status,'agent-status'));group.append(b);
       }return group;
     }));
     if(!people.size)$('project-people').append(node('p','People and agents appear here.','sidebar-empty'));
@@ -117,5 +143,5 @@ function createProjectUI({send,getYou,canSpeak,openTaskEditor,taskCard,openConte
       const selected=active;fetch(url).then(async response=>{if(!response.ok)throw new Error('Could not load this output.');const blob=await response.blob();if(blob.size>1024*1024)throw new Error('Download this file to view it; it is too large for the inline viewer.');return blob.text();}).then(text=>{if(active===selected)content.textContent=text;}).catch(e=>{if(active===selected)content.textContent=e.message;});
     }else content.textContent='Download this file to open it in your preferred app.';
   }
-  return {open,notice(message){$('project-notice').textContent=message || '';$('project-notice').hidden=!message;},update(value){for(const key of Object.keys(data))if(value[key]!==undefined)data[key]=value[key];if(!active.startsWith('file:'))fileView=null;renderNavigation();renderTabs();renderView();},message(entry){if(entry.id && data.chat.some(m=>m.id===entry.id))return;data.chat=[...data.chat,entry].slice(-500);renderView();}};
+  return {open,conversationHint,feedback,notice(message){$('project-notice').textContent=message || '';$('project-notice').hidden=!message;},update(value){for(const key of Object.keys(data))if(value[key]!==undefined)data[key]=value[key];if(!active.startsWith('file:'))fileView=null;renderNavigation();renderTabs();renderView();},message(entry){if(entry.id && data.chat.some(m=>m.id===entry.id))return;data.chat=[...data.chat,entry].slice(-500);renderView();}};
 }

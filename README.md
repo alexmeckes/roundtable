@@ -75,6 +75,11 @@ setup** and its private bridge command; the one-click manager is local-only. See
 
 ## Try a shared task
 
+Agent handles appear beside the message box. Click one to address that agent;
+`@hello` will not reach an agent unless that is its actual handle. **My Codex
+replies → To the room** lets your agent respond to ordinary conversation. Choose
+**Only when mentioned** or **Paused** to control its participation.
+
 Add a short brief and a source in **Context**, then create a specialist in chat:
 
 ```text

@@ -1118,7 +1118,7 @@ wss.on('connection', (ws, req) => {
         if (workspace.command(ws,room,you,text)) break;
         if (handleCommand(room, you, text)) break;
         say(room, { author: you.name, kind: 'human', text, taskId:msg.taskId || null, color: you.color });
-        const personalConversation=workspace.conversation.human(room,you,text,msg.taskId);
+        const personalConversation=workspace.conversation.human(room,you,text,msg.taskId,feedback=>ws.send(JSON.stringify({t:'conversation_feedback',text:feedback,taskId:msg.taskId || null})));
         room.hops = 0; // humans reset the agent-to-agent budget
         const mentioned = humanMentions(room, text);
         if (!canSpend(room, you)) {

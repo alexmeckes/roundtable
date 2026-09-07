@@ -57,7 +57,7 @@ The disposable server was stopped after testing.
 
 ## Automated coverage
 
-[Full test output](unit-tests.txt): **68 passed, 0 failed**. New checks cover:
+[Full test output](unit-tests.txt): **69 passed, 0 failed**. New checks cover:
 
 - Loopback socket, exact Origin/Host/port, JSON, forwarded-header rejection, and disabled manager access.
 - Current room-member authentication and owner-scoped folder selection.
@@ -71,3 +71,17 @@ Windows and Linux picker implementations have not been exercised on real desktop
 Fresh CLI installation and interactive login were not repeated: this machine was
 already installed and signed in. Hosted tables continue to use manual pairing;
 a standalone desktop companion is a separate step.
+
+
+## Reply routing is visible
+
+The composer now shows clickable agent handles and the owner's reply mode. Typing
+`@hello` displayed “No agent named @hello”; sending it returned private guidance
+with the real handle. Clicking `@alex-codex` replaced the unknown handle. Switching
+**My Codex replies** to **To the room** then produced a real agent greeting in
+response to an ordinary message without any mention.
+
+![Visible reply controls and a real response without a mention](05-reply-controls.png)
+
+The added regression checks that unmatched mentions receive guidance only on the
+sender's connection, correct mentions still dispatch, and paused agents stay paused.

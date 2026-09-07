@@ -538,10 +538,12 @@ body.offline .hint{color:#C25E5E}
         <div class="bp-wait">Waiting for a brain to connect…</div>
       </div>
       <div class="composer">
+        <div id="conversation-controls"><div id="conversation-mentions" aria-label="Mention an agent"></div><label id="composer-mode-label" hidden>My Codex replies <select id="composer-mode"><option value="mentions">Only when mentioned</option><option value="auto">To the room</option><option value="off">Paused</option></select></label></div>
         <div class="composer-box">
           <textarea id="chat-text" placeholder="Message the table…" rows="1"></textarea>
           <button id="btn-send">Send</button>
         </div>
+        <div id="conversation-feedback" role="status" hidden></div>
         <div class="hint" id="hint">@agent to put the agent to work, or just talk.</div>
       </div>
     </section>
@@ -871,7 +873,7 @@ const contextUI=createContextUI({send,roomId,getYou:()=>state.you,canSpeak});
 const localConnectionUI=createLocalConnectionUI({roomId,getMemberKey:()=>localStorage.getItem(MEMBER_STORE),manual:()=>workspaceUI.manualConnect()});
 const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,openConnection:options=>localConnectionUI.open(options),onUpdate:value=>projectUI.update(value),openTask:id=>tasksUI.open(id),saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
 function hintText(){
-  if(document.body.classList.contains('work-mode')) return canSpeak()?'Message people and @mention agents. Turn a message into a task when you’re ready to start work.':'View-only — follow the group’s work and review their shared results.';
+  if(document.body.classList.contains('work-mode')) return canSpeak()?projectUI.conversationHint():'View-only — follow the group’s work and review their shared results.';
   if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
   if(state.hostOnlySpend && !state.isHost) return 'Only the host can put agents to work here.';
   if(!state.agents.length) return 'No agents at the table — /agent Name: brief invites one.';
@@ -1063,6 +1065,7 @@ function onMessage(ev){
     case 'context_saved': case 'context_error': contextUI.result(m); break;
     case 'workspaces': workspaceUI.update(m.work,m.connections,m.workspaceRoster || m.connections);tasksUI.update(m);projectUI.update(m); break;
     case 'workspace_progress': workspaceUI.progress(m.id,m.message);tasksUI.update();projectUI.update({}); break;
+    case 'conversation_feedback': if(m.taskId)projectUI.notice(m.text);else projectUI.feedback(m.text);break;
     case 'workspace_pair': workspaceUI.pair(m.token); break;
     case 'auto': setAuto(m.on); break;
     case 'access': setAccess(m.access, m.hostOnlySpend); break;
@@ -1350,7 +1353,7 @@ function sendChat(){
   const text = t.value.trim();
   if(!text) return;
   if(!send({t:'chat', text})) return; // offline: keep the draft, banner explains
-  t.value = '';
+  t.value = '';t.dispatchEvent(new Event('input'));
   $('btn-send').classList.remove('ready');
 }
 $('btn-send').addEventListener('click', sendChat);

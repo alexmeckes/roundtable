@@ -11,7 +11,7 @@ npm test
 ```
 
 The automated suite uses simulated bridges and does not spend model usage. The
-[latest recorded run](evidence/local-connection/unit-tests.txt) passed 68 tests,
+[latest recorded run](evidence/local-connection/unit-tests.txt) passed 69 tests,
 covering authorization, concurrent work, cancellation, downloads, Git integration,
 context history, proposal approval, and skill adoption.
 

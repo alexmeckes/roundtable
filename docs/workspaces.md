@@ -123,7 +123,7 @@ Human messages allow at most four replies, with at most two per agent. Specialis
 answer mentions; general chat invites up to two primary agents in connection order.
 Each agent queues up to eight replies. Room and bridge hourly budgets apply to all
 agents and work. Specialist creation is currently an owner action; autonomous spawning
-and durable private specialist memory are not implemented.
+is not implemented. Private specialist threads are now restored from the owner’s local session store.
 
 ## Results and trust
 
@@ -178,4 +178,50 @@ tasks on another person's behalf.
 The prototype retains up to 100 tasks and 48 execution cards per table. Runs linked
 to tasks cannot be archived, so their deliverables remain available. Unlinked
 execution cards can still be archived. Task history and deliverables persist on
-the server; private Codex conversation sessions still depend on the bridge process.
+the server; private Codex conversation references and execution checkpoints are saved locally.
+
+## Leave and return
+
+Restart the same private bridge command to reconnect. Use the same table URL,
+local project, Codex project, and Codex profile. The bridge restores its local
+session references before accepting new work. Each agent’s next conversation
+turn reopens its existing Codex thread, with read-only conversation permissions
+reapplied. Reconnecting does not replay interrupted messages or start tasks.
+
+The roster keeps disconnected agents visible as **Offline**. Connected owners
+show **Reconnecting**, **Connected**, or **Working**, with their saved conversation
+count. A lost socket is detected by the existing server heartbeat.
+
+An interrupted task stays **Blocked**. Reconnect its original owner, machine,
+and project, then select **Resume my agent**. Resume keeps the original output
+folder or Git worktree, including partial files and its Codex thread when one was
+created. It runs the current task instructions and configured checks, publishes
+a new reviewable result, and retains earlier attempts. Update the instructions
+before resuming if the task should proceed differently.
+
+**Start fresh** creates a separate workspace. Use it when you intentionally want
+a new attempt, or when the original local checkpoint is unavailable. Runs made
+before this feature do not have checkpoints. Git integration attempts are not
+resumed automatically; use the existing review/integration flow.
+
+On returning to a table or a background tab, **Since your last visit** summarizes
+recent task changes, context updates (including decisions and proposals), and
+messages. Open an item to review it and use **Mark caught up** when finished.
+Read positions are stored per member on the server and advance only for delivered
+updates. The summary uses retained history and current item states, not a complete
+audit of every intermediate edit.
+
+Session references are stored under `$CODEX_HOME/roundtable/sessions` (normally
+`~/.codex/roundtable/sessions`) in private files. Scope includes the table origin,
+room, owner, canonical project path, workspace mode, and Codex project. Connection
+status shares only public agent/run IDs; private thread IDs and checkpoint paths
+remain in the local registry. A local lock prevents two
+bridge processes from writing the same session store. Missing or corrupt state
+raises an error rather than silently replacing a saved conversation.
+
+Resume preserves files and conversation; it cannot guarantee exactly-once external
+actions. A missing Codex thread requires recovery in the original profile or a new
+specialist. Changing machines does not copy private threads or checkpoints.
+
+The integration uses Codex’s documented [thread resume lifecycle](https://learn.chatgpt.com/docs/app-server).
+See the [single-owner local evidence](evidence/session-continuity/README.md).

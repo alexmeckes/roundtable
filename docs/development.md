@@ -82,3 +82,8 @@ multi-machine reliability. See [PRODUCT.md](../PRODUCT.md) for product direction
 Shared task planning lives in `workspace/tasks.js` and `public/tasks.js`. Its tests
 cover ownership, dependency cycles, stale edits, review, conversation links,
 concurrent execution, and persistence. See the [task board evidence](evidence/task-board/README.md).
+
+Local continuity lives in `bridge/session-store.js`; catch-up cursors and summaries
+live in `workspace/catchup.js` and `public/catchup.js`. Resume uses a server-authorized
+run ID to select an owner-local checkpoint, never a remotely supplied file path.
+See [session continuity evidence](evidence/session-continuity/README.md).

@@ -2,7 +2,7 @@
 function createTasksUI({send,getYou,canSpeak,roomId}){
   const $=id=>document.getElementById(id),labels={planned:'Planned',working:'Working',blocked:'Blocked',needs_review:'Needs review',done:'Done'};
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
-  let tasks=[],people=[],agents=[],context=[],work=[],editing=null,origin=null,pending=null,chat=[];
+  let tasks=[],people=[],agents=[],context=[],connections=[],work=[],editing=null,origin=null,pending=null,chat=[];
   const request=msg=>{const requestId=crypto.randomUUID();return send({...msg,requestId})?requestId:null;};
   const option=(text,value,selected)=>{const n=node('option',text);n.value=value;n.selected=selected;return n;};
   const action=(text,fn,disabled=false)=>{const b=node('button',text);b.type='button';b.disabled=disabled;b.onclick=fn;return b;};
@@ -42,7 +42,16 @@ function createTasksUI({send,getYou,canSpeak,roomId}){
         if(waiting.length)card.append(node('p','Waiting for: '+waiting.map(t=>t.title).join(', '),'task-waiting'));
         const run=work.find(w=>w.id===task.runIds.at(-1));
         if(run && ['working','blocked'].includes(status)){card.append(node('p',run.message || 'Agent is working…','context-meta'));if(status==='working' && task.ownerId===getYou()?.id)card.append(action('Stop my agent',()=>request({t:'workspace_cancel',id:run.id})));}
-        if(task.ownerId===getYou()?.id && ['planned','blocked'].includes(status))card.append(action('Start my agent',()=>request({t:'task_start',id:task.id,version:task.version}),!canSpeak() || !task.agentId || !!waiting.length));
+        if(task.ownerId===getYou()?.id && ['planned','blocked'].includes(status)){
+          const connection=connections.find(c=>c.ownerId===task.ownerId),disabled=!canSpeak() || !task.agentId || !!waiting.length || !connection || connection.ready===false;
+          if(status==='blocked' && run){
+            let resumeRun=run;for(let i=0;i<48 && resumeRun?.resumeFromId && !connection?.resumableRuns?.includes(resumeRun.id);i++)resumeRun=work.find(w=>w.id===resumeRun.resumeFromId);
+            card.append(action('Resume my agent',()=>request({t:'task_resume',id:task.id,version:task.version}),disabled || !connection?.resumableRuns?.includes(resumeRun?.id) || resumeRun?.agentId!==task.agentId));
+            card.append(node('p','Resume keeps previous local outputs. Start fresh creates a separate workspace.','context-meta'));
+          }
+          card.append(action(status==='blocked'?'Start fresh':'Start my agent',()=>request({t:'task_start',id:task.id,version:task.version}),disabled));
+          if(!connection)card.append(node('p','Owner’s Codex is offline. Reconnect to continue.','context-meta'));
+        }
         section.append(card);
       }return section;
     }));
@@ -52,7 +61,7 @@ function createTasksUI({send,getYou,canSpeak,roomId}){
   $('task-form').onsubmit=e=>{e.preventDefault();if(pending)return;pending=request({t:'task_save',...editing,chatId:origin,title:$('task-title').value,details:$('task-details').value,ownerId:$('task-owner').value,agentId:$('task-agent').value,status:$('task-status').value,dependencies:[...$('task-dependencies').selectedOptions].map(o=>o.value),contextIds:[...$('task-context').selectedOptions].map(o=>o.value)});$('task-save').disabled=!!pending;};
   $('task-comment-form').onsubmit=e=>{e.preventDefault();const text=$('task-comment').value.trim();if(text && editing && send({t:'chat',text,taskId:editing.id}))$('task-comment').value='';};
   return {
-    update(value={}){if(value.tasks)tasks=value.tasks;if(value.taskPeople)people=value.taskPeople;if(value.taskAgents)agents=value.taskAgents;if(value.work)work=value.work;if(value.sharedContext)context=value.sharedContext.entries;render();},
+    update(value={}){if(value.connections)connections=value.connections;if(value.tasks)tasks=value.tasks;if(value.taskPeople)people=value.taskPeople;if(value.taskAgents)agents=value.taskAgents;if(value.work)work=value.work;if(value.sharedContext)context=value.sharedContext.entries;render();},
     message(entry){if(!entry.id || !chat.some(m=>m.id===entry.id))chat.push(entry);if(chat.length>500)chat.shift();comments();},
     history(entries){chat=[...entries];comments();},
     result(m){if(m.t==='task_error'){$('task-notice').textContent=m.message;$('task-error').textContent=m.message;}else $('task-notice').textContent='';if(m.requestId===pending){pending=null;$('task-save').disabled=!canSpeak();if(m.t==='task_saved')$('task-dialog').close();}},

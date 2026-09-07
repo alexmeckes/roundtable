@@ -89,8 +89,9 @@ owner sessions, concurrent work, review, and prerequisite file handoff.
 Multi-machine collaboration is the next validation step.
 
 - Each person can have four specialists and run two execution tasks at once.
-- Shared context and specialist profiles persist. Private agent conversation
-  sessions currently last only as long as the bridge process.
+- Shared context, tasks, and specialist profiles persist. Saved local agent
+  conversations survive bridge restarts; interrupted tasks can resume with their
+  original files. Returning members get a summary of recent changes.
 - Sources use pasted content and links. Automatic document syncing, arbitrary
   source-file uploads, and autonomous specialist creation are not implemented.
 - Room links grant access to shared content. Use trusted participants, keep pairing
@@ -98,6 +99,7 @@ Multi-machine collaboration is the next validation step.
 
 ## Documentation
 
+- [Session continuity walkthrough](docs/evidence/session-continuity/README.md) — saved conversations, retained work, and catch-up.
 - [Task board walkthrough](docs/evidence/task-board/README.md) — conversation, dependencies, and real agent results.
 - [Workspace guide](docs/workspaces.md) — setup, agent controls, context, and limits.
 - [Hosting and security](docs/hosting.md) — persistence, deployment, and access.

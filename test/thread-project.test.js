@@ -40,7 +40,7 @@ test('new project creation uses a stable canonical directory identity',async t=>
 });
 
 test('discussion and work share one project while retaining separate execution directories',async()=>{
-  const server=Object.create(CodexAppServer.prototype);
+  const server=Object.create(CodexAppServer.prototype);server.loadedThreads=new Set();
   server.turns=new Map();server.projectId='shared-project';
   const calls=[];let next=0;
   server.rpc=async(method,params)=>{

@@ -63,6 +63,7 @@ function createContextUI({send,roomId,getYou,canSpeak}){
     update(value=context){context=value;render();},
     result(msg){if(msg.t==='context_error'){$('context-notice').textContent=msg.message;if(pending===msg.requestId)$('context-form-error').textContent=msg.message;}else $('context-notice').textContent='';if(pending===msg.requestId){pending=null;$('context-save').disabled=!canSpeak();if(msg.t==='context_saved')$('context-dialog').close();}},
     disconnected(){pending=null;$('context-save').disabled=!canSpeak();},
+    focus(id){const entry=context.entries.find(e=>e.id===id);if(entry){$('context-filter').value='';$('context-search').value=entry.title;$('context-retired').checked=entry.status==='retired';render();}},
     fromMessage(entry){edit(null,{kind:'learning',title:entry.text.replace(/\s+/g,' ').slice(0,80),body:entry.text.slice(0,6000),chatId:entry.id});},
     fromArtifact(job,file){edit(null,{kind:'source',title:file.path,body:'Deliverable from '+(job.agentName || job.ownerName)+': '+job.title+'\n'+(job.summary || ''),url:location.origin+'/api/rooms/'+encodeURIComponent(roomId)+'/work/'+encodeURIComponent(job.id)+'/deliverables/'+file.path.split('/').map(encodeURIComponent).join('/')});}
   };

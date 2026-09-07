@@ -103,3 +103,13 @@ test('owner cancellation just before integration leaves the target checkout unch
   assert.equal(await git(alice,'rev-parse','HEAD'),before);
   assert.equal(await readFile(join(alice,'player.js'),'utf8'),'speed = 1;\n');
 });
+
+test('resume keeps the original Git branch, baseline, and interrupted changes',async t=>{
+  const {alice}=await repositories(t);let record;
+  const first=new WorktreeProject(alice,{execute:async({cwd})=>{await writeFile(join(cwd,'player.js'),'speed = 7;\n');throw new Error('Interrupted');}});await first.initialize();
+  assert.equal((await first.run(job('resume-first'),{checkpoint:async tree=>{record=tree;}})).status,'failed');
+  const resumed=new WorktreeProject(alice,{execute:async({cwd})=>{assert.equal(await readFile(join(cwd,'player.js'),'utf8'),'speed = 7;\n');await writeFile(join(cwd,'enemy.js'),'health = 9;\n');return 'Continued';}});await resumed.initialize();
+  const result=await resumed.run({...job('resume-second'),localResume:record});assert.equal(result.status,'ready');assert.equal(result.branch,record.branch);assert.equal(result.baseCommit,record.baseCommit);assert.equal(result.files.length,2);
+  assert.equal(await readFile(join(alice,'player.js'),'utf8'),'speed = 1;\n');
+  const invalid=await resumed.run({...job('resume-invalid'),localResume:{...record,branch:'another-branch'}});assert.equal(invalid.status,'failed');
+});

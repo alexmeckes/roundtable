@@ -12,7 +12,7 @@ const mention=(text,handle)=>new RegExp('(^|\\s)@'+handle+'(?=$|[^a-z0-9_-])','i
 // at most four replies, including agent-to-agent follow-ups; no global turn lock.
 export function createConversation({say,announce,allowRun}) {
   const pending=new Map(),queues=new Map();
-  function enabled(room){return participants(room).filter(b=>b.chatMode && b.chatMode!=='off' && room.personalBridges.get(b.ownerId)?.chatMode!=='off' && b.ws.readyState===1 && (room.access!=='view' || [...room.people.values()].some(p=>p.id===b.ownerId && p.isHost)));}
+  function enabled(room){return participants(room).filter(b=>b.chatMode && b.chatMode!=='off' && room.personalBridges.get(b.ownerId)?.chatMode!=='off' && room.personalBridges.get(b.ownerId)?.ready!==false && b.ws.readyState===1 && (room.access!=='view' || [...room.people.values()].some(p=>p.id===b.ownerId && p.isHost)));}
   function stop(bridge){
     for(const child of bridge.specialists || [])stop(child);
     queues.delete(identity(bridge));

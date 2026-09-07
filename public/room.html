@@ -488,6 +488,7 @@ body.offline .hint{color:#C25E5E}
 #context-panel input[type=search],#context-panel select,#context-form input,#context-form select,#context-form textarea{width:100%;box-sizing:border-box;font:inherit;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
 .context-intro,#context-empty{font-size:13px;color:var(--muted);line-height:1.6}.context-card{padding:16px;margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.context-card.proposed{border-color:#bba36b;background:#fffbf1}.context-card.retired{opacity:.65}.context-card h3{font-size:15px;margin:7px 0}.context-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;max-height:260px;overflow:auto}.context-meta,#context-count{font-size:11px;color:var(--muted);line-height:1.5}.context-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}.context-actions button,#context-save{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:var(--bg);cursor:pointer}.context-card details{font-size:12px;margin-top:12px}.context-save-chat{font:inherit;font-size:11px;color:var(--muted);background:none;border:0;padding:5px 0;margin-right:9px;cursor:pointer}.context-toggle input{width:auto}#context-form-error,#context-notice{font-size:12px;color:#a23939}#context-dialog{width:min(580px,90vw)}
 #task-form,#task-comment-form{display:grid;gap:8px}#task-dialog{width:min(620px,90vw)}#task-form input,#task-form textarea,#task-form select,#task-comment{font:inherit;padding:9px;border:1px solid var(--line);border-radius:6px;width:100%;box-sizing:border-box}#task-form label,#task-comment-form label{margin-top:8px}.task-lane{margin:22px 0}.task-lane h3{font-size:13px;color:var(--muted)}.task-card{padding:14px;margin:8px 0;border:1px solid var(--line);border-radius:9px;background:var(--bg)}.task-card button,#task-add{padding:7px 10px;border:1px solid var(--line);background:white;border-radius:6px;cursor:pointer}.task-card button:first-child{text-align:left;font-weight:600;border:0;padding:0}.task-card button:disabled{opacity:.4;cursor:default}.task-waiting{font-size:12px;color:#916a20}#task-notice,#task-error{color:#a23939;font-size:13px}#task-results a{display:block;margin:10px 0}
+#catchup-panel{padding:12px 20px;background:#f5f2e9;border-bottom:1px solid var(--line);font-size:13px;max-height:180px;overflow:auto}#catchup-items{display:flex;flex-wrap:wrap;gap:7px;margin:9px 0}#catchup-panel button{padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:white;cursor:pointer}#catchup-dismiss{margin-top:8px}
 </style>
 </head>
 <body class="work-mode">
@@ -519,6 +520,7 @@ body.offline .hint{color:#C25E5E}
         <button id="specialist-add" disabled>Add specialist</button>
         <div id="conversation-agents" aria-label="Agents at the table"></div>
       </div>
+      <section id="catchup-panel" hidden aria-label="While you were away"><details><summary id="catchup-summary"></summary><div id="catchup-items"></div></details><button id="catchup-dismiss">Mark caught up</button></section>
       <div class="chat-scroll" id="chat"></div>
       <div id="brain-panel">
         <div class="bp-title">This table has no brain yet</div>
@@ -715,6 +717,7 @@ body.offline .hint{color:#C25E5E}
 <div id="task-results"></div><h3>Task conversation</h3><div id="task-comments"></div>
 <form id="task-comment-form"><label for="task-comment">Discuss this task</label><textarea id="task-comment" maxlength="2000" placeholder="Ask a question or @mention an agent" required></textarea><button>Send to conversation</button></form>
 </dialog>
+<script src="/catchup.js"></script>
 <script src="/tasks.js"></script>
 <script src="/context.js"></script>
 <script src="/workspace.js"></script>
@@ -817,7 +820,7 @@ function connect(){
   ws.addEventListener('message', onMessage);
   ws.addEventListener('close', () => {
     preservePendingCanvasEdits();
-    workspaceUI.update(undefined,[]);
+    workspaceUI.update(undefined,[],[]);tasksUI.update({connections:[]});catchupUI.disconnected();
     contextUI.disconnected();tasksUI.disconnected();
     clog('socket closed; retrying in', retryDelay/1000 + 's');
     setConnected(false);
@@ -835,6 +838,7 @@ const send = m => {
   return false;
 };
 const tasksUI=createTasksUI({send,roomId,getYou:()=>state.you,canSpeak});
+const catchupUI=createCatchupUI({send,openTask:id=>tasksUI.open(id),openContext:id=>{showPanel('context');contextUI.focus(id);}});
 const contextUI=createContextUI({send,roomId,getYou:()=>state.you,canSpeak});
 const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
 function hintText(){
@@ -968,7 +972,7 @@ function setAccess(tier, hostOnlySpend){
 
 function onMessage(ev){
   const m = JSON.parse(ev.data);
-  dlog('<-', m.t, m);
+  dlog('<-', m.t, m);catchupUI.delivered(m.asOf);
   switch(m.t){
     case 'welcome': {
       clog('welcome: you are', m.you.name, '· agents:', (m.state.agents || []).map(a => a.name).join(', ') || 'none');
@@ -986,7 +990,8 @@ function onMessage(ev){
       if(m.hostKey) localStorage.setItem(HOST_KEY_STORE, m.hostKey);
       if(m.memberKey) localStorage.setItem(MEMBER_STORE,m.memberKey);
       tasksUI.update(m.state);tasksUI.history(m.state.chat || []);
-      workspaceUI.update(m.state.work || [],m.state.connections || []);
+      workspaceUI.update(m.state.work || [],m.state.connections || [],m.state.workspaceRoster || m.state.connections || []);
+      if(m.catchup)catchupUI.welcome(m.catchup);
       contextUI.update(m.state.sharedContext || {revision:0,entries:[],adoptions:{}});
       state.people = m.state.people;
       if(m.state.parent){
@@ -1023,10 +1028,11 @@ function onMessage(ev){
       readCanvasDrafts().forEach(draft => renderChat({kind:'system', text:'Unsaved canvas draft (copy to recover):\n' + draft}));
       break;
     }
+    case 'catchup':catchupUI.welcome(m.catchup);break;
     case 'task_saved': case 'task_error': tasksUI.result(m);break;
     case 'context': contextUI.update(m.context);tasksUI.update({sharedContext:m.context}); break;
     case 'context_saved': case 'context_error': contextUI.result(m); break;
-    case 'workspaces': workspaceUI.update(m.work,m.connections);tasksUI.update(m); break;
+    case 'workspaces': workspaceUI.update(m.work,m.connections,m.workspaceRoster || m.connections);tasksUI.update(m); break;
     case 'workspace_progress': workspaceUI.progress(m.id,m.message);tasksUI.update(); break;
     case 'workspace_pair': workspaceUI.pair(m.token); break;
     case 'auto': setAuto(m.on); break;

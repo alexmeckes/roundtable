@@ -87,3 +87,9 @@ Local continuity lives in `bridge/session-store.js`; catch-up cursors and summar
 live in `workspace/catchup.js` and `public/catchup.js`. Resume uses a server-authorized
 run ID to select an owner-local checkpoint, never a remotely supplied file path.
 See [session continuity evidence](evidence/session-continuity/README.md).
+
+The project shell lives in `public/project.js` and `public/project.css`. It consumes
+the same room snapshots as the task and conversation views. `public/tasks.js` owns
+task editing and execution controls; the shell reuses its task card in the selected
+thread. Presence includes the existing public member ID so identical display names
+remain distinct. See [project UI evidence](evidence/project-ide/README.md).

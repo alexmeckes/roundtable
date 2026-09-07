@@ -113,7 +113,7 @@ Assign work without leaving the conversation:
 /work @mira Write a decision brief using our discussion and the files in my work folder.
 ```
 
-You can also choose an agent in Workspaces and submit a task. Only the owner can assign
+You can also create a task from a message and choose its owner and agent. Only the owner can assign
 execution; other people can discuss with that agent. Tasks receive the recent room
 conversation and report back under the assigned specialist’s name, with distinct work
 updates. Two tasks may run per person while conversation continues independently.
@@ -225,3 +225,26 @@ specialist. Changing machines does not copy private threads or checkpoints.
 
 The integration uses Codex’s documented [thread resume lifecycle](https://learn.chatgpt.com/docs/app-server).
 See the [single-owner local evidence](evidence/session-continuity/README.md).
+
+## Project navigation
+
+The table is the shared project. The sidebar links its people and agents, work
+threads, context, outputs, and canvas. Selecting a view opens a tab in the main
+area. On narrow screens, use the project menu in the header.
+
+Create tasks from conversation messages or **New task**. A task’s main view shows
+its owner controls, brief, linked context, attempts, outputs, and shared discussion.
+Use **Edit task & assignment** to change the plan. Planning never starts an agent;
+its owner must still choose **Start my agent** or **Resume my agent**.
+
+Open an agent to inspect its role and assigned tasks. **Mention in the table**
+brings you back to the shared conversation; it does not create a private chat.
+Offline agents remain inspectable. **Your Codex** holds your connection and
+conversation controls, including specialist creation and retirement.
+
+Text outputs open in read-only tabs. Downloads, patch review, integration, and
+previews remain available under **Outputs**. Tabs and unsent task messages last
+for the current page session; shared content and local agent continuity retain
+their existing persistence.
+
+See the [project interface evidence](evidence/project-ide/README.md).

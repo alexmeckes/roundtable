@@ -1,7 +1,7 @@
-function createCatchupUI({send,openTask,openContext}){
+function createCatchupUI({send,openTask,openContext,isReading=()=>true}){
   const $=id=>document.getElementById(id);
   let through=0,pending=false,joined=false,away=false;
-  function seen(){if(joined && !pending && document.visibilityState==='visible' && document.hasFocus() && through)send({t:'catchup_seen',through});}
+  function seen(){if(joined && !pending && isReading() && document.visibilityState==='visible' && document.hasFocus() && through)send({t:'catchup_seen',through});}
   $('catchup-dismiss').onclick=()=>{if(send({t:'catchup_seen',through})) {pending=false;$('catchup-panel').hidden=true;}};
   function visibility(){if(document.visibilityState!=='visible' || !document.hasFocus()){away=true;return;}if(away && joined){away=false;send({t:'catchup_request'});}}
   document.addEventListener('visibilitychange',visibility);window.addEventListener('blur',visibility);window.addEventListener('focus',visibility);setInterval(seen,15000);

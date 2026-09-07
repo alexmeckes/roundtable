@@ -1,5 +1,5 @@
 /* Personal workspaces: the room shares progress; each owner controls execution. */
-function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact}) {
+function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact,onUpdate,openTask}) {
   const $=id=>document.getElementById(id);
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   let work=[],connections=[],roster=[],pairToken=null;
@@ -10,20 +10,13 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact}) {
     $('my-workspace').textContent=mine()?mine().project+(mine().ready===false?' · Restoring local sessions…':' · Your Codex is connected'):'Bring your Codex and a folder of work.';
     $('conversation-mode').disabled=!mine() || (!canSpeak() && mine().chatMode==='off');
     $('conversation-mode').value=mine()?.chatMode || 'off';
-    $('conversation-help').textContent=!mine()?'Connect your Codex in Workspaces to bring it to the table.':mine().chatMode==='off'?'Your agents are paused. Joining lets everyone in this room talk with your Codex.':'Room messages use your Codex. Replies are bounded; pause here anytime. Discussion is read-only. Assign work with /work @handle instructions or choose an agent in Workspaces.';
-    $('conversation-agents').replaceChildren(...roster.flatMap(c=>(c.agents || [{...c,name:c.name+"’s Codex"}]).map(a=>({...a,connected:c.connected!==false,ready:c.ready!==false,saved:c.savedConversations?.includes(a.agentId),chatMode:c.chatMode==='off'?'off':a.chatMode}))).map(c=>{
-      const button=action(c.name+(c.agentId!==c.ownerId?" · "+c.ownerName+"’s agent":"")+" · "+(!c.connected?'offline':!c.ready?'reconnecting':c.chatMode==='off'?'paused':c.chatBusy?'thinking…':c.chatMode==='mentions'?'@'+c.handle:'at the table'),()=>{
-        const input=$('chat-text');input.value+=(input.value && !input.value.endsWith(' ')?' ':'')+'@'+c.handle+' ';input.dispatchEvent(new Event('input'));input.focus();
-      });button.disabled=!c.connected || !c.ready || c.chatMode==='off' || !canSpeak();button.title='@'+c.handle+' · '+(c.ownerName || '')+' · '+(c.role || 'General collaborator')+(c.saved?' · Saved conversation':'');return button;
-    }));
+    $('conversation-help').textContent=!mine()?'Connect your Codex to bring your agents into the project.':mine().chatMode==='off'?'Your agents are paused. Joining lets everyone in this room talk with your Codex.':'Room messages use your Codex. Replies are bounded; pause here anytime. Discussion is read-only. Create a task from the conversation to assign work.';
     $('specialist-add').disabled=!mine() || mine()?.ready===false || !canSpeak();
-    const selected=$('workspace-agent').value;
-    $('workspace-agent').replaceChildren(...(mine()?.agents || []).map(a=>{const o=node('option',a.name);o.value=a.agentId;return o;}));
-    if([...( $('workspace-agent').options)].some(o=>o.value===selected))$('workspace-agent').value=selected;
     $('specialist-roster').replaceChildren(...(mine()?.agents || []).filter(a=>a.agentId!==getYou()?.id).map(a=>{
       const row=node('div',undefined,'work-actions');row.append(node('span',a.name+' · '+a.role),action('Retire '+a.name,()=>send({t:'workspace_specialist_retire',agentId:a.agentId})));return row;
     }));
-    $('workspace-start').disabled=!mine() || mine()?.ready===false || !canSpeak();
+    $('connection-settings').textContent=mine()?'Your Codex · '+(mine().ready===false?'reconnecting':'connected'):'Connect your Codex';
+    $('connection-settings').disabled=!mine() && !canSpeak();
     $('workspace-connect').disabled=!canSpeak();
     $('workspace-connect').textContent=mine()?'Reconnect my Codex':'Connect my Codex';
     $('workspace-disconnect').hidden=!mine();
@@ -36,6 +29,7 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact}) {
       if(job.branch)card.append(node('code',job.branch));
       if(job.files?.length)card.append(node('p',job.files.length+(job.deliverables?.length?' deliverable(s)':' file(s) changed'),'work-meta'));
       const buttons=node('div',undefined,'work-actions');
+      if(job.taskId)buttons.append(action('Open task thread',()=>openTask(job.taskId)));
       if(job.hasPatch)buttons.append(action('Review changes',()=>review(job)));
       for(const file of job.deliverables || []){const link=node('a','Download '+file.path);link.href=url(job)+'/deliverables/'+file.path.split('/').map(encodeURIComponent).join('/');link.download=file.path.split('/').pop();buttons.append(link);if(saveArtifact)buttons.append(action('Save '+file.path+' to context',()=>saveArtifact(job,file)));}
       if(job.hasPreview)buttons.append(action('Open preview',()=>play(job)));
@@ -47,6 +41,7 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact}) {
     });
     $('workspace-cards').replaceChildren(...cards);
     $('workspace-empty').hidden=work.length>0;
+    onUpdate({work,connections,workspaceRoster:roster});
   }
   async function review(job){
     const dialog=$('workspace-review');
@@ -80,7 +75,7 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact}) {
   $('workspace-play').addEventListener('close',()=>{$('workspace-preview').src='about:blank';});
   document.querySelectorAll('[data-close-workspace]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
   $('workspace-connect').addEventListener('click',()=>{
-    pairToken=null;$('pair-copy').textContent='Copy command';
+    $('connection-dialog').close();pairToken=null;$('pair-copy').textContent='Copy command';
     $('pair-command').textContent='Preparing your connection…';
     $('workspace-pair').showModal();send({t:'workspace_pair'});
   });
@@ -99,12 +94,8 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact}) {
     if(!pairToken)return;
     try{await navigator.clipboard.writeText($('pair-command').textContent);$('pair-copy').textContent='Copied';}catch{$('pair-copy').textContent='Select and copy the command above';}
   });
-  $('workspace-form').addEventListener('submit',event=>{
-    event.preventDefault();const instructions=$('workspace-task').value.trim();
-    if(!instructions || !mine() || !canSpeak())return;
-    if(send({t:'workspace_start',instructions,agentId:$('workspace-agent').value}))$('workspace-task').value='';
-  });
   return {
+    settings(){if(mine())$('connection-dialog').showModal();else $('workspace-connect').click();},
     update(nextWork=work,nextConnections=connections,nextRoster=roster){work=nextWork;connections=nextConnections;roster=nextRoster;render();},
     progress(id,message){const el=[...document.querySelectorAll('[data-work-id]')].find(n=>n.dataset.workId===id);if(el)el.textContent=message;const job=work.find(w=>w.id===id);if(job)job.message=message;},
     pair(token){pairToken=token;command();},

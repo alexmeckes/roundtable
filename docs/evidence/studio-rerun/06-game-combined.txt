@@ -1,0 +1,18 @@
+Browser tab: 7, Title: "Untitled table — Roundtable", URL: "http://localhost:43141/s/evidence".
+0 AXWebArea Untitled table — Roundtable, URL: localhost:43141/s/evidence
+	1 container workspace-play
+		2 button Close
+		3 heading Integrate Coin feature: change only coins.js so coinScore(position, alreadyColle · Alice, Value: 2, ID: play-title
+			4 text Integrate Coin feature: change only coins.js so coinScore(position, alreadyColle · Alice
+		5 container Description: Playable game build, ID: workspace-preview
+			6 AXWebArea Roundtable Test Game, URL: localhost:43141/api/rooms/evidence/work/V2etmLo-6uf5nwZf8oOLJFiWPJmVgCFC/preview/index.html
+				7 heading Roundtable Test Game, Value: 1
+					8 text Roundtable Test Game
+				9 text Move or dash to reach the coin at position 100.
+				12 button Move right, ID: move
+				13 button Dash right, ID: dash
+				14 button Reset game, ID: reset
+				15 text Position: 100
+				16 text Coins: 1
+
+The focused UI element is 13 button Dash right, ID: dash

@@ -1,0 +1,69 @@
+Browser tab: 8, Title: "Untitled table — Roundtable", URL: "http://127.0.0.1:43141/s/evidence".
+1 AXWebArea Untitled table — Roundtable, URL: 127.0.0.1:43141/s/evidence
+	2 container
+		3 container Value: Untitled table, ID: h-title
+			4 text Untitled table
+		5 button Share, Help: Share this table, ID: h-link
+		6 container faces
+			7 text A
+			8 text B
+			9 text A
+		10 button Workspaces, ID: btn-workspaces
+		11 button Canvas, Help: Toggle the canvas, ID: btn-doc
+	12 container
+		13 text Alice, Bob came and went.
+		14 text entry area (settable) chat-text
+		15 button Send, ID: btn-send
+		16 text Talk with the group here. Start project work with your own Codex in Workspaces.
+		17 container doc
+			18 text Workspaces
+			19 container workspace-panel
+				20 heading Build together, Value: 2
+					21 text Build together
+				22 text bob · Your Codex is connected
+				23 button Reconnect my Codex, ID: workspace-connect
+				24 button Disconnect mine, ID: workspace-disconnect
+				25 container workspace-connections
+					26 text Bob · bob
+					27 text Alice · alice
+				28 container workspace-form
+					29 text What are you working on?
+					30 text entry area (settable) What are you working on?, ID: workspace-task
+					31 button Start with my Codex, ID: workspace-start
+				32 container workspace-cards
+					33 container
+						34 heading Dash feature: change only movement.js so step(position, action) adds SPEED * 5 f, Value: 3
+							35 text Dash feature: change only movement.js so step(position, action) adds SPEED * 5 f
+						36 text Alice · ready Contribution ready for review. Updated only `movement.js`: `dash` adds `SPEED * 5`; all other actions add `SPEED`. `SPEED` remains `10`. Validation: `npm test` and `npm run build` both passed. codex/roundtable-22y-knrKfx23Lk0ZWtbOKkEintSKXN5Y 1 file(s) changed
+						37 button Review changes
+						38 button Play build
+					39 container
+						40 heading Coin feature: change only coins.js so coinScore(position, alreadyCollected) retu, Value: 3
+							41 text Coin feature: change only coins.js so coinScore(position, alreadyCollected) retu
+						42 text Bob · ready Contribution ready for review. Changed only `coins.js`: `coinScore` returns `1` when `position >= 100` and `alreadyCollected === false`; otherwise `0`. Validation passed: `npm test` (2 tests) and `npm run build`. codex/roundtable-qYPkSddZF5krO7dSNzEjOzCfbwUWPojg 1 file(s) changed
+						43 button Review changes
+						44 button Play build
+						45 button Archive
+					46 container
+						47 heading Integrate Dash feature: change only movement.js so step(position, action) adds S, Value: 3
+							48 text Integrate Dash feature: change only movement.js so step(position, action) adds S
+						49 text Alice · integrated Integrated into your local main. Push through your usual Git workflow to share repository history. Integrated 22y-knrKfx23Lk0ZWtbOKkEintSKXN5Y into main codex/roundtable-YqRPP8yE_Kt3LIIryOiGR-21NxEiuaCJ 1 file(s) changed
+						50 button Review changes
+						51 button Play build
+					52 container
+						53 heading Integrate Coin feature: change only coins.js so coinScore(position, alreadyColle, Value: 3
+							54 text Integrate Coin feature: change only coins.js so coinScore(position, alreadyColle
+						55 text Alice · integrated Integrated into your local main. Push through your usual Git workflow to share repository history. Integrated qYPkSddZF5krO7dSNzEjOzCfbwUWPojg into main codex/roundtable-V2etmLo-6uf5nwZf8oOLJFiWPJmVgCFC 1 file(s) changed
+						56 button Review changes
+						57 button Play build
+					58 container
+						59 heading Conflict Alice: change only SPEED in movement.js from 10 to 20. Preserve everyth, Value: 3
+							60 text Conflict Alice: change only SPEED in movement.js from 10 to 20. Preserve everyth
+						61 text Alice · running Codex is working…
+					62 container
+						63 heading Conflict Bob: change only SPEED in movement.js from 10 to 30. Preserve everythin, Value: 3
+							64 text Conflict Bob: change only SPEED in movement.js from 10 to 30. Preserve everythin
+						65 text Bob · running Running a command…
+						66 button Stop
+
+The focused UI element is 1 AXWebArea Untitled table — Roundtable, URL: 127.0.0.1:43141/s/evidence

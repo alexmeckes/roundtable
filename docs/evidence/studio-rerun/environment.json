@@ -1,0 +1,14 @@
+{
+  "codexCli": "codex-cli 0.153.3",
+  "model": "gpt-6-astra",
+  "effort": "low",
+  "sourceCommit": "c2250f32c922344839f61c44660f37c62006a25d",
+  "sourceFiles": {
+    "bridge/app-server.js": "c959b0af989b58aaabad6c80e4154790d1122fd21502af06fb7b3acf397562ee",
+    "bridge/workspace.js": "51d7726d858a309a00c98c5afd5afb68ca2cc0e5d66cb27aca3e56a6ff16e7c8"
+  },
+  "modelTasks": 6,
+  "bridges": 2,
+  "accounts": 1,
+  "localOnly": true
+}

@@ -1,0 +1,128 @@
+[
+  {
+    "id": "01a07b7b-7bc6-7b53-a34a-8187049d3f63",
+    "name": "Roundtable · task-board-demo · Alex's Codex · Prepare the decision brief Read the reviewed prerequisite comparison.md supplied in the task context. Write decision-brief.md using th",
+    "projectId": "01a07b74-581d-7652-9647-72e547f9ea62",
+    "model": "gpt-6-astra",
+    "turns": [
+      {
+        "id": "01a07b7b-7e14-7123-9ed4-d9828cc606ba",
+        "status": "completed",
+        "hasExactPrerequisiteText": true,
+        "items": [
+          {
+            "type": "agentMessage",
+            "text": "I’ll read the supplied comparison and project instructions, then save a concise decision brief with a source note.\n"
+          },
+          {
+            "type": "agentMessage",
+            "text": "Created [decision-brief.md](decision-brief.md) with the Atlas recommendation, $10/month premium, export coverage uncertainty, and source note.\n\nVerified against the complete comparison.md contents supplied in the task context; the artifact URL was unreachable."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "01a07b78-51e1-7aa0-a2cc-89defa366e84",
+    "name": "Roundtable · task-board-demo · Alex's Codex · Prepare the decision brief Use the reviewed comparison to prepare a concise decision brief.",
+    "projectId": "01a07b74-581d-7652-9647-72e547f9ea62",
+    "model": "gpt-6-astra",
+    "turns": [
+      {
+        "id": "01a07b78-543b-7150-b35f-35a22ee9056b",
+        "status": "completed",
+        "hasExactPrerequisiteText": false,
+        "items": [
+          {
+            "type": "agentMessage",
+            "text": "I’ll read the reviewed comparison and project instructions, then save a concise decision brief with the recommendation and remaining uncertainty."
+          },
+          {
+            "type": "agentMessage",
+            "text": "The input folder is empty, and there are no accepted shared context entries. I’ll base the brief on the comparison summarized in the table conversation and note that the original file was unavailable."
+          },
+          {
+            "type": "agentMessage",
+            "text": "Created [decision-brief.md](decision-brief.md), recommending Atlas, explaining the $10/month premium, and identifying export coverage as the remaining uncertainty.\n\nVerified against the supplied conversation. The original comparison file was unavailable; the brief notes this limitation."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "01a07b78-50d5-7212-87bd-8ec9bb1da142",
+    "name": "Roundtable · task-board-demo · Sam (test participant)'s Codex · Draft an export acceptance checklist Write export-checklist.md with six concrete checks for a trial of Atlas Markdow",
+    "projectId": "01a07b74-581d-7652-9647-72e547f9ea62",
+    "model": "gpt-6-astra",
+    "turns": [
+      {
+        "id": "01a07b78-535a-7fb0-ba13-d0b7af76bc9f",
+        "status": "completed",
+        "hasExactPrerequisiteText": false,
+        "items": [
+          {
+            "type": "agentMessage",
+            "text": "I’ll write six trial checks with clear pass criteria, using the supplied fictional facts and treating export coverage as unverified.\n"
+          },
+          {
+            "type": "agentMessage",
+            "text": "Created [export-checklist.md](export-checklist.md) with exactly six concrete checks and pass criteria. Verified consistency with the supplied fictional facts. No browsing performed; trial checks remain untested."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "01a07b75-8d8b-7d10-871d-49a298765592",
+    "name": "Roundtable · task-board-demo · Mira · Compare the supplied tools Compare our fictional tools: Atlas costs $30/month and exports Markdown; Beacon costs $20/month without export. We",
+    "projectId": "01a07b74-581d-7652-9647-72e547f9ea62",
+    "model": "gpt-6-astra",
+    "turns": [
+      {
+        "id": "01a07b75-8fcb-7731-9a60-e5ee39237dc5",
+        "status": "completed",
+        "hasExactPrerequisiteText": false,
+        "items": [
+          {
+            "type": "agentMessage",
+            "text": "Export is the deciding requirement. I’ll write `comparison.md` with the cost tradeoff, a recommendation, and one uncertainty.\n"
+          },
+          {
+            "type": "agentMessage",
+            "text": "Created [comparison.md](comparison.md), recommending Atlas because it meets the export requirement for $10 more per month. Included one uncertainty about export coverage.\n\nVerified the saved file against the supplied facts."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "01a07b74-785f-7550-ac08-7fcbe6ed5e3c",
+    "name": "Roundtable · task-board-demo · Mira · conversation",
+    "projectId": "01a07b74-581d-7652-9647-72e547f9ea62",
+    "model": "gpt-6-astra",
+    "turns": [
+      {
+        "id": "01a07b74-7b07-7800-8d56-e259400dc6ae",
+        "status": "completed",
+        "hasExactPrerequisiteText": false,
+        "items": [
+          {
+            "type": "agentMessage",
+            "text": "I’m Mira. I’ll compare the options we discuss, explain the tradeoffs, and help the table make clear decisions."
+          }
+        ]
+      },
+      {
+        "id": "01a07b75-1a46-7fd1-8047-b2d790fa7164",
+        "status": "completed",
+        "hasExactPrerequisiteText": false,
+        "items": [
+          {
+            "type": "agentMessage",
+            "text": "Alex, export is the deciding requirement. Atlas meets it for $30/month; Beacon saves $10/month but lacks the required export.\n\nI’ll provide content for `comparison.md` with the comparison, an Atlas recommendation, and one uncertainty: whether Markdown export covers everything you need. This conversation is read-only, so I can draft the content here but can’t save the file."
+          }
+        ]
+      }
+    ]
+  }
+]

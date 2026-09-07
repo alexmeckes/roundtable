@@ -23,7 +23,7 @@ async function fixture(t, env = {}) {
   const sockets = [];
   t.after(async () => {
     for (const socket of sockets) socket.terminate();
-    if (proc.exitCode === null) { const stopped = once(proc, 'exit'); proc.kill(); await stopped; }
+    if (proc.exitCode === null && proc.signalCode === null) { const stopped = once(proc, 'exit'); proc.kill(); await stopped; }
     await rm(dataDir, {recursive:true, force:true});
   });
   const port = await new Promise((resolve, reject) => {
@@ -75,7 +75,7 @@ async function fixture(t, env = {}) {
     bridge.reply(await bridge.task(), blocks);
     return (await host.wait(m=>m.t==='canvas')).blocks;
   }
-  return {connect, person, brain, inspect, seed, origin: `http://127.0.0.1:${port}`};
+  return {connect, person, brain, inspect, seed, proc,dataDir, origin: `http://127.0.0.1:${port}`};
 }
 
 test('new room hosts cannot use shared compute; operator-approved rooms can', async t => {
@@ -498,4 +498,45 @@ test('agent context tools are room and run scoped, proposals need human acceptan
   await chatMode(alice,'off');assert.match((await context(a,'propose',{kind:'learning',title:'Late',body:'Late'})).error,/no longer active/);
   alice.send({t:'workspace_cancel',id:work.id});await a.wait(m=>m.t==='workspace_cancel' && m.id===work.id);
   assert.match((await context(a,'read',{},work.id)).error,/no longer active/);
+});
+
+test('shared task board routes concurrent owners, links discussion, reviews results, and persists restart',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  async function save(person,fields){const requestId=Math.random().toString();person.send({t:'task_save',requestId,...fields});await person.wait(m=>m.t==='task_saved' && m.requestId===requestId);return (await f.inspect()).tasks.find(task=>task.title===fields.title);}
+  const fields={title:'Compare options',details:'Deliver a comparison',ownerId:a.ownerId,agentId:a.ownerId,status:'planned',dependencies:[],contextIds:[]};
+  alice.send({t:'chat',text:'We need a comparison.'});const message=await alice.wait(m=>m.t==='chat' && m.entry.text==='We need a comparison.');
+  let first=await save(alice,{...fields,chatId:message.entry.id});
+  let second=await save(alice,{...fields,title:'Draft recommendation',ownerId:b.ownerId,agentId:b.ownerId,dependencies:[first.id]});
+  alice.send({t:'task_start',id:second.id,version:second.version});assert.match((await alice.wait(m=>m.t==='task_error')).message,/owner/);
+  bob.send({t:'task_start',id:second.id,version:second.version});assert.match((await bob.wait(m=>m.t==='task_error')).message,/prerequisite/);
+  second=await save(bob,{...second,dependencies:[]});
+  alice.send({t:'task_start',id:first.id,version:first.version});bob.send({t:'task_start',id:second.id,version:second.version});
+  const [ar,br]=await Promise.all([a.task(),b.task()]);
+  assert.equal(ar.context.task.id,first.id);assert.equal(br.context.task.id,second.id);
+  assert.equal((await f.inspect()).tasks.filter(task=>task.status==='working').length,2);
+  alice.send({t:'workspace_chat_mode',mode:'mentions'});await alice.wait(m=>m.t==='chat' && m.entry.text.includes('invited their Codex'));
+  const connection=(await f.inspect()).connections.find(c=>c.ownerId===a.ownerId);
+  bob.send({t:'chat',taskId:first.id,text:'@'+connection.handle+' Explain the comparison.'});
+  const discussion=await a.wait(m=>m.t==='workspace_chat');
+  assert.ok(discussion.context.tasks.some(task=>task.id===first.id));assert.equal(discussion.context.task.details,fields.details);
+  a.send({t:'workspace_chat_result',id:discussion.id,text:'I am comparing the supplied sources.'});
+  assert.equal((await bob.wait(m=>m.t==='chat' && m.entry.text==='I am comparing the supplied sources.')).entry.taskId,first.id);
+  assert.equal((await upload(f,a,ar,{status:'ready',summary:'Comparison ready',deliverables:[{path:'comparison.md',data:Buffer.from('Compared sources').toString('base64')}]})).status,200);
+  first=(await f.inspect()).tasks.find(task=>task.id===first.id);assert.equal(first.status,'needs_review');
+  first=await save(bob,{...first,status:'done'});assert.equal(first.status,'done');
+  const dependent=await save(alice,{...fields,title:'Use reviewed file',dependencies:[first.id]});
+  alice.send({t:'task_start',id:dependent.id,version:dependent.version});const next=await a.task();
+  assert.equal(next.context.dependencies[0].runId,ar.id);assert.equal(next.context.dependencies[0].deliverables[0].path,'comparison.md');
+  assert.equal((await upload(f,a,next,{status:'ready',summary:'Used reviewed predecessor'})).status,200);
+  alice.send({t:'workspace_archive',id:ar.id});await alice.wait(m=>m.t==='chat' && m.entry.text.includes('retained with their task'));
+  alice.send({t:'set_access',tier:'view',hostOnlySpend:true});await alice.wait(m=>m.t==='access');
+  bob.send({t:'task_save',...second,title:'Forbidden'});assert.match((await bob.wait(m=>m.t==='task_error')).message,/view-only/);
+  await pause(1200);const stopped=once(f.proc,'exit');f.proc.kill();await stopped;
+  const resumed=await fixture(t,{ROUNDTABLE_DATA:join(f.dataDir,'rooms.json')});
+  const state=await resumed.inspect();
+  assert.equal(state.tasks.find(task=>task.id===first.id).status,'done');
+  assert.equal(state.tasks.find(task=>task.id===second.id).status,'blocked');
+  assert.equal(state.tasks.find(task=>task.id===first.id).origin.chatId,message.entry.id);
+  assert.equal(await (await fetch(resumed.origin+'/api/rooms/room/work/'+ar.id+'/deliverables/comparison.md')).text(),'Compared sources');
 });

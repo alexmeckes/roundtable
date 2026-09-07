@@ -1,0 +1,61 @@
+
+> roundtable@0.1.0 test
+> node --test
+
+✔ cancellation waits for its delayed turn ID and stops background terminals without cancelling a sibling turn (395.059916ms)
+✔ conversation preserves its thread and enforces read-only on every turn (24.088708ms)
+✔ dynamic context calls route only supported tools to the active turn (23.383542ms)
+✔ context keeps accepted knowledge separate from proposals, preserves history, and survives serialization (1.232709ms)
+✔ shared skill adoption belongs to a person and exact version, never installs tools (0.281416ms)
+✔ context validates links, evidence, bounds, and conversation attribution (0.295666ms)
+✔ ordinary folders support parallel document work without modifying source inputs (6.539292ms)
+✔ deliverables exclude private files and reject symlinks and oversized outputs (7.481125ms)
+✔ new room hosts cannot use shared compute; operator-approved rooms can (144.194334ms)
+✔ room-scoped bridge works without shared authorization and cannot leak to another room (127.148834ms)
+✔ house compute is also denied to new rooms by default (75.784792ms)
+✔ view-only guests cannot mutate canvas, title, problem, agents, auto or access (188.485834ms)
+✔ late agent results cannot overwrite human edits, and snapshots stay immutable (161.128542ms)
+✔ stale human edits retain drafts and cannot target replacement blocks by index (186.033834ms)
+✔ busy and queued agents retain every explicit follow-up in order (146.465375ms)
+✔ auto replies received during a turn queue a follow-up with the latest conversation (1478.703ms)
+✔ branch merge cannot overwrite newer parent work; retry succeeds (231.402333ms)
+✔ host-only spend also blocks merge for guests in open rooms (135.97675ms)
+✔ malformed messages and repeated joins cannot corrupt room membership (126.114542ms)
+✔ diff application requires current block identity and a room-scoped bridge (187.8745ms)
+✔ branches do not inherit shared compute authorization (142.260583ms)
+✔ room creation limits reject branching without terminating the server (114.623541ms)
+✔ friends run their own Codex concurrently even when host-only shared spending is enabled (207.324625ms)
+✔ member identity survives reconnection and a matching display name grants no ownership (138.311708ms)
+✔ pairing tokens are room-scoped and rotation revokes old connections and late results (153.066917ms)
+✔ preview files are bounded and sandboxed; traversal is rejected (124.987917ms)
+✔ integration is dispatched to the receiving person, not the author or room host (169.6115ms)
+✔ view-only owners can still stop their own active Codex and revoke its connection (153.952709ms)
+✔ personal conversation is owner opt-in, shared, authenticated, and bounded across agents (418.1175ms)
+✔ conversation queues follow-ups, runs beside work, passes discussion into tasks, and pause rejects late replies (289.863375ms)
+✔ mentioning a paused agent does not spend another agent’s compute; view-only cancels guest discussion (306.317625ms)
+✔ specialists can join and accept owner work from chat, with separate conversation identities (232.250541ms)
+✔ specialist creation is bounded, owner pause cancels all its agents, and unsafe downloads are rejected (251.171625ms)
+✔ shared context edits preserve concurrent work, original attribution, and room permissions (187.350459ms)
+✔ agent context tools are room and run scoped, proposals need human acceptance, and cancellation revokes access (341.742334ms)
+✔ shared task board routes concurrent owners, links discussion, reviews results, and persists restart (1717.93375ms)
+✔ prerequisite text is read from paired server with explicit size limits and binary download links (12.267375ms)
+✔ prerequisite fetch rejects traversal, missing files, oversize responses and cancellation (0.578125ms)
+✔ task links preserve origin; stale edits, forged owners and cyclic dependencies are rejected (0.92325ms)
+✔ only owner can start, dependencies gate execution, completion requires human review (0.2205ms)
+✔ project selection finds a canonical root across pages and respects an explicit project (4.017458ms)
+✔ new project creation uses a stable canonical directory identity (1.483708ms)
+✔ discussion and work share one project while retaining separate execution directories (0.80675ms)
+✔ two independent Codex workspaces contribute different features into one game (972.273375ms)
+✔ conflicting contributions retain an integration branch without modifying the receiving checkout (849.261625ms)
+✔ failed checks and dirty target checkouts prevent integration (454.239292ms)
+✔ new files and self-contained preview assets travel with a contribution (560.630292ms)
+✔ preview collection refuses symlinks and task failure retains local work (361.292292ms)
+✔ owner cancellation just before integration leaves the target checkout unchanged (592.976125ms)
+ℹ tests 49
+ℹ suites 0
+ℹ pass 49
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8198.088333

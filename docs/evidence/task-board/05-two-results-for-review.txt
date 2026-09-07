@@ -1,0 +1,131 @@
+Browser tab: 19, Title: "Untitled table — Roundtable", URL: "http://localhost:43147/s/task-board-demo".
+1 AXWebArea Untitled table — Roundtable, URL: localhost:43147/s/task-board-demo
+	2 container
+		3 container Value: Untitled table, ID: h-title
+			4 text Untitled table
+		5 button Share, Help: Share this table, ID: h-link
+		6 container faces
+			7 text A
+			8 text S
+		9 button Tasks, ID: btn-tasks
+		10 button Context, ID: btn-context
+		11 button Workspaces, ID: btn-workspaces
+		12 button Canvas, Help: Toggle the canvas, ID: btn-doc
+	13 container
+		14 text My Codex in the conversation
+		15 pop up button (collapsed, settable) My Codex in the conversation, Value: Only when @mentioned, ID: conversation-mode, Secondary Actions: Expand
+			16 menu
+				17 Paused
+				18 Join the conversation
+				19 (selected) Only when @mentioned
+		20 text Room messages use your Codex. Replies are bounded; pause here anytime. Discussion is read-only. Assign work with /work @handle instructions or choose an agent in Workspaces.
+		21 button Add specialist, ID: specialist-add
+		22 container Description: Agents at the table, ID: conversation-agents
+			23 button Alex's Codex · @alex-codex, Help: @alex-codex · Alex · General collaborator
+			24 button Mira · Alex’s agent · @mira, Help: @mira · Alex · Compare supplied options and explain tradeoffs in a concise response.
+			25 button Sam (test participant)'s Codex · @sam-test-participant-codex, Help: @sam-test-participant-codex · Sam (test participant) · General collaborator
+		26 container chat
+			27 text Alex pulled up a chair.
+			28 text Mira joined — Alex's specialist. Compare supplied options and explain tradeoffs in a concise response. Mention @mira; its owner can assign work with /work @mira instructions.
+			29 container
+				30 text M Mira Alex’s agent 06:40 AM I’m Mira. I’ll compare the options we discuss, explain the tradeoffs, and help the table make clear decisions.
+				31 button Create task ·
+				32 button Save to context
+			33 container
+				34 text A Alex 06:40 AM Compare our fictional tools: Atlas costs $30/month and exports Markdown; Beacon costs $20/month without export. We need export. Write comparison.md with a recommendation and one uncertainty.
+				35 button Create task ·
+				36 button Save to context
+			37 text Alex updated task: Compare the supplied tools — planned.
+			38 text Alex updated task: Prepare the decision brief — planned.
+			39 container
+				40 text A Alex 06:41 AM @mira Before we start, explain which requirement matters most and what you will deliver.
+				41 button Open task
+				42 button Create task ·
+				43 button Save to context
+			44 container
+				45 text M Mira Alex’s agent 06:41 AM Alex, export is the deciding requirement. Atlas meets it for $30/month; Beacon saves $10/month but lacks the required export.
+
+I’ll provide content for `comparison.md` with the comparison, an Atlas recommendation, and one uncertainty: whether Markdown export covers everything you need. This conversation is read-only, so I can draft the content here but can’t save the file.
+				46 button Open task
+				47 button Create task ·
+				48 button Save to context
+			49 container
+				50 text M Mira Alex’s agent work update 06:41 AM I’m starting work: Compare the supplied tools
+Compare our fictional tools: Atlas costs $30/month and exports Markdown; Beacon costs $20/month without export. We need export. Write comparison.md with a recommendation and one uncertainty.
+				51 button Open task
+				52 button Create task ·
+				53 button Save to context
+			54 container
+				55 text 06:42 AM Compare the supplied tools
+Compare our fictional tools: Atlas costs $30/month an — ready. Created [comparison.md](comparison.md), recommending Atlas because it meets the export requirement for $10 more per month. Included one uncertainty about export coverage.
+
+Verified the saved file against the supplied facts.
+				56 button Open task
+				57 button Create task ·
+				58 button Save to context
+			59 text Alex came and went.
+			60 text Alex updated task: Compare the supplied tools — done.
+			61 text Sam (test participant) pulled up a chair.
+			62 text Sam (test participant) invited their Codex into the conversation. Mention @sam-test-participant-codex.
+			63 text Alex updated task: Draft an export acceptance checklist — planned.
+			64 container
+				65 text S Sam (test participant)'s Codex work update 06:44 AM I’m starting work: Draft an export acceptance checklist
+Write export-checklist.md with six concrete checks for a trial of Atlas Markdown export. Use the fictional facts in our conversation. Do not browse.
+				66 button Open task
+				67 button Create task ·
+				68 button Save to context
+			69 container
+				70 text A Alex's Codex work update 06:44 AM I’m starting work: Prepare the decision brief
+Use the reviewed comparison to prepare a concise decision brief.
+				71 button Open task
+				72 button Create task ·
+				73 button Save to context
+			74 container
+				75 text 06:45 AM Prepare the decision brief
+Use the reviewed comparison to prepare a concise deci — ready. Created [decision-brief.md](decision-brief.md), recommending Atlas, explaining the $10/month premium, and identifying export coverage as the remaining uncertainty.
+
+Verified against the supplied conversation. The original comparison file was unavailable; the brief notes this limitation.
+				76 button Open task
+				77 button Create task ·
+				78 button Save to context
+			79 container
+				80 text S Sam (test participant)'s Codex work update 06:45 AM Draft an export acceptance checklist
+Write export-checklist.md with six concrete — ready. Created [export-checklist.md](export-checklist.md) with exactly six concrete checks and pass criteria. Verified consistency with the supplied fictional facts. No browsing performed; trial checks remain untested.
+				81 button Open task
+				82 button Create task ·
+				83 button Save to context
+		84 text entry area (settable) chat-text
+		85 button Send, ID: btn-send
+		86 text Talk with people and their Codex here. Click an agent to @mention it; assign work with /work @handle instructions.
+		87 container doc
+			88 text Tasks
+			89 container tasks-panel
+				90 text Plan together, assign an owner and agent, and review results. Only the owner starts their Codex.
+				91 button New task, ID: task-add
+				92 container task-board
+					93 container
+						94 heading Planned · 0, Value: 3
+							95 text Planned · 0
+						96 text No tasks
+					97 container
+						98 heading Working · 0, Value: 3
+							99 text Working · 0
+						100 text No tasks
+					101 container
+						102 heading Blocked · 0, Value: 3
+							103 text Blocked · 0
+						104 text No tasks
+					105 container
+						106 heading Needs review · 2, Value: 3
+							107 text Needs review · 2
+						108 button Prepare the decision brief
+						109 text Alex · Alex's Codex
+						110 button Draft an export acceptance checklist
+						111 text Sam (test participant) · Sam (test participant)'s Codex
+					112 container
+						113 heading Done · 1, Value: 3
+							114 text Done · 1
+						115 button Compare the supplied tools
+						116 text Alex · Mira
+
+The focused UI element is 110 button Draft an export acceptance checklist

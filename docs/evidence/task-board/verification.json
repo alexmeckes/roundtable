@@ -1,0 +1,73 @@
+{
+  "date": "2026-09-07",
+  "scope": "Two browser identities and two local Codex bridges on one machine and account; no multi-machine claim.",
+  "concurrentIntervalMs": 32640,
+  "realModel": "gpt-6-astra",
+  "prerequisiteRerun": "QrfEC69ZQH0iKwyEUA5UbDozCpm5FWYQ",
+  "work": [
+    {
+      "id": "pIVgPMcEKsbbImCAsdyQr7ZCQybMOLuk",
+      "taskId": "Mj1qiPfEqet16-YV",
+      "ownerName": "Alex",
+      "agentName": "Mira",
+      "status": "ready",
+      "summary": "Created [comparison.md](comparison.md), recommending Atlas because it meets the export requirement for $10 more per month. Included one uncertainty about export coverage.\n\nVerified the saved file against the supplied facts.",
+      "deliverables": [
+        {
+          "path": "comparison.md",
+          "bytes": 526
+        }
+      ],
+      "createdAt": 1788777696646,
+      "updatedAt": 1788777731768
+    },
+    {
+      "id": "KbqXqmghsOp6QdZwYGwq2H8JohkOohDS",
+      "taskId": "W4FhZYhIGhjVO4QM",
+      "ownerName": "Sam (test participant)",
+      "agentName": "Sam (test participant)'s Codex",
+      "status": "ready",
+      "summary": "Created [export-checklist.md](export-checklist.md) with exactly six concrete checks and pass criteria. Verified consistency with the supplied fictional facts. No browsing performed; trial checks remain untested.",
+      "deliverables": [
+        {
+          "path": "export-checklist.md",
+          "bytes": 2286
+        }
+      ],
+      "createdAt": 1788777877711,
+      "updatedAt": 1788777923956
+    },
+    {
+      "id": "WRjqjO4AnsfLKE7AWoLFlLG9bLaldmdJ",
+      "taskId": "iNx0oD8hKt-LZ5ZS",
+      "ownerName": "Alex",
+      "agentName": "Alex's Codex",
+      "status": "ready",
+      "summary": "Created [decision-brief.md](decision-brief.md), recommending Atlas, explaining the $10/month premium, and identifying export coverage as the remaining uncertainty.\n\nVerified against the supplied conversation. The original comparison file was unavailable; the brief notes this limitation.",
+      "deliverables": [
+        {
+          "path": "decision-brief.md",
+          "bytes": 754
+        }
+      ],
+      "createdAt": 1788777877979,
+      "updatedAt": 1788777910619
+    },
+    {
+      "id": "QrfEC69ZQH0iKwyEUA5UbDozCpm5FWYQ",
+      "taskId": "iNx0oD8hKt-LZ5ZS",
+      "ownerName": "Alex",
+      "agentName": "Alex's Codex",
+      "status": "ready",
+      "summary": "Created [decision-brief.md](decision-brief.md) with the Atlas recommendation, $10/month premium, export coverage uncertainty, and source note.\n\nVerified against the complete comparison.md contents supplied in the task context; the artifact URL was unreachable.",
+      "deliverables": [
+        {
+          "path": "decision-brief.md",
+          "bytes": 867
+        }
+      ],
+      "createdAt": 1788778085293,
+      "updatedAt": 1788778139783
+    }
+  ]
+}

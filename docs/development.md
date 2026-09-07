@@ -78,3 +78,7 @@ to the [legacy canvas workflow](legacy-canvas.md), not personal specialists.
 Evidence captures are historical records of their tested revision. The latest
 shared-context run used one local owner and two specialists; it does not establish
 multi-machine reliability. See [PRODUCT.md](../PRODUCT.md) for product direction.
+
+Shared task planning lives in `workspace/tasks.js` and `public/tasks.js`. Its tests
+cover ownership, dependency cycles, stale edits, review, conversation links,
+concurrent execution, and persistence. See the [task board evidence](evidence/task-board/README.md).

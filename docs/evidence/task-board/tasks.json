@@ -1,0 +1,64 @@
+[
+  {
+    "id": "Mj1qiPfEqet16-YV",
+    "createdAt": 1788777653055,
+    "createdBy": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY",
+    "version": 4,
+    "runIds": [
+      "pIVgPMcEKsbbImCAsdyQr7ZCQybMOLuk"
+    ],
+    "origin": {
+      "chatId": "Ymh_Y-Pm4JbHJp_R",
+      "author": "Alex",
+      "text": "Compare our fictional tools: Atlas costs $30/month and exports Markdown; Beacon costs $20/month without export. We need export. Write comparison.md with a recommendation and one uncertainty."
+    },
+    "title": "Compare the supplied tools",
+    "details": "Compare our fictional tools: Atlas costs $30/month and exports Markdown; Beacon costs $20/month without export. We need export. Write comparison.md with a recommendation and one uncertainty.",
+    "ownerId": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY",
+    "agentId": "Ld0B0hzP_Qvu9QFhUMKFj3CsTOf9HPaW",
+    "status": "done",
+    "dependencies": [],
+    "contextIds": [],
+    "updatedAt": 1788777788178,
+    "updatedBy": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY"
+  },
+  {
+    "id": "iNx0oD8hKt-LZ5ZS",
+    "createdAt": 1788777666571,
+    "createdBy": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY",
+    "version": 6,
+    "runIds": [
+      "WRjqjO4AnsfLKE7AWoLFlLG9bLaldmdJ",
+      "QrfEC69ZQH0iKwyEUA5UbDozCpm5FWYQ"
+    ],
+    "title": "Prepare the decision brief",
+    "details": "Read the reviewed prerequisite comparison.md supplied in the task context. Write decision-brief.md using that actual file, with a recommendation, cost difference, remaining uncertainty, and a source note that identifies the comparison.",
+    "ownerId": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY",
+    "agentId": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY",
+    "status": "needs_review",
+    "dependencies": [
+      "Mj1qiPfEqet16-YV"
+    ],
+    "contextIds": [],
+    "updatedAt": 1788778139783,
+    "updatedBy": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY"
+  },
+  {
+    "id": "W4FhZYhIGhjVO4QM",
+    "createdAt": 1788777863063,
+    "createdBy": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY",
+    "version": 3,
+    "runIds": [
+      "KbqXqmghsOp6QdZwYGwq2H8JohkOohDS"
+    ],
+    "title": "Draft an export acceptance checklist",
+    "details": "Write export-checklist.md with six concrete checks for a trial of Atlas Markdown export. Use the fictional facts in our conversation. Do not browse.",
+    "ownerId": "F2FMPFZkBbTBFw15mEMlhkfJqEGkMT6w",
+    "agentId": "F2FMPFZkBbTBFw15mEMlhkfJqEGkMT6w",
+    "status": "needs_review",
+    "dependencies": [],
+    "contextIds": [],
+    "updatedAt": 1788777923956,
+    "updatedBy": "oDtoKQ6ABDCqU5ymPInUxvQ9ujHxwHqY"
+  }
+]

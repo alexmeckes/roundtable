@@ -41,7 +41,7 @@ function createWorkspaceUI({send,roomId,getYou,canSpeak,saveArtifact}) {
       if(job.hasPreview)buttons.append(action('Open preview',()=>play(job)));
       const busy=['running','integrating'].includes(job.status);
       if(job.ownerId===getYou()?.id && (busy || canSpeak())) {
-        buttons.append(action(busy?'Stop':'Archive',()=>send({t:busy?'workspace_cancel':'workspace_archive',id:job.id})));
+        if(busy || !job.taskId)buttons.append(action(busy?'Stop':'Archive',()=>send({t:busy?'workspace_cancel':'workspace_archive',id:job.id})));
       }
       card.append(buttons);return card;
     });

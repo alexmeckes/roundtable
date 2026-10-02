@@ -26,6 +26,8 @@ collaboration.
 4. **Review the results.** Download deliverables, review code changes, and save
    useful outputs back into the table's context.
 
+The hosted Site UI and managed MCP server source are in [`sites/roundtable`](sites/roundtable). The [separate Codex trial](docs/codex-trial.md) documents the latest private deployment and its connection setup.
+
 ## Get started
 
 You need Node.js 20+ and an installed Codex CLI on each participant's machine.

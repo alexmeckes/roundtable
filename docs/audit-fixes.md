@@ -19,7 +19,7 @@ The additional runtime tests use the real bridge subprocess with a fake app serv
 
 ## Publication status
 
-The Site changes are committed locally in the separate `sites-trial` checkout at `805f47f61b0e60ef6788682206912a0cb2c98971`. The current session's Sites connector returns `project_not_found` for the existing project `appgprj_6abee94c4c8c81918ab8e3e95a2d8cfd`. No replacement Site was created, audience changed, or coordinated deployment attempted. Publish the prepared Site and backend together once the owning Site account/workspace is connected.
+The original trial's owner account was unavailable to this session, so its prepared update was not deployed there. At the user's request, a separate owner-private Codex trial was published on 2026-10-02 with the audited backend and Site. The Site source is now included in `sites/roundtable/`; see [the Codex trial notes](codex-trial.md) for deployment and connection status. The original trial and its audience were left unchanged.
 
 Keep the authenticated room open while its AI runs. The main room polls while backgrounded; settings renews access every minute. If renewal fails for five minutes, reconnect through the room. Access revocation is bounded by that lease, not an instant cross-platform revocation webhook.
 

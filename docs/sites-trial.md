@@ -1,5 +1,7 @@
 # Private Sites trial
 
+These notes describe the original trial. The later [Codex trial](codex-trial.md) runs separately; its Site source is tracked in [`sites/roundtable`](../sites/roundtable).
+
 The shared room is hosted at https://roundtable-plugin-trial.ameckes.chatgpt.site/s/sites-trial. Sites supplies sign-in and a generated MCP plugin. Its Node backend runs in the dedicated Railway trial environment with a persistent `/data` volume. The Site remains owner-private: one allowed account, no external visitors or groups. No participants have been invited.
 
 ## Connect a real local AI

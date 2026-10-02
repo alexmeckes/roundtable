@@ -4,13 +4,22 @@
   "description": "A link that turns any group chat into a shared workspace with agents at the table.",
   "type": "module",
   "main": "server.js",
+  "bin": {"roundtable-connect": "scripts/start-companion.mjs"},
+  "engines": {"node": ">=20"},
+  "files": ["server.js", "agents/", "bridge/*.js", "workspace/", "public/", "plugins/roundtable/*.json", "plugins/roundtable/assets/", "plugins/roundtable/skills/", "plugins/roundtable/runtime/", "plugins/roundtable/ui/", "scripts/start-companion.mjs", "scripts/check-chatgpt-runtime.mjs", "docs/plugin.md", "docs/workspaces.md"],
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "connect": "node scripts/start-companion.mjs",
+    "check:connector": "node scripts/start-companion.mjs --check",
+    "test": "node --test",
+    "check:chatgpt-runtime": "node scripts/check-chatgpt-runtime.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "express": "^4.19.0",
-    "ws": "^8.18.0"
+    "jose": "^6.2.12",
+    "ws": "^8.18.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "mermaid": "^11.16.1"

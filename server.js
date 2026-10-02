@@ -15,7 +15,7 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import { randomBytes } from 'crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync,renameSync,openSync,fsyncSync,closeSync,unlinkSync } from 'fs';
 import { dirname } from 'path';
 import { runHouseAgent, houseAvailable } from './agents/house.js';
 import { sanitizeCanvas, sanitizeActions, serializeCanvas } from './agents/prompt.js';
@@ -23,6 +23,8 @@ import { createWorkspaces } from './workspace/server.js';
 import {catchupSummary,markSeen} from './workspace/catchup.js';
 import {taskPeople,taskAgents} from './workspace/tasks.js';
 import {contextSummary} from './workspace/context.js';
+import {createSitesGateway} from './workspace/sites.js';
+import {createRoomEvents} from './workspace/events.js';
 
 const PORT = process.env.PORT || 3131;
 const BRIDGE_TASK_TIMEOUT_MS = 3.5 * 60 * 1000;
@@ -320,25 +322,35 @@ const roomHasContent = (r) =>
   r.agents.length !== 1 || r.agents[0].name !== DEFAULT_AGENT.name;
 
 let persistT = null;
-function schedulePersist() {
-  if (persistT) return;
-  persistT = setTimeout(() => {
-    persistT = null;
+function flushPersist({required=false}={}) {
     const data = [...rooms.values()].filter(roomHasContent).map((r) => ({
       id: r.id, title: r.title, problem: r.problem, canvas: r.canvas, canvasRevision: r.canvasRevision, auto: r.auto,
       hostKey: r.hostKey, hostClaimed: r.hostClaimed,
       access: r.access, hostOnlySpend: r.hostOnlySpend,
       parent: r.parent || null,
-      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,specialists:r.specialists,sharedContext:r.sharedContext,tasks:r.tasks,
+      agents: r.agents, chat: r.chat.slice(-CHAT_KEEP), members:r.members, work:r.work,specialists:r.specialists,sharedContext:r.sharedContext,tasks:r.tasks,replyRequests:r.replyRequests,eventSubscriptions:r.eventSubscriptions,eventOutbox:r.eventOutbox,eventPauses:r.eventPauses,
       colorIdx: r.colorIdx, createdAt: r.createdAt, lastActivity: r.lastActivity,
     }));
     try {
       mkdirSync(dirname(DATA_FILE), { recursive: true });
-      writeFileSync(DATA_FILE, JSON.stringify(data));
+      const temporary=DATA_FILE+'.tmp-'+randomBytes(12).toString('hex');
+      try{
+        writeFileSync(temporary,JSON.stringify(data),{mode:0o600,flag:'wx'});
+        const file=openSync(temporary,'r');try{fsyncSync(file);}finally{closeSync(file);}
+        renameSync(temporary,DATA_FILE);
+        const directory=openSync(dirname(DATA_FILE),'r');try{fsyncSync(directory);}finally{closeSync(directory);}
+      }finally{try{unlinkSync(temporary);}catch{}}
       vlog('-', `persisted ${data.length} room(s)`);
     } catch (err) {
       log('-', `persist FAILED: ${err.message}`);
+      if(required)throw new Error('Room event state could not be saved.');
     }
+}
+function schedulePersist({immediate=false}={}) {
+  if(immediate){clearTimeout(persistT);persistT=null;flushPersist({required:true});return;}
+  if (persistT) return;
+  persistT = setTimeout(() => {
+    persistT = null;flushPersist();
   }, 1000);
 }
 
@@ -364,7 +376,7 @@ function loadRooms() {
       hostOnlySpend: !!r.hostOnlySpend,
       parent: r.parent || null,
       agents: Array.isArray(r.agents) && r.agents.length ? r.agents : [{ ...DEFAULT_AGENT, color: AGENT_COLORS[0] }],
-      members:r.members || [], specialists:r.specialists || [],sharedContext:r.sharedContext,tasks:(r.tasks || []).map(t=>t.status==='working'?{...t,status:'blocked',version:t.version+1,updatedAt:Date.now()}:t), work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',updatedAt:Date.now(),message:'Server restarted. Reconnect the original machine and project to resume retained work.'}:w), personalBridges:new Map(),
+      members:r.members || [], specialists:r.specialists || [],sharedContext:r.sharedContext,replyRequests:r.replyRequests || [],eventSubscriptions:r.eventSubscriptions || [],eventOutbox:r.eventOutbox || [],eventPauses:r.eventPauses || [],tasks:(r.tasks || []).map(t=>t.status==='working'?{...t,status:'blocked',version:t.version+1,updatedAt:Date.now()}:t), work:(r.work || []).map(w => ['running','integrating'].includes(w.status) ? {...w,status:'interrupted',updatedAt:Date.now(),message:'Server restarted. Reconnect the original machine and project to resume retained work.'}:w), personalBridges:new Map(),
       chat: r.chat || [], autoT: null, queue: [], running: null, hops: 0,
       people: new Map(), bridges: new Map(),
       colorIdx: r.colorIdx || 0, createdAt: r.createdAt || Date.now(),
@@ -696,6 +708,7 @@ function handleCommand(room, you, text) {
 
   const branch = text.match(/^\/branch\s+(.{1,40})$/);
   if (branch) {
+    if(sites.enabled){say(room,{kind:'system',text:'This Sites pilot uses one shared room. Branching is unavailable.'});return true;}
     if (!canManage(room, you)) {
       say(room, { kind: 'system', text: 'Only the host can branch this table.' });
       return true;
@@ -808,12 +821,22 @@ function detachBridgeWs(ws) {
 /* ---------------- HTTP ---------------- */
 
 const workspace = createWorkspaces({rooms,broadcast,persist:schedulePersist,tell,canSpeak,allowRun,say,dataDir:dirname(DATA_FILE)});
+const roomEvents=createRoomEvents({rooms,persist:()=>schedulePersist({immediate:true}),canSpeak,allowedRoom:id=>sites.allowedRoom(id)});
+const sites=createSitesGateway({rooms,getOrCreateRoom,initialize:workspace.init,operation:workspace.nativeOperation,persist:schedulePersist,events:roomEvents,runtimePair:workspace.runtimePair,runtimeDisconnect:workspace.runtimeDisconnect,runtimeTaskStart:workspace.runtimeTaskStart,runtimeTaskStop:workspace.runtimeTaskStop,runtimeAccess:workspace.runtimeAccess});
+if(sites.enabled)setInterval(()=>workspace.expireRuntimeAccess(),1000).unref();
 const app = express();
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
   next();
+});
+sites.mount(app);
+if(sites.enabled)app.use('/api/rooms/:room',(req,res,next)=>{
+  if(req.method!=='GET' && req.method!=='HEAD')return next();
+  const token=req.headers.authorization?.match(/^Bearer (.+)$/)?.[1],room=rooms.get(req.params.room);
+  if(!sites.authorizedRead(req,req.params.room) && !workspace.authorizedRoomRead(room,token))return res.status(403).json({error:'Authenticated room access is required.'});
+  res.setHeader('Cache-Control','no-store');next();
 });
 workspace.mount(app);
 app.use(express.static('public'));
@@ -905,6 +928,7 @@ wss.on('connection', (ws, req) => {
 
   let room = null;
   let isBridge = false;
+  let sitesConnection=null,sitesSessionTimer=null;
   const rate = { start: Date.now(), count: 0, warned: false };
 
   ws.on('message', async (raw) => {
@@ -934,6 +958,11 @@ wss.on('connection', (ws, req) => {
     vlog(room?.id, `<- ${isBridge ? 'bridge ' : ''}${msg.t} (${raw.length}b)`);
 
     if (msg.t === 'peek') {
+      let peekGrant=null;
+      if(sites.enabled){
+        peekGrant=sitesConnection && msg.room===sitesConnection.room.id && sites.current(sitesConnection)?sitesConnection:sites.browser(msg.siteToken,msg.room);
+        if(!peekGrant){tell(ws,'Open this room through its authenticated Sites page.');return;}
+      }
       // Arrival screen: describe the table without sitting down at it.
       const r = rooms.get(String(msg.room || ''));
       ws.send(JSON.stringify({
@@ -948,7 +977,7 @@ wss.on('connection', (ws, req) => {
         hostOnlySpend: r ? r.hostOnlySpend : DEFAULT_HOST_ONLY_SPEND,
         hostPresent: r ? [...r.people.values()].some((p) => p.isHost) : false,
         // You'd be the host if the table has never been claimed, or you hold the key.
-        wouldHost: r ? (!r.hostClaimed || msg.hostKey === r.hostKey) : true,
+        wouldHost: sites.enabled?peekGrant.actor.isHost:r ? (!r.hostClaimed || msg.hostKey === r.hostKey) : true,
       }));
       return;
     }
@@ -958,7 +987,9 @@ wss.on('connection', (ws, req) => {
       if (typeof msg.room !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(msg.room)) {
         tell(ws, 'Invalid room name.'); return;
       }
-      room = getOrCreateRoom(msg.room);
+      const grant=sites.enabled?sites.browser(msg.siteToken,msg.room,{consume:true}):null;
+      if(sites.enabled && !grant){tell(ws,'Open this room through its authenticated Sites page.');ws.close(1008,'Sites room authentication required');return;}
+      room = grant?.room || getOrCreateRoom(msg.room);
       if (!room) {
         tell(ws, 'This server is at its room limit — try again later.');
         ws.close();
@@ -975,17 +1006,20 @@ wss.on('connection', (ws, req) => {
       const wanted = String(msg.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
       const clash = wanted && [...room.people.values()].some((p) => p.name.toLowerCase() === wanted.toLowerCase());
       const you = {
-        name: (wanted && !clash) ? wanted : `${pick(ADJ)} ${pick(CRITTER)}`,
+        name: grant?grant.actor.name:(wanted && !clash) ? wanted : `${pick(ADJ)} ${pick(CRITTER)}`,
         color: nextColor(room),
       };
       let membership;
-      try { membership=workspace.joinMember(room,msg.memberKey,you.name); }
+      try { membership=grant?{member:grant.member}:workspace.joinMember(room,msg.memberKey,you.name); }
       catch(error) { tell(ws,error.message); ws.close(); return; }
       you.id=membership.member.id;
       // Host: returning key wins; otherwise the first person to sit down
       // claims the table and their browser keeps the key.
       let hostKeyToSend = null;
-      if (msg.hostKey && msg.hostKey === room.hostKey) {
+      if(grant){
+        you.isHost=grant.actor.isHost;sitesConnection=grant;
+        sitesSessionTimer=setTimeout(()=>ws.close(1008,'Sites session expired; reopen the authenticated room'),Math.max(1,grant.expiresAt-Date.now()));sitesSessionTimer.unref();
+      }else if (msg.hostKey && msg.hostKey === room.hostKey) {
         you.isHost = true;
       } else if (!room.hostClaimed) {
         you.isHost = true;
@@ -1013,13 +1047,16 @@ wss.on('connection', (ws, req) => {
     if (msg.t === 'workspace_bridge_join') {
       if (isBridge || room) { ws.close(1008,'already joined'); return; }
       const target=rooms.get(msg.room);
-      if (!target || !workspace.attach(ws,target,msg.token,msg)) { ws.close(1008,'invalid pairing token'); return; }
+      let attached=false;
+      try{attached=!!target && workspace.attach(ws,target,msg.token,msg);}
+      catch{try{workspace.detach(ws);}catch{}ws.close(1011,'runtime connection unavailable');return;}
+      if (!attached) { ws.close(1008,'invalid pairing token'); return; }
       room=target; isBridge=true; return;
     }
 
     if (msg.t === 'bridge_join') {
       if (isBridge || room) { ws.close(1008, 'already joined'); return; }
-      if (BRIDGE_SECRET && msg.secret !== BRIDGE_SECRET) {
+      if ((sites.enabled && !BRIDGE_SECRET) || (BRIDGE_SECRET && msg.secret !== BRIDGE_SECRET)) {
         log('-', 'bridge_join rejected: bad or missing secret');
         ws.close(1008, 'bridge auth failed');
         return;
@@ -1081,6 +1118,7 @@ wss.on('connection', (ws, req) => {
       return;
     }
     if (!room) return;
+    if(sites.enabled && !sites.current(sitesConnection)){ws.close(1008,'Sites room session expired');return;}
 
     const you = room.people.get(ws);
     if (!you) return;
@@ -1241,6 +1279,7 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
+    clearTimeout(sitesSessionTimer);
     const n = (connsPerIp.get(ip) || 1) - 1;
     if (n <= 0) connsPerIp.delete(ip); else connsPerIp.set(ip, n);
     if (isBridge) {
@@ -1261,7 +1300,7 @@ wss.on('connection', (ws, req) => {
 
 loadRooms();
 
-server.listen(PORT, () => {
+server.listen({port:PORT,...(process.env.ROUNDTABLE_HOST?{host:process.env.ROUNDTABLE_HOST}:{})}, () => {
   console.log(`Roundtable listening on http://localhost:${server.address().port}`);
   console.log(`Attach a brain to a room: node bridge/codex.js http://localhost:${server.address().port}/s/<room>`);
   console.log(`Rooms authorized for shared compute: ${[...SHARED_ROOMS].join(', ') || 'none'}`);

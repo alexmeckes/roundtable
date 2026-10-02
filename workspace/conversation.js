@@ -6,13 +6,13 @@ const id=()=>randomBytes(18).toString('base64url');
 const label=bridge=>bridge.agentName || `${bridge.name}'s Codex`;
 const identity=bridge=>bridge.agentId || bridge.ownerId;
 const participants=room=>[...room.personalBridges.values()].flatMap(b=>[b,...(b.specialists || [])]);
-const mention=(text,handle)=>new RegExp('(^|\\s)@'+handle+'(?=$|[^a-z0-9_-])','i').test(text);
+const mention=(text,handle)=>typeof handle==='string' && !!handle && new RegExp('(^|\\s)@'+handle+'(?=$|[^a-z0-9_-])','i').test(text);
 
 // Each personal bridge gets its own conversation queue. A human message grants
 // at most four replies, including agent-to-agent follow-ups; no global turn lock.
-export function createConversation({say,announce,allowRun}) {
+export function createConversation({say,announce,allowRun,canParticipate=(room,bridge)=>room.access!=='view' || [...room.people.values()].some(p=>p.id===bridge.ownerId && p.isHost)}) {
   const pending=new Map(),queues=new Map();
-  function enabled(room){return participants(room).filter(b=>b.chatMode && b.chatMode!=='off' && room.personalBridges.get(b.ownerId)?.chatMode!=='off' && room.personalBridges.get(b.ownerId)?.ready!==false && b.ws.readyState===1 && (room.access!=='view' || [...room.people.values()].some(p=>p.id===b.ownerId && p.isHost)));}
+  function enabled(room){return participants(room).filter(b=>b.chatMode && b.chatMode!=='off' && room.personalBridges.get(b.ownerId)?.chatMode!=='off' && room.personalBridges.get(b.ownerId)?.ready!==false && b.ws.readyState===1 && canParticipate(room,b));}
   function stop(bridge){
     for(const child of bridge.specialists || [])stop(child);
     queues.delete(identity(bridge));
@@ -40,10 +40,13 @@ export function createConversation({say,announce,allowRun}) {
     queue.push({text,chain});queues.set(identity(bridge),queue);drain(room,bridge);
   }
   function human(room,you,text,taskId){
-    const agents=enabled(room),direct=participants(room).filter(b=>mention(text,b.handle));
-    const targets=direct.length?direct.filter(b=>agents.includes(b)):agents.filter(b=>b.chatMode==='auto').slice(0,2);
+    const agents=enabled(room),known=[...participants(room),...(room.members || []),...(room.specialists || [])];
+    // An addressed agent may be paused or offline. Keep the message directed
+    // rather than spending another owner's automatic participant as fallback.
+    const direct=known.some(agent=>mention(text,agent.handle || agent.agentHandle));
+    const targets=direct?agents.filter(agent=>mention(text,agent.handle)):agents.filter(b=>b.chatMode==='auto').slice(0,2);
     const chain={remaining:4,visits:new Map(),taskId};for(const b of targets)enqueue(room,b,`${you.name}: ${text}`,chain);
-    return room.personalBridges.size>0;
+    return direct || room.personalBridges.size>0;
   }
   function result(ws,room,msg){
     const job=pending.get(msg.id);if(!job || job.room!==room || job.bridge.ws!==ws)return;

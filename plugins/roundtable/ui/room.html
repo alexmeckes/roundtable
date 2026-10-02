@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roundtable</title>
+<style>
+:root{color-scheme:light;--ink:#1c2333;--muted:#727b8d;--paper:#f6f7fb;--card:#fff;--line:#e4e7ef;--accent:#3158e7;--pale:#edf1ff;--green:#268064;font-family:var(--font-sans,Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);font-size:14px;line-height:1.5}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink)}button,input,textarea,select{font:inherit}button,a,input,textarea{touch-action:manipulation}button{cursor:pointer}button:disabled{opacity:.45;cursor:default}a{color:var(--accent);text-underline-offset:3px}button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #b8c7ff;outline-offset:3px}button, a{transition:background .15s,border-color .15s,box-shadow .15s}svg{flex-shrink:0}
+.workspace{max-width:1440px;margin:0 auto}.masthead{padding:20px 36px 18px;background:var(--card);border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.brand-name{display:flex;align-items:center;gap:9px;font-weight:650;font-size:13px}.brand-mark{display:grid;place-items:center;width:29px;height:29px;border-radius:9px;background:var(--accent);color:#fff}.brand svg{width:19px;height:19px}.breadcrumb{font-weight:400;color:var(--muted);padding-left:12px;border-left:1px solid var(--line);margin-left:4px}.member-summary{display:flex;align-items:center;gap:12px}.header-main{display:flex;align-items:flex-start;justify-content:space-between;gap:22px}.masthead h1{font-size:24px;font-weight:650;letter-spacing:-.8px;line-height:1.2;margin:0 0 8px;overflow-wrap:anywhere}.masthead p{font-size:13px;line-height:1.6;color:var(--muted);margin:0;max-width:76ch}.membership{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;white-space:nowrap}.membership strong{color:var(--ink);font-weight:550}.connection-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#b5bac7;margin-right:6px}.connected .connection-dot{background:#29a17c}.room-link{font-size:12px;color:var(--muted);white-space:nowrap;text-decoration:none}.room-link:hover{color:var(--accent)}
+.toolbar{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 36px;background:var(--card);border-bottom:1px solid var(--line)}.tabs{display:flex;gap:28px}.tabs button{display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:16px 0 13px;color:var(--muted);border-bottom:3px solid transparent;font-size:13px;font-weight:500}.tabs svg{width:15px;height:15px}.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent);font-weight:650}.tab-count{font-size:10px;padding:1px 6px;border-radius:5px;background:#edf0f5;color:var(--muted)}.tabs button[aria-selected=true] .tab-count{background:var(--pale);color:var(--accent)}.quiet{display:flex;align-items:center;gap:6px;border:0;background:none;color:var(--muted);font-size:12px;padding:7px}.quiet:hover{color:var(--accent);background:var(--paper);border-radius:6px}.quiet svg{width:14px;height:14px}.main{padding:22px 36px 0}.notice{font-size:11px;line-height:1.6;color:var(--muted);margin:0}.notice.error{color:#b14146}.statusline{display:flex;align-items:center;gap:16px;font-size:11px;color:var(--muted);padding:16px 0;border-top:1px solid var(--line);margin-top:24px}.statusline .notice{flex:1}.statusline #room-id{display:none}.roster{display:flex;align-items:center}.person{display:flex;align-items:center;position:relative}.person+.person{margin-left:-7px}.person .person-name{position:absolute;visibility:hidden;background:var(--ink);color:white;font-size:11px;padding:4px 8px;white-space:nowrap;border-radius:5px;top:34px;left:0;z-index:2}.person:hover .person-name{visibility:visible}.avatar{display:grid;place-items:center;width:29px;height:29px;border-radius:50%;background:#efe9e0;color:#857058;font-size:10px;font-weight:650;border:2px solid #fff}.person.self .avatar{background:#dde5ff;color:#3158e7}.people-count{font-size:11px;color:var(--muted);padding-left:8px}.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 20px}.section-head h2{font-size:19px;letter-spacing:-.4px;font-weight:650;margin:0}.section-head p{margin:4px 0 0;color:var(--muted);font-size:12px}.button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:7px;padding:9px 13px;background:var(--card);color:var(--ink);font-size:12px;font-weight:550;text-decoration:none;line-height:1.4}.button:hover:enabled{background:#f9fafc;border-color:#c7cedf}.button.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 4px #3158e715}.button.primary:hover:enabled{background:#274bd0;border-color:#274bd0}.button svg{width:14px;height:14px}.button .plus{font-size:17px;line-height:10px;font-weight:400}.board-layout{display:grid;grid-template-columns:minmax(285px,.83fr) minmax(350px,1.17fr);gap:24px;align-items:start}.task-column{min-width:0}.stats{display:flex;gap:7px;margin-bottom:18px}.stat{flex:1;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px}.stat strong{font-size:16px;font-weight:650}.stat span{font-size:10px;line-height:1.4;color:var(--muted)}.stat:last-child{background:#fffcf5;border-color:#eee5cf}.stat:last-child strong{color:#a47a22}.filters{display:flex;gap:4px;padding:3px;background:#eaedf4;border-radius:7px;width:max-content;margin:0 0 12px}.filters button{border:0;background:transparent;padding:5px 12px;border-radius:5px;color:var(--muted);font-size:11px;font-weight:550}.filters button[aria-pressed=true]{background:#fff;color:var(--ink);box-shadow:0 1px 3px #1c233312}.search{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--line);background:var(--card);border-radius:7px;margin-bottom:14px}.search svg{color:#939bac;width:15px;height:15px}.search input{border:0;background:none;outline:none;color:var(--ink);width:100%;font-size:12px;padding:0}.search input:focus-visible{outline:none}.search:focus-within{border-color:#9aacfa;box-shadow:0 0 0 3px #edf1ff}.list-label{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:10px;letter-spacing:.04em;text-transform:uppercase;margin:20px 1px 10px}.task-list{scroll-margin-top:68px;display:grid;grid-template-columns:minmax(0,1fr);gap:9px;min-width:0}.task{display:block;width:100%;min-width:0;overflow:hidden;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:16px;color:var(--ink)}.task:hover{border-color:#b6c1e0;box-shadow:0 3px 12px #1c233307}.task[aria-pressed=true]{border-color:#a3b6ff;background:#f7f9ff;box-shadow:0 0 0 1px #dfe7ff}.task-top{display:flex;align-items:flex-start;gap:10px}.task-symbol{display:grid;place-items:center;width:22px;height:22px;border:1px solid #dce1ed;border-radius:6px;background:#fff;color:var(--muted);margin-top:1px}.task-symbol svg{width:12px;height:12px}.task-title{display:block;flex:1;font-size:13px;font-weight:600;line-height:1.55;overflow-wrap:anywhere}.task-meta{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11px;margin-top:13px}.task-meta .owner{margin-left:auto;display:flex;align-items:center;gap:5px}.mini-avatar{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#e5ebfc;color:#687ba9;font-size:8px;font-weight:650}.task-caption{display:block;width:calc(100% - 32px);font-size:11px;color:var(--muted);margin:6px 0 0 32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.badge{display:inline-flex;align-items:center;gap:5px;border-radius:5px;font-size:10px;font-weight:550;padding:3px 7px;background:#eff1f6;color:#727b8d;white-space:nowrap}.badge:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}.badge.working{background:#eaf0ff;color:#456bd1}.badge.needs_review{background:#fff1d4;color:#9d7220}.badge.blocked{background:#fff0ed;color:#ae6356}.badge.done{background:#e7f5ee;color:#268064}.empty{border:1px dashed #ccd3e3;border-radius:9px;padding:28px 20px;text-align:center;font-size:12px;line-height:1.7;color:var(--muted);margin:10px 0}.empty strong{display:block;color:var(--ink);font-weight:550;margin-bottom:5px}.detail{scroll-margin-top:68px;border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden;box-shadow:0 3px 12px #1c233303;min-width:0}.back-to-list{display:none}.detail-head{padding:23px 24px 20px;border-bottom:1px solid var(--line)}.detail-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.detail h3{font-size:20px;letter-spacing:-.5px;font-weight:650;line-height:1.4;margin:0 0 12px;overflow-wrap:anywhere}.detail-owner{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}.detail-body{padding:21px 24px 24px}.body-text{font-size:12px;white-space:pre-wrap;line-height:1.8;overflow-wrap:anywhere;margin:10px 0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.hint{font-size:11px;color:var(--muted);line-height:1.7;margin:12px 0 0}.instructions{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}.instructions summary{font-size:12px;font-weight:600;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between}.instructions summary:after{content:"+";color:var(--muted);font-size:16px;font-weight:400}.instructions[open] summary:after{content:"−"}.instructions summary::-webkit-details-marker{display:none}.result-section h4{font-size:13px;margin:0 0 8px;font-weight:600}.review-banner{display:flex;gap:11px;align-items:center;padding:13px 14px;border:1px solid #dbeee4;background:#f2faf6;border-radius:8px;margin-bottom:21px}.review-icon{display:grid;place-items:center;background:#dceddf;border-radius:50%;color:#268064;width:25px;height:25px;font-size:13px}.review-banner strong{display:block;font-size:12px;color:#28654d;font-weight:600}.review-banner span{display:block;font-size:10px;color:#729384;margin-top:2px}.downloads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:15px 0 0}.file-link{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:#fafbfe;border-radius:8px;padding:12px 10px;color:var(--ink);text-decoration:none;min-width:0}.file-link:hover{border-color:#a8b9f6;background:#f5f7ff}.file-icon{display:grid;place-items:center;background:#eef1f9;border-radius:6px;color:#8793b5;width:28px;height:32px;font-size:10px;font-weight:650;flex-shrink:0}.file-info{min-width:0;flex:1}.file-info strong{display:block;font-size:10px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-info small{display:block;font-size:9px;color:var(--muted);margin-top:2px}.file-arrow{font-size:15px;color:var(--muted)}.result-actions{margin-top:21px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.inspector-empty{display:grid;place-items:center;min-height:280px;background:#fff;border:1px solid var(--line);border-radius:12px;text-align:center;padding:32px;color:var(--muted)}.inspector-empty .placeholder-icon{margin:0 auto 14px;width:44px;height:44px;border-radius:12px;background:var(--pale);display:grid;place-items:center;color:var(--accent);font-size:23px}.inspector-empty h3{font-size:14px;font-weight:600;color:var(--ink);margin:0 0 7px}.inspector-empty p{font-size:12px;margin:0;max-width:28ch}
+.form{display:grid;gap:9px}.form h3{margin:0 0 8px;font-size:18px;letter-spacing:-.4px}.form label{font-size:11px;color:#5c6578;font-weight:550}.form input,.form textarea{width:100%;border:1px solid #dce1eb;border-radius:7px;background:#fff;color:var(--ink);padding:11px 12px;font-size:12px}.form input::placeholder,.form textarea::placeholder{color:#9aa2b2}.form textarea{min-height:95px;resize:vertical;line-height:1.7}.form .actions{margin:7px 0 0;justify-content:flex-end}.form .field-note{font-size:10px;color:var(--muted);line-height:1.6;margin:3px 0}.form.result{margin:22px 0 0;border-top:1px solid var(--line);padding-top:20px}.form.result h3{font-size:14px}.form.result .actions{justify-content:flex-start}dialog{border:1px solid var(--line);border-radius:14px;padding:28px;width:min(470px,calc(100vw - 32px));box-shadow:0 24px 100px #1c23332a;color:var(--ink)}dialog::backdrop{background:#17213a55;backdrop-filter:blur(3px)}.dialog-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}.dialog-head h2{font-size:19px;letter-spacing:-.4px;margin:0}.dialog-close{border:0;background:var(--paper);border-radius:6px;width:28px;height:28px;color:var(--muted);font-size:18px}.content-width{max-width:900px;margin:0 auto}.context-intro{padding:15px 18px;background:var(--pale);border:1px solid #dfe7ff;border-radius:8px;font-size:12px;color:#697aab;margin-bottom:20px}.context-card{border:1px solid var(--line);border-radius:9px;background:var(--card);padding:18px 20px;margin:10px 0}.context-card summary{cursor:pointer;list-style:none}.context-card summary::-webkit-details-marker{display:none}.context-card .context-title{font-size:14px;font-weight:600;margin:7px 0 0;line-height:1.5;display:flex;justify-content:space-between;align-items:center}.context-title:after{content:"+";font-weight:400;color:var(--muted)}.context-card[open] .context-title:after{content:"−"}.context-card .body-text{padding-top:15px;margin-top:15px;border-top:1px solid var(--line)}.context-card .context-meta{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:10px}.chat-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(240px,.8fr);gap:24px;align-items:start}.chat-list{display:grid;gap:12px}.chat-message{background:#fff;border:1px solid var(--line);border-radius:9px;padding:15px 18px}.chat-message .author{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:#495574}.chat-message .author .mini-avatar{width:22px;height:22px;font-size:9px}.chat-message .body-text{margin:9px 0 0;font-size:12px}.chat-message.system{background:transparent;border-color:transparent;padding:2px 18px}.chat-message.system .author{font-weight:500;color:var(--muted)}.chat-message.system .body-text{font-size:11px;color:var(--muted)}.compose{background:#fff;border:1px solid var(--line);border-radius:10px;padding:21px;position:sticky;top:20px}.compose h3{font-size:14px;margin-bottom:6px}.compose .actions{justify-content:flex-start}.footer{font-size:10px;line-height:1.7;color:var(--muted)}[hidden]{display:none!important}
+@media(min-width:1100px){.board-layout{grid-template-columns:minmax(300px,.7fr) minmax(400px,1.3fr)}.detail{position:sticky;top:70px}.masthead h1{font-size:26px}}
+@media(max-width:619px){.back-to-list{display:flex;margin:0 0 14px;padding:0;font-size:11px}}
+@media(max-width:760px){.masthead{padding:20px 20px 18px}.brand{margin-bottom:17px}.breadcrumb{display:none}.header-main{gap:12px}.masthead h1{font-size:22px}.masthead p{font-size:12px}.toolbar{padding:0 20px}.main{padding:20px 20px 0}.tabs{gap:20px}.board-layout{grid-template-columns:1fr;gap:20px}.stats{margin-bottom:16px}.task-caption{max-width:70vw}.section-head h2{font-size:18px}.detail-head{padding:19px 20px 17px}.detail-body{padding:18px 20px 20px}.chat-layout{grid-template-columns:1fr}.compose{position:static;grid-row:1}.statusline{align-items:flex-start;gap:10px}.statusline #updated{white-space:nowrap;font-size:10px}.member-summary{gap:8px}.membership{font-size:10px}.room-link{font-size:11px}.footer{display:none}}
+@media(min-width:620px) and (max-width:760px){.masthead{padding-top:17px;padding-bottom:17px}.brand{margin-bottom:14px}.detail-top{margin-bottom:9px}.detail h3{margin-bottom:8px}.review-banner{padding-top:11px;padding-bottom:11px;margin-bottom:16px}.board-layout{grid-template-columns:minmax(225px,.78fr) minmax(300px,1.22fr);gap:16px}.stat{padding:9px 8px}.stat span{font-size:9px}.detail-head{padding:18px}.detail-body{padding:18px}.detail h3{font-size:18px}.downloads{grid-template-columns:repeat(2,minmax(0,1fr))}.file-link{display:grid;grid-template-columns:minmax(0,1fr) 12px;gap:5px;padding:11px 10px}.file-icon{display:none}.file-link .file-arrow{font-size:14px}.stats{gap:5px}.task-caption{max-width:none}}
+@media(max-width:390px){.masthead,.toolbar{padding-left:16px;padding-right:16px}.main{padding-left:16px;padding-right:16px}.tabs{gap:15px}.tabs svg{display:none}.member-summary .roster{display:none}.membership{font-size:10px}.section-head p{font-size:11px}.downloads{grid-template-columns:1fr}.stat{padding:9px 8px}.stat span{font-size:9px}.button{font-size:11px;padding:8px 10px}.quiet span{display:none}.detail h3{font-size:18px}}
+@media(prefers-reduced-motion:reduce){button,a{transition:none}}
+
+/* Chat is the starting point. History scrolls while the composer stays in view. */
+html,body{height:100%}body{overflow:hidden}.workspace{height:100dvh;display:flex;flex-direction:column}.masthead,.toolbar{flex-shrink:0}.main{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}.conversation-view{width:100%;max-width:900px;margin:0 auto;min-height:0;flex:1;display:flex;flex-direction:column}.chat-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:16px}.chat-head h2{font-size:18px;letter-spacing:-.4px;margin:0 0 4px;font-weight:650}.chat-head p{font-size:12px;color:var(--muted);margin:0}.chat-scope{display:flex;align-items:center;white-space:nowrap;font-size:10px;color:var(--muted);padding:5px 8px;border:1px solid var(--line);background:#fff;border-radius:6px}.chat-scope .connection-dot{background:var(--accent)}.message-scroll{flex:1;min-height:100px;overflow-y:auto;padding:4px 3px 18px;scrollbar-width:thin;scrollbar-color:#dce1ec transparent;overscroll-behavior:contain}.message-scroll:focus-visible{outline:2px solid #b8c7ff;outline-offset:2px}.chat-list{gap:12px}.chat-message{border:0;padding:15px 18px;box-shadow:0 1px 2px #1c233304}.chat-message .body-text{font-size:13px;line-height:1.7}.chat-message.system{box-shadow:none;padding:0 18px}.chat-message.system .body-text{margin:3px 0 0;font-size:11px}.chat-message.system .author .mini-avatar{background:transparent}.room-composer{flex-shrink:0;padding-top:10px}.composer-box{display:flex;align-items:flex-end;gap:10px;padding:10px;border:1px solid #dce1ed;border-radius:12px;background:#fff;box-shadow:0 3px 12px #1c233305}.composer-box:focus-within{border-color:#a4b6fa;box-shadow:0 0 0 3px #edf1ff}.composer-box textarea{flex:1;min-width:0;border:0;outline:0;background:transparent;resize:none;min-height:38px;max-height:110px;padding:9px 7px;font-size:13px;line-height:1.5;color:var(--ink);overflow-y:auto}.composer-box textarea::placeholder{color:#9aa2b2}.composer-box textarea:focus-visible{outline:none}.composer-box .button{min-height:38px;padding:8px 14px;font-size:12px}.composer-note{font-size:10px;line-height:1.6;color:var(--muted);margin:7px 2px 0}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.statusline{margin-top:12px;padding:9px 0}.content-width{width:100%;flex-shrink:0}#board{flex-shrink:0}.message-scroll .empty{max-width:420px;margin:40px auto 0;padding:32px 20px}.chat-head .connection-dot{margin-right:5px}
+@media(max-width:619px){.main{padding-top:16px}.chat-head{padding-bottom:12px}.chat-head h2{font-size:16px}.chat-head p{font-size:11px}.chat-scope{display:none}.chat-message{padding:13px 14px}.chat-message.system{padding:0 14px}.chat-message .body-text{font-size:12px}.composer-box{padding:7px;gap:5px}.composer-box .button{padding:8px 11px}.composer-note{font-size:9px}.statusline{margin-top:8px;padding:7px 0}.statusline .notice{font-size:10px}.message-scroll{min-height:70px}}
+.chat-ai{display:flex;flex-direction:column;align-items:flex-end;gap:3px;text-align:right;flex-shrink:0}.chat-ai strong{display:flex;align-items:center;font-size:11px;font-weight:550}.chat-ai small{font-size:10px;color:var(--muted)}.chat-ai .connection-dot{background:#aab3c4}.chat-ai.live .connection-dot{background:#29a17c}.chat-ai.paused .connection-dot{background:#b89756}.chat-ai .quiet{font-size:10px;padding:0;color:var(--accent)}.composer-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}.composer-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 2px 0}.composer-tools .composer-note{margin:0}.agent-picker{position:relative;flex-shrink:0}.agent-picker summary{list-style:none;cursor:pointer;font-size:11px;color:var(--muted);padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:#fff}.agent-picker summary::-webkit-details-marker{display:none}.agent-picker summary:hover,.agent-picker[open] summary{color:var(--accent);background:var(--pale)}.agent-menu{position:absolute;bottom:calc(100% + 7px);left:0;width:min(310px,calc(100vw - 40px));max-height:260px;overflow:auto;padding:7px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px #1c233318;z-index:4}.agent-option{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;border:0;background:none;padding:10px;border-radius:6px;text-align:left;color:var(--ink)}.agent-option:hover:enabled{background:var(--paper)}.agent-option strong{display:block;font-size:11px;font-weight:550}.agent-option small{display:block;font-size:10px;color:var(--muted);margin-top:2px}.agent-option .agent-state{font-size:9px;color:var(--muted);white-space:nowrap}.agent-option:disabled{opacity:.65}.agent-menu .hint{padding:6px;margin:0;font-size:10px}.chat-message.agent .mini-avatar{background:#e8edff;color:var(--accent)}.chat-message.human .mini-avatar{background:#eef2f6;color:#68768c}
+@media(max-width:619px){.chat-ai strong{font-size:10px}.chat-ai small{font-size:9px}.composer-box{flex-wrap:wrap}.composer-box textarea{flex-basis:100%}.composer-actions{width:100%;justify-content:flex-end}.composer-tools{align-items:flex-start}.composer-tools .composer-note{max-width:32ch;text-align:right}.chat-head{gap:10px}}
+</style>
+</head>
+<body>
+<div class="workspace">
+<header class="masthead">
+  <div class="brand"><div class="brand-name"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="2.7" r="1.7" fill="currentColor"/><circle cx="21.3" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="21.3" r="1.7" fill="currentColor"/><circle cx="2.7" cy="12" r="1.7" fill="currentColor"/></svg></span>Roundtable<span class="breadcrumb">Your shared workspace</span></div><div class="member-summary"><div id="roster" class="roster" aria-label="People in the room"></div><div id="membership" class="membership"><span><span class="connection-dot"></span><span id="member-label">Connecting…</span></span></div></div></div>
+  <div class="header-main"><div><h1 id="room-title">Your shared table.</h1><p id="room-brief">Bring the context. Move the work forward.</p></div><a id="room-link" class="room-link" target="_blank" rel="noopener noreferrer" hidden>Open room ↗</a></div>
+</header>
+<div class="toolbar"><div class="tabs" role="tablist" aria-label="Room views"><button type="button" role="tab" id="tab-conversation" aria-controls="conversation" aria-selected="true"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 3h10v8H7l-4 3V3Z" stroke="currentColor" stroke-linejoin="round"/></svg>Chat</button><button type="button" role="tab" id="tab-board" aria-controls="board" aria-selected="false" tabindex="-1"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor"/><path d="M6 2v12M6 7h8" stroke="currentColor"/></svg>Tasks<span id="tab-task-count" class="tab-count">0</span></button><button type="button" role="tab" id="tab-context" aria-controls="context" aria-selected="false" tabindex="-1"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 2h6l3 3v9H4zM10 2v4h3M6 8h5M6 11h4" stroke="currentColor" stroke-linejoin="round"/></svg>Context<span id="tab-context-count" class="tab-count">0</span></button></div><button class="quiet" type="button" id="refresh" aria-label="Refresh room"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 6a5 5 0 1 0 .2 4M13 2v4H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Refresh</span></button></div>
+<main class="main">
+  <section id="board" role="tabpanel" aria-labelledby="tab-board" hidden>
+    <div class="section-head"><div><h2>Shared tasks</h2></div><button id="new-task" type="button" class="button primary" disabled><span class="plus" aria-hidden="true">+</span> New task</button></div>
+    <div class="board-layout"><div class="task-column">
+      <div class="stats"><div class="stat"><strong id="count-open">0</strong><span>To do</span></div><div class="stat"><strong id="count-working">0</strong><span>In progress</span></div><div class="stat"><strong id="count-review">0</strong><span>For review</span></div></div>
+      <div class="filters" aria-label="Filter tasks"><button type="button" data-filter="all" aria-pressed="true">All tasks</button><button type="button" data-filter="mine" aria-pressed="false">Mine</button><button type="button" data-filter="review" aria-pressed="false">For review</button></div>
+      <label class="search"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><input id="task-search" type="search" aria-label="Search tasks" placeholder="Search tasks…"></label>
+      <div class="list-label"><span id="list-label">All tasks</span><span id="list-count">0 tasks</span></div>
+      <div id="tasks" class="task-list"></div><div id="tasks-empty" class="empty"><strong>No tasks yet.</strong>Give the table a clear outcome to work toward.</div>
+    </div><div class="inspector"><article id="selected-task" class="detail" hidden></article><div id="inspector-empty" class="inspector-empty"><div><div class="placeholder-icon" aria-hidden="true">↗</div><h3>A little clarity goes a long way.</h3><p>Select a task to see its instructions, progress, and results.</p></div></div></div></div>
+  </section>
+  <section id="context" class="content-width" role="tabpanel" aria-labelledby="tab-context" hidden><div class="section-head"><div><h2>A shared starting point</h2><p>The brief, sources, and decisions everyone can work from.</p></div><span class="badge done">Accepted</span></div><div class="context-intro">Reviewed by a person. Propose changes from chat or review them in the full room.</div><div id="context-items"></div><div id="context-empty" class="empty"><strong>Build on the same context.</strong>Accepted sources and decisions will appear here.</div></section>
+  <section id="conversation" class="conversation-view" role="tabpanel" aria-labelledby="tab-conversation">
+    <div class="chat-head"><div><h2>Room chat</h2><p>Conversation shared with everyone at this table.</p></div><div id="chat-ai" class="chat-ai"><strong><span class="connection-dot"></span><span id="ai-state">Checking your AI…</span></strong><small id="ai-route">Your room connection</small><button type="button" id="open-room-controls" class="quiet">Connect my AI in the room</button><button type="button" id="ai-mode" class="quiet" hidden>Enable my AI</button></div></div>
+    <div id="message-scroll" class="message-scroll" role="log" aria-label="Room conversation" aria-live="polite" tabindex="0"><div id="messages" class="chat-list"></div><div id="chat-empty" class="empty"><strong>Start the conversation.</strong>Share a question, an idea, or what you’re working on.</div></div>
+    <form id="publish-form" class="room-composer"><label for="contribution" class="sr-only">Message the room</label><div class="composer-box"><textarea id="contribution" maxlength="6000" rows="1" required placeholder="Message the room, or ask your AI…"></textarea><div class="composer-actions"><button type="button" class="button" id="ask-ai" disabled>Ask my AI</button><button type="submit" class="button primary" id="publish" disabled>Send <span aria-hidden="true">↑</span></button></div></div><div class="composer-tools"><details id="agent-picker" class="agent-picker"><summary>@ Mention</summary><div id="agent-options" class="agent-menu"><p class="hint">Room agents will appear here.</p></div></details><p id="composer-note" class="composer-note">Send as yourself. Ask my AI requests a reply shared here.</p></div></form>
+  </section>
+  <div class="statusline"><span id="room-id">Your configured room</span><p class="notice" id="notice" role="status">Connecting to your workspace…</p><span id="updated">Waiting for host</span></div>
+</main>
+</div>
+<dialog id="task-dialog" aria-labelledby="dialog-title"><div class="dialog-head"><h2 id="dialog-title">Create a task</h2><button id="close-task" type="button" class="dialog-close" aria-label="Close task form">×</button></div><form id="task-form" class="form"><label for="task-title">What needs to happen?</label><input id="task-title" maxlength="120" required placeholder="Prepare a decision brief"><label for="task-details">Give your agent a clear brief</label><textarea id="task-details" maxlength="4000" required placeholder="Describe the outcome, sources, and what a good result looks like."></textarea><p class="field-note">Owned by you. Your agent starts when you choose to work in chat.</p><div class="actions"><button id="cancel-task" type="button" class="button">Cancel</button><button type="submit" class="button primary">Create task</button></div></form></dialog>
+<script>
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
+  const button=(text,fn,primary=false)=>{const n=el('button',text,'button'+(primary?' primary':''));n.type='button';n.addEventListener('click',fn);return n;};
+  const safeUrl=value=>{try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:null;}catch{return null;}};
+  const deliverableUrl=(run,path)=>{
+    const roomUrl=safeUrl(snapshot?.room?.url);
+    if(!roomUrl || typeof path!=='string' || !/\.(md|txt|csv|json)$/i.test(path))return null;
+    const parts=path.split('/');
+    if(parts.some(part=>!part || part==='.' || part==='..' || part.startsWith('.') || part==='node_modules' || /[\\\u0000-\u001f\u007f]/.test(part)))return null;
+    return new URL('/api/rooms/'+encodeURIComponent(snapshot.room.id)+'/work/'+encodeURIComponent(run.id)+'/deliverables/'+parts.map(encodeURIComponent).join('/'),new URL(roomUrl).origin).href;
+  };
+  const pending=new Map(),claimed=new Set(),resultDrafts=new Map();
+  let nextId=1,snapshot=null,selectedId=null,hostReady=false,loading=false,mutating=false,initializing=false,taskFilter='all',previewHost=false,poll=null,lastChatSignature=null,lastAgentSignature=null,lastSelectedSignature=null;
+  const conversation=()=>snapshot?.conversation || {};
+  const roomAgents=()=>Array.isArray(conversation().agents)?conversation().agents.filter(a=>typeof a.handle==='string' && /^[A-Za-z0-9_-]{1,80}$/.test(a.handle)):[];
+  const ownBridge=()=>conversation().canRequestBridge?roomAgents().find(a=>a.ownerId===snapshot.member.id && a.available):null;
+  const myRoomAgent=()=>ownBridge() || roomAgents().find(a=>a.ownerId===snapshot?.member?.id && a.connected) || roomAgents().find(a=>a.ownerId===snapshot?.member?.id);
+  const agentState=agent=>!agent.connected?'Offline':!agent.ready?'Reconnecting':agent.mode==='off'?'Paused':agent.busy?'Thinking…':agent.available?'Connected':'Unavailable';
+  const notice=(text,error=false)=>{$('notice').textContent=text;$('notice').classList.toggle('error',error);};
+  function request(method,params,timeout=15000){
+    if(window.parent===window)return Promise.reject(new Error('Open Roundtable from an MCP Apps host to connect this panel.'));
+    return new Promise((resolve,reject)=>{
+      const id=nextId++,timer=setTimeout(()=>{pending.delete(id);reject(new Error(method==='ui/initialize'?'The host bridge did not respond. Open this panel through the installed Roundtable plugin.':'The request timed out. Your draft is kept; refresh before retrying.'));},timeout);
+      pending.set(id,{resolve,reject,timer});
+      window.parent.postMessage({jsonrpc:'2.0',id,method,params},'*');
+    });
+  }
+  function resultData(result){
+    if(result?.isError)throw new Error(result.content?.find(c=>c.type==='text')?.text || 'The room rejected this operation.');
+    if(result?.structuredContent)return result.structuredContent;
+    const text=result?.content?.find(c=>c.type==='text')?.text;
+    if(text){try{return JSON.parse(text);}catch{}}
+    return result || {};
+  }
+  const call=async(name,args={})=>resultData(await request('tools/call',{name,arguments:args}));
+  function applyData(data){
+    if(!data || typeof data!=='object')return;
+    if(data.conversation && snapshot && !data.room){snapshot.conversation=data.conversation;renderConversation();controls();}
+    if(data.run?.id){claimed.add(data.run.id);if(data.task?.id)selectedId=data.task.id;}
+    if(data.room && data.member){
+      snapshot=data;
+      if(Array.isArray(data.claimedRunIds)){claimed.clear();for(const id of data.claimedRunIds)if(typeof id==='string')claimed.add(id);}
+      if(selectedId && !(data.tasks || []).some(t=>t.id===selectedId))selectedId=null;
+      render();
+    }
+  }
+  window.addEventListener('message',event=>{
+    if(event.source!==window.parent)return;
+    const msg=event.data;if(!msg || msg.jsonrpc!=='2.0')return;
+    if(msg.id!==undefined && pending.has(msg.id)){
+      const p=pending.get(msg.id);pending.delete(msg.id);clearTimeout(p.timer);
+      msg.error?p.reject(new Error(msg.error.message || 'The host rejected this request.')):p.resolve(msg.result);return;
+    }
+    if(msg.method==='ui/notifications/tool-result'){
+      try{applyData(resultData(msg.params));}catch(error){notice(error.message,true);}
+    }
+    if(msg.method==='ui/resource-teardown'){
+      clearInterval(poll);poll=null;
+      for(const p of pending.values()){clearTimeout(p.timer);p.reject(new Error('Panel closed.'));}pending.clear();
+      window.parent.postMessage({jsonrpc:'2.0',id:msg.id,result:{}},'*');
+    }
+  });
+  function controls(){
+    $('refresh').disabled=loading || initializing;
+    $('new-task').disabled=!hostReady || mutating || !conversation().canSend;
+    const canSend=hostReady && conversation().canSend===true,hasDraft=!!$('contribution').value.trim();
+    $('publish').disabled=!canSend || mutating || !hasDraft;
+    $('ask-ai').disabled=!canSend || mutating || !hasDraft || !ownBridge();
+    $('open-room-controls').disabled=!hostReady || !safeUrl(snapshot?.room?.url);
+    $('contribution').disabled=hostReady && !conversation().canSend;
+    $('ask-ai').textContent='Ask my AI';
+    $('ai-mode').disabled=!hostReady || mutating || !conversation().canSetOwnMode || (myRoomAgent()?.mode==='off' && !canSend);
+    for(const n of document.querySelectorAll('.agent-option'))n.disabled=!canSend || mutating || n.dataset.available!=='true';
+    for(const n of document.querySelectorAll('#task-form button[type=submit],#selected-task button'))n.disabled=!hostReady || mutating;
+  }
+  async function refresh({quiet=false}={}){
+    if(!hostReady)return initialize();
+    if(loading)return;
+    loading=true;controls();
+    try{applyData(await call('roundtable_read'));$('updated').textContent='Updated '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});if(!quiet)notice('Your room is up to date.');}
+    catch(error){notice(error.message,true);}
+    finally{loading=false;controls();}
+  }
+  async function mutate(fn,success){
+    if(mutating)return;
+    mutating=true;controls();
+    try{const data=await fn();applyData(data);await refresh({quiet:true});notice(success);return data;}
+    catch(error){notice(error.message,true);return null;}
+    finally{mutating=false;controls();}
+  }
+  const statusName=status=>({planned:'Planned',working:'Working',needs_review:'Needs review',done:'Done',blocked:'Blocked'})[status] || String(status || 'Planned').replaceAll('_',' ');
+  const taskOwner=t=>t.ownerName || (snapshot?.people || []).find(p=>p.id===t.ownerId)?.name || (t.ownerId===snapshot?.member?.id?snapshot.member.name:'Room member');
+  function renderConversation(){
+    const agent=myRoomAgent(),bridge=ownBridge(),state=agent?agentState(agent):'Native chat';
+    $('chat-ai').classList.toggle('live',Boolean(bridge));$('chat-ai').classList.toggle('paused',agent?.mode==='off');
+    $('ai-state').textContent=agent?(agent.name || 'My room AI')+' · '+state:'My AI · not connected';
+    $('ai-route').textContent=bridge?'Replies are shared in this room.':previewHost?'Preview only; no AI runs here.':'Connect your runtime from the room.';
+    $('open-room-controls').textContent=agent?.connected?'Manage my AI in the room':'Connect my AI in the room';
+    $('ai-mode').hidden=!conversation().canSetOwnMode;$('ai-mode').textContent=agent?.mode==='off'?'Enable my AI':'Pause my AI';
+    $('composer-note').textContent=!conversation().canSend?'This room is view-only.':bridge?'Send as yourself. Ask my AI mentions your connected room agent.':'Open the room to connect your AI. Its answers will appear here.';
+    const agents=roomAgents(),signature=JSON.stringify(agents);
+    if(signature!==lastAgentSignature){
+      lastAgentSignature=signature;
+      $('agent-options').replaceChildren(...agents.map(a=>{
+        const option=button('',()=>{const input=$('contribution'),prefix=input.value && !input.value.endsWith(' ')?' ':'';input.value+=prefix+'@'+a.handle+' ';input.dispatchEvent(new Event('input'));$('agent-picker').open=false;input.focus();});option.className='agent-option';option.dataset.available=String(a.available);option.title='@'+a.handle+' · '+(a.ownerName || 'Room member');
+        const label=el('span');label.append(el('strong',a.name || a.handle),el('small','@'+a.handle+(a.ownerId===snapshot.member.id?' · yours':'')));option.append(label,el('span',agentState(a),'agent-state'));return option;
+      }));
+      if(!agents.length)$('agent-options').append(el('p','No room agents are connected. Connect your AI from the room.','hint'));
+    }
+  }
+  function render(){
+    if(!snapshot)return;
+    $('room-title').textContent=snapshot.room.title || 'Your Roundtable';
+    $('room-brief').textContent=snapshot.room.problem?String(snapshot.room.problem).slice(0,240):'Shared conversation, with tasks and context when you need them.';
+    $('room-id').textContent='Table · '+snapshot.room.id;
+    $('member-label').replaceChildren(el('span','Here as '),el('strong',snapshot.member.name || 'Room member'));
+    $('membership').classList.add('connected');
+    const link=safeUrl(snapshot.room.url);$('room-link').hidden=!link;if(link)$('room-link').href=link;
+    const people=Array.isArray(snapshot.people)?snapshot.people:[];
+    $('roster').replaceChildren(...people.slice(0,5).map(p=>{const row=el('span',undefined,'person'+(p.id===snapshot.member.id?' self':''));row.title=p.name || 'Room member';row.setAttribute('role','img');row.setAttribute('aria-label',p.name || 'Room member');const avatar=el('span',(p.name || '?').split(/\s+/).filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase(),'avatar');avatar.setAttribute('aria-hidden','true');row.append(avatar,el('span',p.name || 'Room member','person-name'));return row;}));
+    if(people.length>5)$('roster').append(el('span','+'+(people.length-5),'people-count'));
+    const tasks=Array.isArray(snapshot.tasks)?snapshot.tasks:[];
+    $('count-open').textContent=tasks.filter(t=>['planned','blocked'].includes(t.status)).length;
+    $('count-working').textContent=tasks.filter(t=>t.status==='working').length;
+    $('count-review').textContent=tasks.filter(t=>t.status==='needs_review').length;
+    $('tab-task-count').textContent=tasks.length;
+    const query=$('task-search').value.trim().toLowerCase(),order={working:0,needs_review:1,planned:2,blocked:3,done:4};
+    const visible=[...tasks].filter(t=>(taskFilter!=='mine' || t.ownerId===snapshot.member.id) && (taskFilter!=='review' || t.status==='needs_review') && (!query || [t.title,t.details,taskOwner(t)].join(' ').toLowerCase().includes(query))).sort((a,b)=>(order[a.status]??5)-(order[b.status]??5));
+    if(!visible.some(t=>t.id===selectedId))selectedId=visible[0]?.id || null;
+    $('list-label').textContent=taskFilter==='mine'?'Your tasks':taskFilter==='review'?'Waiting for review':'All tasks';
+    $('list-count').textContent=visible.length+' '+(visible.length===1?'task':'tasks');
+    for(const f of document.querySelectorAll('[data-filter]'))f.setAttribute('aria-pressed',String(f.dataset.filter===taskFilter));
+    $('tasks').replaceChildren(...visible.map(t=>{
+      const n=button('',()=>selectTask(t.id));n.className='task';n.setAttribute('aria-pressed',String(selectedId===t.id));
+      const top=el('span',undefined,'task-top');top.append(el('span',t.status==='done'?'✓':'↗','task-symbol'),el('span',t.title,'task-title'));n.append(top,el('span',t.details || 'No additional instructions','task-caption'));
+      const meta=el('span',undefined,'task-meta'),owner=el('span',undefined,'owner');owner.append(el('span',taskOwner(t).slice(0,1).toUpperCase(),'mini-avatar'),el('span',taskOwner(t)));meta.append(el('span',statusName(t.status),'badge '+(t.status || '')),owner);n.append(meta);return n;
+    }));
+    $('tasks-empty').hidden=visible.length>0;
+    if(!visible.length)$('tasks-empty').replaceChildren(el('strong',tasks.length?'No matching tasks.':'No tasks yet.'),el('span',tasks.length?'Try a different search or filter.':'Give the table a clear outcome to work toward.'));
+    const context=(Array.isArray(snapshot.context)?snapshot.context:[]).filter(c=>!c.status || c.status==='accepted');
+    $('tab-context-count').textContent=context.length;
+    $('context-items').replaceChildren(...context.filter(c=>!c.status || c.status==='accepted').map(c=>{
+      const d=el('details',undefined,'context-card'),s=el('summary'),meta=el('div',undefined,'context-meta');meta.append(el('span',c.kind || 'Source','eyebrow'),el('span','v'+(c.version || 1)));s.append(meta,el('div',c.title,'context-title'));d.append(s,el('p',c.body || c.summary || '', 'body-text'));
+      if(c.kind==='skill')d.append(el('p',c.adopted?'Adopted by you for this version.':'Not adopted by you. Shared instructions do not change your local permissions.','hint'));
+      const source=safeUrl(c.url);if(source){const a=el('a','Open reference ↗');a.href=source;a.target='_blank';a.rel='noopener noreferrer';d.append(a);}
+      if(c.updatedBy?.name)d.append(el('p','Saved by '+c.updatedBy.name,'hint'));
+      return d;
+    }));
+    $('context-empty').hidden=context.length>0;
+    const chat=Array.isArray(snapshot.chat)?snapshot.chat:[],chatSignature=JSON.stringify(chat);
+    const messageScroll=$('message-scroll'),follow=messageScroll.scrollHeight-messageScroll.scrollTop-messageScroll.clientHeight<60;
+    if(chatSignature!==lastChatSignature){lastChatSignature=chatSignature;$('messages').replaceChildren(...chat.map(m=>{const name=m.author || (m.kind==='system'?'Roundtable':'Room member'),n=el('article',undefined,'chat-message '+(m.kind || 'human')),author=el('div',undefined,'author');author.append(el('span',m.kind==='system'?'·':name.slice(0,1).toUpperCase(),'mini-avatar'),el('span',name));if(m.kind==='agent')author.append(el('span','AI','eyebrow'));if(m.ts){const time=el('span',new Date(m.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}));time.style.cssText='margin-left:auto;font-weight:400;color:var(--muted);font-size:10px';author.append(time);}n.append(author,el('p',m.text || '', 'body-text'));return n;}));if(follow)messageScroll.scrollTop=messageScroll.scrollHeight;}
+    $('chat-empty').hidden=chat.length>0;
+    renderConversation();renderSelected();controls();
+  }
+  async function openRoom(){
+    const url=safeUrl(snapshot?.room?.url);if(!url){notice('Refresh the room to load its connection controls.',true);return;}
+    try{const result=await request('ui/open-link',{url});if(result?.isError)throw new Error('The host could not open the room.');}
+    catch(error){notice('Use Open room above to connect or manage your AI. '+error.message,true);}
+  }
+  function selectTask(id){
+    selectedId=id;render();
+    if(window.matchMedia('(max-width:619px)').matches)$('selected-task').scrollIntoView({block:'start'});
+    notice('Task selected. Open the room to start your connected AI or review the result.');
+  }
+  function renderSelected(){
+    const card=$('selected-task'),task=(snapshot.tasks || []).find(t=>t.id===selectedId),signature=JSON.stringify({task,work:(snapshot.work || []).filter(w=>w.taskId===selectedId),claimed:[...claimed],member:snapshot.member.id,canSend:conversation().canSend,owner:task?taskOwner(task):'',url:snapshot.room.url});if(signature===lastSelectedSignature)return;lastSelectedSignature=signature;card.replaceChildren();card.hidden=!task;$('inspector-empty').hidden=Boolean(task);if(!task)return;
+    const own=task.ownerId===snapshot.member.id,head=el('div',undefined,'detail-head'),top=el('div',undefined,'detail-top');
+    top.append(el('span','Task details','eyebrow'),el('span',statusName(task.status),'badge '+(task.status || '')));
+    const owner=el('div',undefined,'detail-owner');owner.append(el('span',taskOwner(task).slice(0,1).toUpperCase(),'mini-avatar'),el('span','Owned by '+taskOwner(task)));
+    const back=button('← Back to tasks',()=>{$('tasks').scrollIntoView({block:'start'});$('tasks').querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});});back.className='quiet back-to-list';head.append(back,top,el('h3',task.title),owner);card.append(head);
+    const body=el('div',undefined,'detail-body');card.append(body);
+    const run=(snapshot.work || []).find(w=>w.taskId===task.id && claimed.has(w.id) && w.status==='running');
+    const latest=(snapshot.work || []).filter(w=>w.taskId===task.id).sort((a,b)=>(b.updatedAt || b.createdAt || 0)-(a.updatedAt || a.createdAt || 0))[0];
+    const hasResult=latest?.summary && latest.status!=='running',actionable=own && ['planned','blocked','working'].includes(task.status);
+    if(hasResult){
+      const result=el('section',undefined,'result-section');
+      if(['needs_review','done'].includes(task.status)){
+        const banner=el('div',undefined,'review-banner'),copy=el('div');copy.append(el('strong',task.status==='done'?'Reviewed and complete':'Ready for review'),el('span',task.status==='done'?'A person marked this task done.':'Your agent submitted a result. You decide what’s next.'));banner.append(el('div','✓','review-icon'),copy);result.append(banner);
+      }
+      result.append(el('h4',actionable?'Previous result':'Result summary'),el('p',latest.summary,'body-text'));
+      const downloads=el('div',undefined,'downloads');
+      for(const asset of latest.deliverables || []){
+        const href=deliverableUrl(latest,asset.path);if(!href)continue;
+        const link=el('a',undefined,'file-link'),info=el('span',undefined,'file-info'),ext=asset.path.split('.').at(-1).toUpperCase();link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.download=asset.path.split('/').at(-1);link.title='Download '+asset.path;
+        const size=asset.bytes?asset.bytes<1024?asset.bytes+' B':(asset.bytes/1024).toFixed(1)+' KB':'Text file';info.append(el('strong',asset.path.split('/').at(-1)),el('small',ext+' · '+size));link.append(el('span',ext,'file-icon'),info,el('span','↓','file-arrow'));downloads.append(link);
+      }
+      if(downloads.childElementCount)result.append(downloads);
+      const resultActions=el('div',undefined,'result-actions'),roomUrl=safeUrl(snapshot.room.url);
+      if(roomUrl){const link=el('a',task.status==='needs_review'?'Review in full room ↗':'View in full room ↗','button primary');link.href=roomUrl;link.target='_blank';link.rel='noopener noreferrer';resultActions.append(link);}
+      result.append(resultActions);body.append(result);
+    }
+    const instructions=el('details',undefined,'instructions');instructions.open=!hasResult || actionable;instructions.append(el('summary','Task instructions'),el('p',task.details || 'No additional instructions.','body-text'));body.append(instructions);
+    if(!hasResult || actionable){
+      const actions=el('div',undefined,'actions');
+      if(own && ['planned','blocked','working'].includes(task.status))actions.append(button('Continue in the room ↗',openRoom,true));
+      body.append(actions);
+    }
+    if(!own)body.append(el('p','Its owner controls execution. You can discuss the task in Chat.','hint'));
+    else if(task.status==='working' && !run)body.append(el('p','Work is underway. Open the room to inspect progress or stop your run.','hint'));
+    if(run){
+      const form=el('form',undefined,'form result');form.id='result-form';form.append(el('h3','Submit a result for review'));
+      const label=el('label','Summary');label.htmlFor='result-summary';const summary=el('textarea');summary.id='result-summary';summary.required=true;summary.maxLength=4000;summary.placeholder='What changed, what you checked, and what needs review.';
+      const filenameLabel=el('label','Text deliverable filename (optional)');filenameLabel.htmlFor='result-path';const filename=el('input');filename.id='result-path';filename.placeholder='result.md';filename.maxLength=240;
+      const contentLabel=el('label','Deliverable content (optional)');contentLabel.htmlFor='result-content';const content=el('textarea');content.id='result-content';content.placeholder='Paste only the final text you intend to share.';content.maxLength=32768;
+      const draft=resultDrafts.get(run.id) || {};summary.value=draft.summary || '';filename.value=draft.path || '';content.value=draft.content || '';
+      for(const field of [summary,filename,content])field.addEventListener('input',()=>resultDrafts.set(run.id,{summary:summary.value,path:filename.value,content:content.value}));
+      const submit=el('button','Submit for review','button primary');submit.type='submit';form.append(label,summary,filenameLabel,filename,contentLabel,content,el('p','Summary and deliverable are shared with the room. A person decides when the task is Done.','field-note'),submit);
+      form.addEventListener('submit',async event=>{event.preventDefault();if(!summary.value.trim())return;if(content.value && !filename.value.trim()){notice('Give the text deliverable a filename.',true);filename.focus();return;}const body={id:run.id,summary:summary.value.trim(),...(content.value?{deliverables:[{path:filename.value.trim(),content:content.value}]}:{})};const result=await mutate(()=>call('roundtable_submit_result',body),'Result submitted. Human review is next.');if(result)resultDrafts.delete(run.id);});body.append(form);
+    }
+  }
+  function tab(name){
+    for(const item of ['conversation','board','context']){const chosen=item===name;$('tab-'+item).setAttribute('aria-selected',String(chosen));$('tab-'+item).tabIndex=chosen?0:-1;$(item).hidden=!chosen;}
+    if(name==='conversation')$('message-scroll').scrollTop=$('message-scroll').scrollHeight;
+  }
+  for(const name of ['conversation','board','context'])$('tab-'+name).addEventListener('click',()=>tab(name));
+  document.querySelector('[role=tablist]').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const names=['conversation','board','context'],current=names.findIndex(n=>$('tab-'+n).getAttribute('aria-selected')==='true');const i=event.key==='Home'?0:event.key==='End'?2:(current+(event.key==='ArrowRight'?1:2))%3;tab(names[i]);$('tab-'+names[i]).focus();});
+  $('refresh').addEventListener('click',()=>refresh());
+  $('new-task').addEventListener('click',()=>{$('task-dialog').showModal();$('task-title').focus();});
+  for(const id of ['cancel-task','close-task'])$(id).addEventListener('click',()=>{$('task-dialog').close();});
+  $('task-search').addEventListener('input',()=>render());
+  for(const filter of document.querySelectorAll('[data-filter]'))filter.addEventListener('click',()=>{taskFilter=filter.dataset.filter;render();});
+  $('task-form').addEventListener('submit',async event=>{event.preventDefault();const title=$('task-title').value.trim(),details=$('task-details').value.trim();if(!title || !details)return;const result=await mutate(()=>call('roundtable_create_task',{title,details}),'Task created. Select it when you are ready to work.');if(result){$('task-form').reset();$('task-dialog').close();}});
+  function clearDraft(draft){if($('contribution').value===draft){$('contribution').value='';$('contribution').style.height='38px';}controls();}
+  $('publish-form').addEventListener('submit',async event=>{event.preventDefault();const draft=$('contribution').value,text=draft.trim();if(!text || $('publish').disabled)return;const result=await mutate(()=>call('roundtable_chat_send',{text}),'Your message was sent to the room.');if(result)clearDraft(draft);});
+  $('ai-mode').addEventListener('click',()=>{if($('ai-mode').disabled)return;const mode=myRoomAgent()?.mode==='off'?'mentions':'off';mutate(()=>call('roundtable_chat_mode',{mode}),mode==='off'?'Your room AI is paused.':'Your room AI is enabled for @mentions. Write a question and choose Ask my AI.');});
+  $('open-room-controls').addEventListener('click',openRoom);
+  $('ask-ai').addEventListener('click',async()=>{
+    const draft=$('contribution').value,text=draft.trim(),bridge=ownBridge();if(!text || $('ask-ai').disabled || !bridge)return;
+    const question='@'+bridge.handle+' '+text;
+    if(question.length>6000){notice('Shorten the question slightly to leave room for your agent’s @mention.',true);return;}
+    const result=await mutate(()=>call('roundtable_chat_send',{text:question}),'Question shared with your connected AI. Its reply will appear in room chat.');
+    if(result)clearDraft(draft);
+  });
+  $('contribution').addEventListener('input',()=>{const input=$('contribution');input.style.height='38px';input.style.height=Math.min(input.scrollHeight,110)+'px';controls();});
+  $('contribution').addEventListener('keydown',event=>{if(event.key==='Enter' && !event.shiftKey && !event.isComposing){event.preventDefault();if(!$('publish').disabled)$('publish-form').requestSubmit();}});
+  async function initialize(){
+    if(initializing)return;initializing=true;controls();notice('Connecting to your shared workspace…');
+    try{const host=await request('ui/initialize',{protocolVersion:'2026-01-26',appInfo:{name:'Roundtable',version:'0.1.0'},appCapabilities:{}},8000);previewHost=host?.hostInfo?.name==='Roundtable local preview';window.parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*');hostReady=true;await refresh();if(!poll)poll=setInterval(()=>{if(!document.hidden && hostReady && !loading && !mutating)refresh({quiet:true});},5000);}
+    catch(error){hostReady=false;$('member-label').textContent='Host connection needed';notice(error.message,true);}
+    finally{initializing=false;controls();}
+  }
+  if(window.parent===window){$('member-label').textContent='Host connection needed';notice('Open this panel through the Roundtable plugin in a compatible MCP Apps host. For a local UI trial, run node scripts/plugin-preview.mjs and open http://localhost:4142. No room credentials belong in this page.');}
+  else initialize();
+})();
+</script>
+</body>
+</html>

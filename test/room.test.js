@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import WebSocket from 'ws';
@@ -77,6 +77,61 @@ async function fixture(t, env = {}) {
   }
   return {connect, person, brain, inspect, seed, proc,dataDir, origin: `http://127.0.0.1:${port}`};
 }
+
+test('Sites gateway binds browser joins and tools to distinct enrolled people and protects room files',async t=>{
+  const secret='a-synthetic-sites-gateway-service-secret-with-at-least-32-characters';
+  const f=await fixture(t,{ROUNDTABLE_SITES_GATEWAY_SECRET:secret,ROUNDTABLE_SITES_ROOM:'sites-trial'});
+  const headers=(user='alice')=>({authorization:'Bearer '+secret,'x-roundtable-site-user-id':user,'x-roundtable-site-user-name':encodeURIComponent(user==='alice'?'Alice':'Bob')});
+  const call=async(action,body={},user='alice',extra={})=>{
+    const response=await fetch(f.origin+'/api/sites/rooms/sites-trial/'+action,{method:'POST',headers:{...headers(user),'content-type':'application/json',...extra},body:JSON.stringify(body)});
+    return {status:response.status,data:await response.json()};
+  };
+  const ok=async(action,body={},user)=>{const response=await call(action,body,user);assert.equal(response.status,200,JSON.stringify(response.data));return response.data;};
+  assert.equal((await call('session',{},'alice',{authorization:'Bearer forged'})).status,403);
+  const alice=await ok('session'),bob=await ok('session',{},'bob');
+  assert.notEqual(alice.member.id,bob.member.id);assert.equal(alice.member.isHost,true);assert.equal(bob.member.isHost,false);
+  const stranger=await f.connect();stranger.send({t:'peek',room:'sites-trial'});
+  await stranger.wait(message=>message.t==='chat' && message.entry.text.includes('authenticated Sites page'));
+  assert.equal(stranger.ws.messages.some(message=>message.t==='preview'),false);
+  const rejectedJoin=once(stranger.ws,'close');stranger.send({t:'join',room:'sites-trial',name:'Forged host'});
+  assert.equal((await rejectedJoin)[0],1008);
+  const host=await f.connect();host.send({t:'peek',room:'sites-trial',siteToken:alice.browser.token,hostKey:'forged'});
+  assert.equal((await host.wait(message=>message.t==='preview')).wouldHost,true);
+  host.send({t:'join',room:'sites-trial',siteToken:alice.browser.token,name:'Forged name',memberKey:'forged',hostKey:'forged'});
+  const welcome=await host.wait(message=>message.t==='welcome');assert.equal(welcome.you.id,alice.member.id);assert.equal(welcome.you.name,'Alice');assert.equal(welcome.you.isHost,true);assert.equal(welcome.hostKey,null);assert.equal(welcome.memberKey,undefined);
+  const guest=await f.connect();guest.send({t:'peek',room:'sites-trial',siteToken:bob.browser.token,hostKey:'forged'});
+  assert.equal((await guest.wait(message=>message.t==='preview')).wouldHost,false);
+  guest.send({t:'join',room:'sites-trial',siteToken:bob.browser.token,name:'Alice',memberKey:'forged',hostKey:'forged'});
+  const guestWelcome=await guest.wait(message=>message.t==='welcome');assert.equal(guestWelcome.you.id,bob.member.id);assert.equal(guestWelcome.you.name,'Bob');assert.equal(guestWelcome.you.isHost,false);
+  const replay=await f.connect(),replayClosed=once(replay.ws,'close');replay.send({t:'join',room:'sites-trial',siteToken:alice.browser.token});assert.equal((await replayClosed)[0],1008);
+  const wrongRoom=await f.connect(),wrongClosed=once(wrongRoom.ws,'close');wrongRoom.send({t:'join',room:'another-room',siteToken:(await ok('session')).browser.token});assert.equal((await wrongClosed)[0],1008);
+  assert.equal((await call('publish',{text:'Forge attribution',ownerId:bob.member.id})).status,400);
+  const task=(await ok('task_save',{title:'Compare options',details:'Use room evidence.'})).task;
+  assert.equal(task.ownerId,alice.member.id);assert.equal((await call('task_claim',{id:task.id,version:task.version},'bob')).status,400);
+  const claim=await ok('task_claim',{id:task.id,version:task.version});
+  const snapshot=await ok('snapshot',{},'bob');assert.equal(snapshot.member.id,bob.member.id);assert.ok(!JSON.stringify(snapshot).includes(claim.runToken));assert.ok(!JSON.stringify(snapshot).includes('sitesUserHash'));
+  // Sites members must use managed connection grants; legacy tokens would bypass
+  // the Site access lease. A permitted runtime pair leaves a Sites claim intact.
+  host.send({t:'workspace_native_pair'});await host.wait(message=>message.t==='chat' && message.entry.text.includes('Legacy native pairing is unavailable'));
+  host.send({t:'workspace_pair'});await host.wait(message=>message.t==='chat' && message.entry.text.includes('Legacy pairing is unavailable'));
+  const pairing=await call('runtime_pair',{},'alice',{'x-roundtable-site-client':'app'});assert.equal(pairing.status,200);
+  const runtime=await f.connect();runtime.send({t:'workspace_bridge_join',room:'sites-trial',token:pairing.data.pairToken,authMode:'codex'});
+  const connected=await runtime.wait(message=>message.t==='workspace_connected');
+  const submission={id:claim.run.id,runToken:claim.runToken,summary:'Comparison ready.',deliverables:[{path:'brief.md',content:'# Private room evidence\n'}]};
+  assert.equal((await call('task_submit',submission,'bob')).status,403);
+  const crossChannel=await fetch(f.origin+'/api/rooms/sites-trial/native/task_submit',{method:'POST',headers:{authorization:'Bearer '+connected.sessionToken,'content-type':'application/json'},body:JSON.stringify(submission)});assert.equal(crossChannel.status,403);
+  const result=await ok('task_submit',submission);assert.equal(result.task.status,'needs_review');
+  const file=f.origin+'/api/rooms/sites-trial/work/'+claim.run.id+'/deliverables/brief.md';
+  assert.equal((await fetch(file)).status,403);assert.equal((await fetch(file,{headers:headers('not-enrolled')})).status,403);
+  assert.equal(await (await fetch(file,{headers:headers('bob')})).text(),'# Private room evidence\n');
+  assert.equal((await fetch(file,{headers:{authorization:'Bearer '+connected.sessionToken}})).status,200);
+  assert.equal((await fetch(file,{headers:{authorization:'Bearer forged'}})).status,403);
+  host.send({t:'set_access',tier:'view',hostOnlySpend:true});await host.wait(message=>message.t==='access');
+  assert.equal((await call('publish',{text:'Viewer write'},'bob')).status,403);
+  assert.equal((await call('publish',{text:'Host write'})).status,200);
+  guest.send({t:'edit_title',text:'Forged guest change'});guest.send({t:'peek',room:'sites-trial'});
+  assert.equal((await guest.wait(message=>message.t==='preview')).title,'Roundtable trial');
+});
 
 test('new room hosts cannot use shared compute; operator-approved rooms can', async t => {
   const f=await fixture(t,{ROUNDTABLE_SHARED_ROOMS:'approved'});
@@ -308,6 +363,35 @@ test('member identity survives reconnection and a matching display name grants n
   assert.equal(bridge.ws.messages.some(m=>m.t==='workspace_task'),false);
 });
 
+test('personal auth mode is validated, defaults to Codex, and persists without account credentials',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const privateMetadata={accountId:'private-account-id',email:'private@example.invalid',accessToken:'private-access-token'};
+  const a=await personalBridge(f,alice,'room',{authMode:'chatgpt-plan',...privateMetadata});
+  await personalBridge(f,bob);
+  let state=await f.inspect();
+  assert.equal(state.connections.find(c=>c.ownerId===a.ownerId).authMode,'chatgpt-plan');
+  assert.equal(state.connections.find(c=>c.ownerId===bob.welcome.you.id).authMode,'codex');
+  for(const authMode of ['unknown',null,{mode:'chatgpt-plan'}]){
+    const invalid=await f.connect(),closed=once(invalid.ws,'close');
+    invalid.send({t:'workspace_bridge_join',room:'room',token:a.token,project:'game',authMode});
+    assert.equal((await closed)[0],1008);
+  }
+  assert.equal((await f.inspect()).connections.find(c=>c.ownerId===a.ownerId).authMode,'chatgpt-plan');
+  const closed=once(a.ws,'close');a.ws.close();await closed;
+  await alice.wait(m=>m.t==='workspaces' && !m.connections.some(c=>c.ownerId===a.ownerId));
+  state=await f.inspect();
+  const offline=state.workspaceRoster.find(c=>c.ownerId===a.ownerId);
+  assert.equal(offline.authMode,'chatgpt-plan');assert.equal(offline.connected,false);
+  for(const privateValue of Object.values(privateMetadata))assert.equal(JSON.stringify(state).includes(privateValue),false);
+  await pause(1200);
+  const persisted=await readFile(join(f.dataDir,'rooms.json'),'utf8');
+  for(const privateValue of Object.values(privateMetadata))assert.equal(persisted.includes(privateValue),false);
+  const stopped=once(f.proc,'exit');f.proc.kill();await stopped;
+  const restarted=await fixture(t,{ROUNDTABLE_DATA:join(f.dataDir,'rooms.json')});
+  const restored=(await restarted.inspect()).workspaceRoster.find(c=>c.ownerId===a.ownerId);
+  assert.equal(restored.authMode,'chatgpt-plan');assert.equal(restored.connected,false);
+});
+
 test('pairing tokens are room-scoped and rotation revokes old connections and late results',async t=>{
   const f=await fixture(t),alice=await f.person('room','Alice'),bridge=await personalBridge(f,alice);
   await f.person('other','Other');const wrong=await f.connect();
@@ -360,6 +444,63 @@ async function chatMode(person,mode){
 }
 const chatTask=bridge=>bridge.wait(m=>m.t==='workspace_chat');
 const chatReply=(bridge,job,text)=>bridge.send({t:'workspace_chat_result',room:'room',id:job.id,text,author:'Spoofed'});
+
+test('native panel human chat reuses live bridge mentions and owner-only reply modes without model reply loops',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  alice.send({t:'workspace_native_pair'});const {token}=await alice.wait(message=>message.t==='workspace_native_pair');
+  bob.send({t:'workspace_native_pair'});const bobToken=(await bob.wait(message=>message.t==='workspace_native_pair')).token;
+  const native=async(action,body={},credential=token)=>{
+    const response=await fetch(f.origin+'/api/rooms/room/native/'+action,{method:'POST',headers:{authorization:'Bearer '+credential,'content-type':'application/json'},body:JSON.stringify(body)});
+    return {status:response.status,data:await response.json()};
+  };
+  const initial=(await native('snapshot')).data;
+  assert.equal(initial.conversation.canSend,true);assert.equal(initial.conversation.canSetOwnMode,true);assert.equal(initial.conversation.canRequestBridge,false);
+  const own=initial.conversation.agents.find(agent=>agent.ownerId===a.ownerId),other=initial.conversation.agents.find(agent=>agent.ownerId===b.ownerId);
+  assert.equal(own.mode,'off');assert.equal(own.available,false);assert.equal(other.mode,'off');
+  assert.deepEqual(Object.keys(own).sort(),['id','ownerId','ownerName','name','handle','mode','connected','ready','busy','available','authMode'].sort());
+  assert.equal(own.authMode,'codex');
+  assert.equal((await native('chat_mode',{mode:'mentions',ownerId:b.ownerId})).status,400);
+  assert.equal((await native('chat_mode',{mode:'mentions'})).status,200);
+  await alice.wait(message=>message.t==='workspaces' && message.connections?.some(connection=>connection.ownerId===a.ownerId && connection.chatMode==='mentions'));
+  assert.equal(a.ws.messages.some(message=>message.t==='workspace_chat'),false);
+  const sent=await native('chat_send',{text:'@'+own.handle+' Compare the options.'});assert.equal(sent.status,200);assert.equal(sent.data.message.kind,'human');assert.equal(sent.data.message.author,'Alice');
+  const job=await chatTask(a);assert.match(job.trigger,/Alice:.*Compare the options/);assert.equal(job.context.chat.at(-1).kind,'human');
+  assert.equal((await native('snapshot')).data.conversation.agents.find(agent=>agent.id===own.id).busy,true);
+  chatReply(a,job,'Use the accepted export requirements.');await alice.wait(message=>message.t==='chat' && message.entry.text==='Use the accepted export requirements.');
+  await native('publish',{text:'@'+own.handle+' A model contribution must not start another reply.'});await pause(40);
+  assert.equal(a.ws.messages.some(message=>message.t==='workspace_chat'),false);
+  await native('chat_mode',{mode:'auto'},bobToken);
+  const handoff=await native('chat_send',{text:'@'+own.handle+' @'+other.handle+' This question goes to my native AI.',requestReply:false});assert.equal(handoff.status,200);assert.equal(handoff.data.message.kind,'human');
+  await pause(40);assert.equal(a.ws.messages.some(message=>message.t==='workspace_chat'),false);assert.equal(b.ws.messages.some(message=>message.t==='workspace_chat'),false);
+  await native('chat_mode',{mode:'off'},bobToken);
+  await native('chat_send',{text:'@'+own.handle+' Check the costs.'});const active=await chatTask(a);
+  assert.equal((await native('chat_mode',{mode:'off'})).status,200);assert.equal((await a.wait(message=>message.t==='workspace_chat_cancel')).id,active.id);
+  chatReply(a,active,'Late paused native answer');await pause(40);assert.equal((await native('snapshot')).data.chat.some(message=>message.text==='Late paused native answer'),false);
+  await native('chat_mode',{mode:'auto'},bobToken);
+  alice.send({t:'set_access',tier:'view',hostOnlySpend:true});await alice.wait(message=>message.t==='access');
+  assert.equal((await native('chat_mode',{mode:'mentions'},bobToken)).status,403);
+  assert.equal((await native('chat_mode',{mode:'off'},bobToken)).status,200);
+  const readOnly=(await native('snapshot',{},bobToken)).data.conversation;assert.equal(readOnly.canSend,false);assert.equal(readOnly.canRequestBridge,false);
+  assert.equal((await native('chat_send',{text:'@'+own.handle+' Forbidden request'},bobToken)).status,403);
+});
+
+test('known offline mentions do not fall back to another owner’s automatic AI',async t=>{
+  const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob');
+  const a=await personalBridge(f,alice),b=await personalBridge(f,bob);
+  await chatMode(alice,'auto');
+  const before=await f.inspect(),offlineHandle=before.connections.find(connection=>connection.ownerId===b.ownerId).handle;
+  bob.send({t:'workspace_disconnect'});await bob.wait(message=>message.t==='workspaces' && message.connections?.length===1);
+  alice.send({t:'workspace_native_pair'});const {token}=await alice.wait(message=>message.t==='workspace_native_pair');
+  const snapshot=await fetch(f.origin+'/api/rooms/room/native/snapshot',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:'{}'}).then(response=>response.json());
+  const offline=snapshot.conversation.agents.find(agent=>agent.ownerId===b.ownerId);
+  assert.equal(offline.connected,false);assert.equal(offline.ready,false);assert.equal(offline.available,false);assert.equal(offline.handle,offlineHandle);
+  alice.send({t:'chat',text:'@'+offlineHandle+' Are you there?'});
+  await alice.wait(message=>message.t==='chat' && message.entry.kind==='human' && message.entry.text.includes('Are you there?'));await pause(50);
+  assert.equal(a.ws.messages.some(message=>message.t==='workspace_chat'),false);
+  alice.send({t:'chat',text:'A general question for the table.'});const general=await chatTask(a);assert.match(general.trigger,/general question/);
+  chatReply(a,general,'I can answer a general question.');
+});
 
 test('personal conversation is owner opt-in, shared, authenticated, and bounded across agents',async t=>{
   const f=await fixture(t),alice=await f.person('room','Alice'),bob=await f.person('room','Bob'),eve=await f.person('room','Eve');

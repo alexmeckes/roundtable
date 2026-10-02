@@ -3,10 +3,12 @@ import { readFile } from 'node:fs/promises';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
 import {SessionStore} from './session-store.js';
-import {loadTaskInputs} from './task-inputs.js';
+import {loadTaskInputs,fetchRoomArtifact} from './task-inputs.js';
 import {FolderProject} from './folder.js';
 import { WorktreeProject } from './worktree.js';
 import { CodexAppServer } from './app-server.js';
+import {ChatGPTAuth} from './chatgpt-auth.js';
+import {ChatGPTPlanRuntime} from './chatgpt-runtime.js';
 
 const args=process.argv.slice(2);
 function option(name,fallback='') {const i=args.indexOf(name);if(i<0)return fallback;const value=args[i+1];if(!value || value.startsWith('--'))throw new Error(name+' requires a value');args.splice(i,2);return value;}
@@ -14,27 +16,52 @@ const workspaceMode=option('--workspace-mode','git');
 if(!['git','folder'].includes(workspaceMode))throw new Error('Workspace mode must be git or folder.');
 const codexBin=option('--codex-bin','codex');
 const codexProjectId=option('--codex-project-id');
+const authMode=option('--auth','codex'),chatGPTAccount=option('--chatgpt-account');
+const expectedOwner=option('--expected-owner');
+if(!['codex','chatgpt-plan'].includes(authMode))throw new Error('Authentication must be codex or chatgpt-plan.');
+if(chatGPTAccount && authMode!=='chatgpt-plan')throw new Error('--chatgpt-account requires --auth chatgpt-plan.');
 const projectPath=option('--project'),check=option('--check'),preview=option('--preview-dir'),approachFile=option('--approach-file'),model=option('--model',null),effort=option('--effort',null);
 const url=new URL(args[0] || 'http://invalid');
 const room=url.pathname.match(/^\/s\/([A-Za-z0-9_-]{1,80})\/?$/)?.[1];
-const token=process.env.ROUNDTABLE_PAIR_TOKEN;
+let token=process.env.ROUNDTABLE_PAIR_TOKEN;
 if(!room || !projectPath || !token || !['http:','https:'].includes(url.protocol)) {
-  console.error('Usage: ROUNDTABLE_PAIR_TOKEN=<from Connect my Codex> node bridge/workspace.js <room-url> --project /path/to/work [--workspace-mode folder|git] [--codex-project-id id] [--check "validation command"] [--preview-dir dist] [--approach-file path] [--model model] [--effort effort] [--codex-bin path]');process.exit(1);
+  console.error('Usage: ROUNDTABLE_PAIR_TOKEN=<from Connect my Codex> node bridge/workspace.js <room-url> --project /path/to/work [--workspace-mode folder|git] [--auth codex|chatgpt-plan] [--chatgpt-account id] [--codex-project-id id] [--check "validation command"] [--preview-dir dist] [--approach-file path] [--model model] [--effort effort] [--codex-bin path]');process.exit(1);
 }
 const approach=approachFile?(await readFile(approachFile,'utf8')).slice(0,8000):'';
-const codex=new CodexAppServer({cwd:projectPath,command:codexBin});
+let codex;
 const Project=workspaceMode==='folder'?FolderProject:WorktreeProject;
 const project=new Project(projectPath,{check,preview,execute:params=>codex.run({...params,sessionId:params.job.localResume?.threadId,approach,model,effort,onThread:async threadId=>{await sessions.saveRun(params.job.id,{threadId});publishSessions();},contextTool:(name,args)=>requestContext(params.job,name,args,params.signal)})});
-const projectName=await project.initialize(); await codex.initialize();
+// Validate the local inputs before opening the browser for account consent.
+const projectName=await project.initialize();
+let authAccount,auth,codexAccount;
+if(authMode==='chatgpt-plan'){
+  auth=new ChatGPTAuth();const status=await auth.status();
+  const accountId=chatGPTAccount || status.activeAccountId;
+  authAccount=status.accounts.find(account=>account.id===accountId);
+  if(chatGPTAccount && !authAccount)throw new Error('Unknown ChatGPT account. Run node bridge/chatgpt-auth-cli.js accounts.');
+  if(!authAccount?.signedIn){console.log('Continue with ChatGPT in your system browser. Eligible requests use your ChatGPT plan.');authAccount=await auth.login({accountId:accountId || null});}
+}
+codex=authMode==='chatgpt-plan'?new ChatGPTPlanRuntime({auth,accountId:authAccount.id,cwd:project.project,command:codexBin}):new CodexAppServer({cwd:project.project,command:codexBin});
+try{
+  await codex.initialize();
+  if(authMode==='codex'){
+    codexAccount=await codex.useChatGPTAccount();
+  }
+}
+catch(error){codex.close();throw error;}
+if(authMode==='chatgpt-plan')console.log('Using your ChatGPT plan. Manage usage: https://chatgpt.com/settings/usage');
 try {
   const threadProject=await codex.useProject({cwd:project.project,projectId:codexProjectId});
   console.log('Local Codex project: '+threadProject.name+' ('+threadProject.id+')');
 }catch(error){codex.close();throw error;}
-const jobs=new Map(),chatJobs=new Map();let ws,stopping=false;let sessions,sessionOwner,sessionReady=Promise.resolve();
-codex.process.once('exit',()=>{if(!stopping){console.error('Codex runtime exited. Reconnect to restore saved sessions.');stop();}});
+const jobs=new Map(),chatJobs=new Map();let ws,stopping=false,reconnectTimer;let sessions,sessionOwner,sessionReady=Promise.resolve();
+const runtimeExit=()=>{if(!stopping){console.error('Codex runtime exited. Reconnect to restore saved sessions.');stop();}};
+if(authMode==='chatgpt-plan')codex.on('exit',runtimeExit);else codex.process.once('exit',runtimeExit);
 const contextRequests=new Map();
 function requestContext(job,name,args,signal){
   signal?.throwIfAborted();
+  const action={roundtable_context_read:'read',roundtable_history_read:'history',roundtable_context_propose:'propose'}[name];
+  if(!action)return Promise.reject(new Error('This room tool is unavailable.'));
   if(ws?.readyState!==1)return Promise.reject(new Error('The table is disconnected.'));
   const requestId=randomBytes(12).toString('base64url');
   return new Promise((resolve,reject)=>{
@@ -42,27 +69,34 @@ function requestContext(job,name,args,signal){
     const abort=()=>finish(new Error('Stopped by owner'));
     const timer=setTimeout(()=>finish(new Error('Shared context request timed out.')),20_000);
     contextRequests.set(requestId,finish);signal?.addEventListener('abort',abort,{once:true});
-    ws.send(JSON.stringify({t:'workspace_context_request',room,id:job.id,requestId,action:name==='roundtable_context_read'?'read':'propose',args}));
+    ws.send(JSON.stringify({t:'workspace_context_request',room,id:job.id,requestId,action,args}));
   });
 }
 let runStart=Date.now(),runs=0;
 async function post(job,result) {
-  const response=await fetch(url.origin+'/api/rooms/'+room+'/work/'+job.id+'/result',{method:'POST',headers:{Authorization:'Bearer '+token,'X-Run-Token':job.runToken,'Content-Type':'application/json'},body:JSON.stringify(result),signal:AbortSignal.timeout(30_000)});
+  const response=await fetch(url.origin+'/api/rooms/'+room+'/work/'+job.id+'/result',{method:'POST',headers:{Authorization:'Bearer '+token,'X-Run-Token':job.runToken,'Content-Type':'application/json'},body:JSON.stringify(result),signal:AbortSignal.timeout(30_000),redirect:'error'});
   if(!response.ok)throw new Error('Could not publish result ('+response.status+'): '+await response.text());
 }
 function publishSessions(){if(sessions && ws?.readyState===1)ws.send(JSON.stringify({t:'workspace_ready',room,savedConversations:Object.keys(sessions.data.conversations),resumableRuns:Object.keys(sessions.data.runs)}));}
 function connect(){
+  if(stopping)return;
+  clearTimeout(reconnectTimer);reconnectTimer=null;
   ws=new WebSocket(url.origin.replace(/^http/,'ws'));
-  ws.on('open',()=>ws.send(JSON.stringify({t:'workspace_bridge_join',room,token,project:projectName,workspaceMode,supportsContinuity:true,approach:approach?'Custom approach + local Codex configuration':'Local Codex configuration'})));
+  ws.on('open',()=>ws.send(JSON.stringify({t:'workspace_bridge_join',room,token,project:projectName,workspaceMode,authMode,supportsContinuity:true,approach:approach?'Custom approach + local Codex configuration':'Local Codex configuration'})));
   ws.on('message',async raw=>{
     let msg;try{msg=JSON.parse(raw);}catch{return;}
     if(!msg || msg.room!==room)return;
     if(msg.t==='workspace_context_result'){contextRequests.get(msg.requestId)?.(msg.error?new Error(msg.error):null,msg.result);return;}
     if(msg.t==='workspace_connected'){
+      if(expectedOwner && msg.ownerId!==expectedOwner){console.error('The table connected a different room owner. Reconnect from your own room controls.');stop();return;}
+      if(msg.sessionToken!==undefined){
+        if(typeof msg.sessionToken!=='string' || !/^[A-Za-z0-9_-]{32}$/.test(msg.sessionToken)){console.error('The table returned an invalid runtime session.');stop();return;}
+        token=msg.sessionToken;
+      }
       sessionReady=(async()=>{
         if(sessionOwner && sessionOwner!==msg.ownerId)throw new Error('Table owner changed; restart this bridge.');
         sessionOwner=msg.ownerId;
-        sessions ||= await SessionStore.open({origin:url.origin,room,ownerId:msg.ownerId,project:project.project,workspaceMode,projectId:codex.projectId});
+        sessions ||= await SessionStore.open({origin:url.origin,room,ownerId:msg.ownerId,project:project.project,workspaceMode,projectId:codex.projectId,...(authAccount?{authMode,authClientId:authAccount.clientId,authSubject:authAccount.subject}:{authMode,authSubject:codexAccount})});
         if(stopping){await sessions.close();return;}
         publishSessions();console.log('Your Codex is connected to '+url.origin+'/s/'+room+' for '+projectName+'. Saved conversations: '+Object.keys(sessions.data.conversations).length);
       })();
@@ -104,11 +138,11 @@ function connect(){
       let result;
       if(msg.t==='workspace_integrate') {
         if(!/^[A-Za-z0-9_-]{8,80}$/.test(msg.sourceId))throw new Error('Invalid contribution ID');
-        const response=await fetch(url.origin+'/api/rooms/'+room+'/work/'+msg.sourceId+'/patch',{signal:controller.signal});
+        const response=await fetchRoomArtifact(url.origin,'/api/rooms/'+room+'/work/'+msg.sourceId+'/patch',{token,room,signal:controller.signal});
         if(!response.ok)throw new Error('Contribution patch is unavailable');
         const patch=await response.text();if(Buffer.byteLength(patch)>1024*1024)throw new Error('Patch too large');
         result=await project.integrate(msg,patch,{signal:controller.signal,progress});
-      } else {msg.context=await loadTaskInputs(msg.context,url.origin,{signal:controller.signal});result=await project.run(msg,{signal:controller.signal,progress,checkpoint:async tree=>{await sessions.saveRun(msg.id,{...tree,agentId:msg.agentId,taskId:msg.taskId || null,...(msg.localResume?.threadId?{threadId:msg.localResume.threadId}:{})});publishSessions();}});}
+      } else {msg.context=await loadTaskInputs(msg.context,url.origin,{token,room,signal:controller.signal});result=await project.run(msg,{signal:controller.signal,progress,checkpoint:async tree=>{await sessions.saveRun(msg.id,{...tree,agentId:msg.agentId,taskId:msg.taskId || null,...(msg.localResume?.threadId?{threadId:msg.localResume.threadId}:{})});publishSessions();}});}
       // The room has already revoked this run's upload capability on Stop.
       // Cleanup still completes locally; publishing again only produces a 403.
       if(controller.signal.aborted){console.log(msg.id+': '+result.status+' '+result.message);return;}
@@ -125,11 +159,11 @@ function connect(){
     for(const controller of jobs.values())controller.abort();
     for(const controller of chatJobs.values())controller.abort();
     if(code===1008){console.error('Connection revoked or pairing invalid. Generate a new connection command in the room.');stop();return;}
-    if(!stopping)setTimeout(connect,3000);
+    if(!stopping){console.log('Roundtable connection interrupted. Reconnecting…');reconnectTimer=setTimeout(connect,3000);}
   });
 }
 async function stop(){
-  if(stopping)return;stopping=true;const active=[...jobs.values(),...chatJobs.values()];for(const c of active)c.abort();ws?.close();
+  if(stopping)return;stopping=true;clearTimeout(reconnectTimer);reconnectTimer=null;const active=[...jobs.values(),...chatJobs.values()];for(const c of active)c.abort();ws?.close();
   const timeout=setTimeout(()=>codex.close(),35000);
   try{await Promise.allSettled(active.map(c=>c.finished));await sessionReady.catch(()=>{});}finally{clearTimeout(timeout);codex.close();await sessions?.close().catch(console.error);}
 }

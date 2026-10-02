@@ -45,7 +45,10 @@ test('discussion and work share one project while retaining separate execution d
   const calls=[];let next=0;
   server.rpc=async(method,params)=>{
     calls.push({method,params});
-    if(method==='thread/start')return {thread:{id:'thread-'+(++next)}};
+    if(method==='config/read')return {config:{}};
+    if(method==='thread/start')return {thread:{id:'thread-'+(++next)},sandbox:{type:params.sandbox==='read-only'?'readOnly':'workspaceWrite'}};
+    if(method==='thread/unsubscribe')return {};
+    if(method==='thread/resume')return {thread:{id:params.threadId},sandbox:{type:'readOnly'}};
     if(method==='thread/name/set')return {};
     if(method==='turn/start'){
       queueMicrotask(()=>server.turns.get(params.threadId).resolve('Done'));
@@ -59,12 +62,12 @@ test('discussion and work share one project while retaining separate execution d
   await server.run({...chat,sessionId});
   const starts=calls.filter(c=>c.method==='thread/start');
   assert.equal(starts.length,2);
-  assert.deepEqual(starts.map(c=>c.params.cwd),['/source','/isolated/task-1']);
+  assert.deepEqual(starts.map(c=>c.params.cwd).sort(),['/isolated/task-1','/source']);
   for(const c of starts)assert.equal(c.params.projectId,'shared-project');
   const names=calls.filter(c=>c.method==='thread/name/set').map(c=>c.params.name);
-  assert.deepEqual(names,['Roundtable · planning · Mira · conversation','Roundtable · planning · Quinn · Write a CSV']);
+  assert.deepEqual(names.sort(),['Roundtable · planning · Mira · conversation','Roundtable · planning · Quinn · Write a CSV']);
   const turns=calls.filter(c=>c.method==='turn/start');
-  assert.equal(turns[1].params.cwd,'/isolated/task-1');
-  assert.equal(turns[0].params.sandboxPolicy.type,'readOnly');
-  assert.equal(turns[2].params.threadId,sessionId);
+  assert.equal(turns.filter(c=>c.params.cwd==='/isolated/task-1').length,1);
+  const discussion=turns.filter(c=>c.params.cwd==='/source');assert.equal(discussion.length,2);
+  for(const turn of discussion){assert.equal(turn.params.sandboxPolicy.type,'readOnly');assert.equal(turn.params.threadId,sessionId);}
 });

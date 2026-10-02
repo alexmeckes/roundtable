@@ -1,0 +1,21 @@
+{
+  "name": "roundtable",
+  "version": "0.1.0",
+  "description": "Bring a shared Roundtable room, tasks, and accepted context into your native chat.",
+  "author": { "name": "Alex Meckes" },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Roundtable",
+    "shortDescription": "A shared room beside your chat.",
+    "longDescription": "Read shared tasks and accepted context, work in your current chat, and publish selected contributions for human review. Local development preview.",
+    "developerName": "Alex Meckes",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/alexmeckes/roundtable",
+    "defaultPrompt": "Open my Roundtable room and show its tasks and accepted context.",
+    "brandColor": "#243d32",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg"
+  }
+}

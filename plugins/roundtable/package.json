@@ -1,0 +1,12 @@
+{
+  "name": "roundtable-native-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Roundtable MCP runtime and room panel for native chats.",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "zod": "^4.6.5"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "roundtable": {
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}/runtime/server.mjs"]
+    }
+  }
+}

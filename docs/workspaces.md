@@ -4,10 +4,66 @@
 
 Detailed setup, agent controls, shared context, and limits for personal Codex connections.
 
-## Connect your Codex
+## Hosted room connection
 
-Use Node 20+ and a Codex CLI installed and logged in on each participant’s machine.
-Git is needed only for repository workspaces.
+Each participant needs Node 20+, the Codex CLI, and a running local connector on
+their own computer. From a Roundtable checkout:
+
+```bash
+npm ci
+npm run connect
+```
+
+Open the [hosted room](https://roundtable-plugin-trial.ameckes.chatgpt.site/s/sites-trial)
+with your own approved Site access and select **Connect my AI**. Choose
+**Continue with ChatGPT** for ChatGPT plan usage or **Use Codex login** for the
+ChatGPT account already signed in to Codex. API-key logins are not accepted by
+this connection. The local companion shows the room, participant, and approved
+backend before you click Connect. Sign-in opens your system browser only when
+needed and after this confirmation.
+
+Wait for **Your AI is connected**, then return to the room. The status appears
+after the local runtime initializes, the backend accepts the pairing, and saved
+room conversations are loaded. A saved conversation count means those local
+session references are available; the next reply resumes its existing thread.
+Connecting does not execute a task. It enables replies to explicit mentions or
+the room's **My AI** composer. Other people can discuss with your AI, while only
+you can start its assigned work.
+
+The companion listens only at `http://127.0.0.1:4146`. This trial trusts its
+configured hosted backend. The short-lived pairing grant travels in a URL
+fragment, is cleared from browser history, and is consumed by the backend.
+No monitoring prompt or private command needs copying. Keep the connector
+running and the authenticated room open for replies. A five-minute access lease
+is renewed only by authenticated Site requests; expired access stops the runtime. Use **Disconnect my AI** in the room or local
+companion to stop the connection; reconnect from the room with a fresh grant.
+
+Discussion uses the latest 40 human and AI room messages, accepted shared
+context, and your agent's saved local conversation. A read-only history tool can
+retrieve older discussion within the 400 retained messages. It does not import your
+private ChatGPT history. Discussion threads have local commands and inherited
+MCP apps disabled; project inspection and execution require an owner-started
+task. The default task folder is `~/Documents/Roundtable/<room-id>`, created
+when you connect. Change it under **Local project access** before connecting
+if a task needs another folder. Folder tasks publish outputs from their separate
+task directory for human review.
+
+Use the same computer, local account profile, and project folder when returning.
+Room-side disconnect retains saved conversation references and task files.
+Request changes records feedback and resumes the reviewed task's original thread
+and files. If its checkpoint is unavailable, reconnect the original setup or
+create a new task; the system does not silently discard prior work.
+Codex-login identity is scoped by a local hash of the authenticated email. Old
+unscoped Codex-login sessions are not automatically migrated across accounts.
+Restarting the companion requires a fresh connection from the room; that
+connection restores the references instead of importing unrelated private chats.
+
+## Advanced local server and CLI setup
+
+Use Node 20+ and a Codex CLI installed on each participant’s machine. The default
+uses your existing local Codex ChatGPT login; the optional ChatGPT plan preview
+has its own local sign-in. API-key authentication is not accepted. Git is needed
+only for repository workspaces.
 
 ```bash
 npm ci
@@ -50,6 +106,57 @@ To group multiple connections under another existing project, pass
 API. The bridge prints its selected project and ID at startup. This requires the
 project APIs supported by Codex CLI 0.153.3; unsupported runtimes report a startup
 error. Existing threads are not automatically reassigned.
+
+### ChatGPT plan preview
+
+In **Connect my Codex**, select **ChatGPT plan (preview)** to add
+`--auth chatgpt-plan` to the connection command. This uses eligible ChatGPT Plus or
+Pro plan usage through [Continue with ChatGPT](https://developers.openai.com/siwc).
+When needed, running the command opens sign-in in your system browser and returns
+to the local bridge. Joining a room does not require this sign-in. Node and the
+local Codex runtime are still required; project files, tools, and execution stay
+on your machine.
+
+Manage the preview's accounts from your Roundtable checkout:
+
+```bash
+node bridge/chatgpt-auth-cli.js login
+node bridge/chatgpt-auth-cli.js status
+node bridge/chatgpt-auth-cli.js accounts
+node bridge/chatgpt-auth-cli.js select <id>
+node bridge/chatgpt-auth-cli.js logout [id]
+```
+
+The `accounts` command supplies the local account IDs used by `select` and
+`logout`. Omit the ID from `logout` to use the current selection. You can pin a
+connection to a saved account with `--chatgpt-account <id>` alongside
+`--auth chatgpt-plan`. Use the original account and local profile when resuming
+existing work.
+
+Tokens are stored in protected local files under `~/.config/roundtable/chatgpt`.
+They are passed only to the local runtime and OpenAI, never to room participants,
+the room browser, or the Roundtable server. The room receives only the safe
+`codex` or `chatgpt-plan` mode label. **Using ChatGPT plan** and **Manage usage**
+appear beside your connected workspace and conversation controls; usage is
+managed at [ChatGPT settings](https://chatgpt.com/settings/usage).
+
+Run `npm run check:chatgpt-runtime` to check your installed Codex's project APIs
+and token exclusion from agent shell environments. This uses a dummy credential
+and does not sign in, create an agent thread, or spend model usage.
+
+Token renewal waits until current turns finish before restarting the local runtime
+and resuming saved local threads. Login or renewal errors do not replace your
+existing Codex login; reconnect with **Existing Codex login** to use that path.
+If a token expires during a long execution, the run can fail with its local files
+retained. After renewal, use **Resume my agent** to continue that task.
+Stop the account's bridges before using the local `logout` command.
+The preview does not support the `tool_search` tool.
+
+OpenAI currently documents this plan-usage flow for open-source and locally hosted
+apps. Paid or remotely hosted apps require completing its interest form. Roundtable
+keeps this runtime local even when the shared room is hosted; confirm eligibility
+with OpenAI before offering paid or remotely hosted execution. See the
+[official eligibility guidance](https://developers.openai.com/siwc/token-sharing-open-source).
 
 ## Shared context
 
@@ -137,8 +244,9 @@ out of deliverables. Pairing commands and browser identity storage are private
 capabilities. Reconnecting with a new pairing command revokes the old bridge. The room
 host cannot assign work using another person’s Codex.
 
-Discussion runs in the read-only filesystem sandbox. Execution runs in its task
-workspace with the owner’s configured tools; check commands have local OS permissions.
+Discussion uses the shared transcript and accepted context, with local commands
+and inherited MCP apps disabled. Execution runs in its task workspace with the
+owner’s configured tools; check commands have local OS permissions.
 Use trusted participants and tools. Filesystem separation is not a substitute for
 OS isolation of untrusted code. Outputs stay on the owner’s machine after archiving a
 room card. Source uploads, hosted compute, large files, and live coediting are not yet
@@ -182,7 +290,9 @@ the server; private Codex conversation references and execution checkpoints are 
 
 ## Leave and return
 
-Restart the same private bridge command to reconnect. Use the same table URL,
+For the hosted connector, restart `npm run connect` and create a fresh connection
+from the room. For the advanced reusable CLI pairing, restart the same private
+bridge command. Use the same table URL,
 local project, Codex project, and Codex profile. The bridge restores its local
 session references before accepting new work. Each agent’s next conversation
 turn reopens its existing Codex thread, with read-only conversation permissions

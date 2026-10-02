@@ -14,3 +14,7 @@ bridge/.threads.json
 .claude/
 .DS_Store
 *.log
+
+# Isolated deployment artifacts and the separately managed Sites checkout
+.deployment/
+sites-trial/

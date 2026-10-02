@@ -49,6 +49,9 @@ header{
   padding:5px 8px;border-radius:5px;white-space:nowrap;
 }
 .icon-btn:hover{background:var(--hover);color:var(--ink)}
+.room-nav{display:flex;align-items:center;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.room-nav .icon-btn{flex-shrink:0}
+.room-nav .icon-btn.open{background:var(--active);color:var(--ink);font-weight:600}
 .icon-btn.copied{color:#0F7B55}
 #h-parent,#h-branches{
   color:var(--accent);background:rgba(47,128,237,.07);
@@ -323,6 +326,11 @@ main{display:flex;flex:1;min-height:0}
 }
 #btn-send.ready{color:var(--accent)}
 .hint{font-size:12px;color:var(--faint);padding:6px 4px 0}
+.composer-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:9px 2px 0}
+.composer-actions select,.composer-actions button{font:inherit;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:var(--bg);color:var(--ink)}
+.composer-actions button{cursor:pointer;font-weight:600}.composer-actions :disabled{opacity:.5;cursor:default}
+#chat-ai-status{font-size:11px;color:var(--muted);margin-left:2px}
+@media(max-width:580px){#chat-ai-status{flex-basis:100%;margin-top:2px}.composer-actions{gap:6px}}
 body.offline .composer-box{border-color:#E5A3A3;background:#FDF9F9}
 body.offline .hint{color:#C25E5E}
 
@@ -456,11 +464,20 @@ body.offline .hint{color:#C25E5E}
 .work-mode #brain-panel{display:none!important}
 .work-mode #brain,.work-mode #btn-auto,.work-mode #btn-new-agent,.work-mode .faces .agent,.work-mode .a-faces .agent{display:none}
 .doc{width:38%;min-width:320px}
-.conversation-bar{padding:12px 20px;border-bottom:1px solid #e8e6e1;font-size:12px;background:#faf9f6}
+.conversation-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;padding:14px 20px;border-bottom:1px solid var(--line);font-size:12px;background:var(--bg)}
+.room-chat-heading h1{font-size:15px;font-weight:650;line-height:1.4}
+.conversation-bar .room-chat-heading p{font-size:12px;color:var(--muted);margin:3px 0 0}
+#conversation-setup{flex-shrink:0}
+#conversation-setup summary{list-style:none;cursor:pointer;color:var(--muted);font-size:12px;padding:6px 9px;border:1px solid var(--line);border-radius:6px}
+#conversation-setup summary::-webkit-details-marker{display:none}
+#conversation-setup summary:hover,#conversation-setup[open] summary{color:var(--ink);background:var(--hover)}
+#conversation-setup summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.conversation-settings{position:absolute;top:calc(100% + 6px);right:16px;width:min(520px,calc(100vw - 32px));z-index:35;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.1)}
 .conversation-bar label{font-weight:600}.conversation-bar select{margin:0 8px;padding:5px;border:1px solid #ddd;border-radius:6px;background:white}
 .conversation-bar p{margin:6px 0;color:#777}
-#conversation-agents{display:flex;gap:6px;flex-wrap:wrap}
-#conversation-agents button{border:1px solid #ded8ed;background:#f1edf8;color:#58457e;border-radius:18px;padding:6px 10px;cursor:pointer}
+#conversation-agents{display:flex;gap:6px;overflow-x:auto;flex-shrink:0;padding:10px 20px 0;scrollbar-width:thin}
+#conversation-agents button{border:1px solid #ded8ed;background:#f1edf8;color:#58457e;border-radius:18px;padding:5px 9px;cursor:pointer;font-size:11px;white-space:nowrap}
+#conversation-agents button:disabled{background:var(--panel);color:var(--muted);border-color:var(--line);cursor:default}
 .msg.activity .text{font-size:12px;color:#777}
 #workspace-panel h2{margin:0 0 8px;font-size:22px}
 #workspace-panel p{font-size:13px;line-height:1.5}
@@ -481,7 +498,7 @@ body.offline .hint{color:#C25E5E}
 .work-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#f5f5f3;border-radius:8px;font-size:12px;max-height:40vh;overflow:auto}
 .work-close{float:right}.work-play{width:95vw}#workspace-preview{width:100%;height:65vh;border:0;background:#111}
 @media(max-width:860px){.doc{width:100%;min-width:0}}
-#specialist-add{border:1px solid #ded8ed;border-radius:6px;padding:5px 9px;margin-bottom:8px;background:white;cursor:pointer}#specialist-form{display:grid;gap:12px}#specialist-form input,#specialist-form textarea,#workspace-agent,#pair-mode{font:inherit;padding:8px;border:1px solid #ddd;border-radius:6px}#specialist-role{min-height:100px}.work-actions a{font-size:13px;overflow-wrap:anywhere}
+#specialist-add{border:1px solid #ded8ed;border-radius:6px;padding:5px 9px;margin-bottom:8px;background:white;cursor:pointer}#specialist-form{display:grid;gap:12px}#specialist-form input,#specialist-form textarea,#workspace-agent,#pair-mode,#pair-auth{font:inherit;padding:8px;border:1px solid #ddd;border-radius:6px}#specialist-role{min-height:100px}.work-actions a{font-size:13px;overflow-wrap:anywhere}
 [hidden]{display:none!important}
 
 #context-panel{padding:0 2px 24px}#context-panel label,#context-form label{display:block;font-size:12px;margin:14px 0 5px;color:var(--muted)}
@@ -505,21 +522,28 @@ body.offline .hint{color:#C25E5E}
     <div class="faces" id="faces"></div>
     <button class="icon-btn" id="btn-new-agent" title="Invite a new agent">+</button>
     <button class="icon-btn" id="btn-auto" title="Auto-reply: agents chime in without being @mentioned">Auto</button>
-    <button class="icon-btn" id="btn-tasks">Tasks</button>
-    <button class="icon-btn" id="btn-context">Context</button>
-    <button class="icon-btn" id="btn-workspaces">Workspaces</button>
-    <button class="icon-btn" id="btn-doc" title="Toggle the canvas">Canvas</button>
+    <nav class="room-nav" aria-label="Room views">
+      <button class="icon-btn open" id="btn-chat" aria-pressed="true">Chat</button>
+      <button class="icon-btn" id="btn-tasks" aria-pressed="false">Tasks</button>
+      <button class="icon-btn" id="btn-context" aria-pressed="false">Context</button>
+      <button class="icon-btn" id="btn-workspaces" aria-pressed="false">Workspaces</button>
+      <button class="icon-btn" id="btn-doc" aria-pressed="false" title="Toggle the canvas">Canvas</button>
+    </nav>
   </header>
 
   <main>
     <section class="chat">
       <div class="conversation-bar">
-        <label for="conversation-mode">My Codex in the conversation</label>
-        <select id="conversation-mode" disabled><option value="off">Paused</option><option value="auto">Join the conversation</option><option value="mentions">Only when @mentioned</option></select>
-        <p id="conversation-help">Connect your Codex in Workspaces to bring it to the table.</p>
-        <button id="specialist-add" disabled>Add specialist</button>
-        <div id="conversation-agents" aria-label="Agents at the table"></div>
+        <div class="room-chat-heading"><h1>Room chat</h1><p>People and their AIs, in one conversation.</p></div>
+        <details id="conversation-setup"><summary>Agent setup</summary><div class="conversation-settings">
+          <label for="conversation-mode">My connected Codex in room chat</label>
+          <select id="conversation-mode" disabled><option value="off">Paused</option><option value="mentions">Only when @mentioned</option><option value="auto">Reply automatically</option></select>
+          <p id="conversation-help">Connect a Codex bridge in Workspaces to let it reply here.</p>
+          <p id="conversation-usage" hidden>Using ChatGPT plan · <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer">Manage usage</a></p>
+          <button id="specialist-add" disabled>Add specialist</button>
+        </div></details>
       </div>
+      <div id="conversation-agents" aria-label="AIs at the table" hidden></div>
       <section id="catchup-panel" hidden aria-label="While you were away"><details><summary id="catchup-summary"></summary><div id="catchup-items"></div></details><button id="catchup-dismiss">Mark caught up</button></section>
       <div class="chat-scroll" id="chat"></div>
       <div id="brain-panel">
@@ -533,14 +557,15 @@ body.offline .hint{color:#C25E5E}
       </div>
       <div class="composer">
         <div class="composer-box">
-          <textarea id="chat-text" placeholder="Message the table…" rows="1"></textarea>
+          <textarea id="chat-text" placeholder="Message the room or @mention an AI…" rows="1" maxlength="2000" aria-label="Message the room"></textarea>
           <button id="btn-send">Send</button>
         </div>
-        <div class="hint" id="hint">@agent to put the agent to work, or just talk.</div>
+        <div class="composer-actions"><select id="chat-mention" aria-label="Mention an AI" disabled><option value="">@ Mention AI</option></select><button id="chat-ask-ai" type="button" disabled>Ask my AI</button><span id="chat-ai-status" role="status">Connecting to the room…</span></div>
+        <div class="hint" id="hint">Send to everyone, or @mention an AI for a reply here.</div>
       </div>
     </section>
 
-    <aside class="doc" id="doc">
+    <aside class="doc closed" id="doc">
       <div class="doc-head">
         <span id="panel-heading">Workspaces</span>
         <span class="writing">agent writing…</span>
@@ -560,10 +585,11 @@ body.offline .hint{color:#C25E5E}
   <p id="context-empty">Add the shared brief or a source to give everyone a common starting point.</p>
   <div id="context-items"></div>
 </section>
-<section id="workspace-panel">
+<section id="workspace-panel" hidden>
   <h2>Work together</h2>
   <p id="my-workspace">Bring your Codex and a folder of work.</p>
-  <div class="work-actions"><button id="workspace-connect">Connect my Codex</button><button id="workspace-disconnect" hidden>Disconnect mine</button></div>
+  <p id="workspace-usage" class="work-meta" hidden><a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer">Manage usage</a></p>
+  <div class="work-actions"><button id="workspace-connect">Connect my Codex</button><button id="workspace-disconnect" hidden>Disconnect mine</button><button id="native-connect">Connect native plugin</button><button id="native-disconnect">Revoke native plugin</button></div>
   <div id="workspace-connections"></div>
   <form id="workspace-form">
     <label for="workspace-agent">Who should do this?</label><select id="workspace-agent"></select>
@@ -662,14 +688,23 @@ body.offline .hint{color:#C25E5E}
 
 <dialog id="workspace-pair" class="work-dialog">
   <button data-close-workspace class="work-close">Close</button>
-  <h2>Connect your Codex</h2>
-  <p>Use your own Codex login, instructions, skills, and tools. Run the command from your Roundtable checkout on your machine. Use an ordinary folder for documents and research, or a Git repository for code changes.</p>
+  <h2>Standalone server setup</h2>
+  <p>Run the command from your Roundtable checkout on your machine. Use an ordinary folder for documents and research, or a Git repository for code changes.</p>
+  <label for="pair-auth">Authentication</label><select id="pair-auth" aria-describedby="pair-auth-help"><option value="codex">Existing Codex login</option><option value="chatgpt-plan">ChatGPT plan (preview)</option></select>
+  <p id="pair-auth-help" class="work-meta">Uses your existing local Codex login, instructions, skills, and tools.</p>
   <label for="pair-mode">Workspace type</label><select id="pair-mode"><option value="folder">Folder — documents, research, data, and other work</option><option value="git">Git repository — isolated branches and patch review</option></select>
   <label for="pair-project">Local work folder</label><input id="pair-project" placeholder="/path/to/work">
   <label for="pair-check">Validation command (optional)</label><input id="pair-check" placeholder="npm ci && npm test && npm run build">
   <label for="pair-preview">Preview folder (optional)</label><input id="pair-preview" placeholder="dist">
   <p class="work-meta">Folder tasks write into separate output folders and share their deliverables. Git tasks start from your committed HEAD and publish reviewable patches. Optional previews need a self-contained index.html. Keep this connection command private.</p>
   <pre id="pair-command"></pre><button id="pair-copy">Copy command</button>
+</dialog>
+<dialog id="native-pair" class="work-dialog">
+  <button data-close-workspace class="work-close">Close</button>
+  <h2>Advanced local plugin setup</h2>
+  <p>Run this private command from the Roundtable checkout. It saves a room connection on your machine for the local Roundtable plugin. Your current ChatGPT or Codex chat does the work.</p>
+  <p>Install the Roundtable plugin from this repository’s marketplace, then start a new chat. Share only contributions and files you choose. Keep the connection command private.</p>
+  <pre id="native-command">Preparing your connection…</pre><button id="native-copy">Copy command</button>
 </dialog>
 <dialog id="workspace-review" class="work-dialog">
   <button data-close-workspace class="work-close">Close</button>
@@ -840,9 +875,9 @@ const send = m => {
 const tasksUI=createTasksUI({send,roomId,getYou:()=>state.you,canSpeak});
 const catchupUI=createCatchupUI({send,openTask:id=>tasksUI.open(id),openContext:id=>{showPanel('context');contextUI.focus(id);}});
 const contextUI=createContextUI({send,roomId,getYou:()=>state.you,canSpeak});
-const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
+const workspaceUI=createWorkspaceUI({send,roomId,getYou:()=>state.you,canSpeak,requestReply:handle=>sendChat(handle),saveArtifact:(job,file)=>contextUI.fromArtifact(job,file)});
 function hintText(){
-  if(document.body.classList.contains('work-mode')) return canSpeak()?'Talk with people and their Codex here. Click an agent to @mention it; assign work with /work @handle instructions.':'View-only — follow the group’s work and review their shared results.';
+  if(document.body.classList.contains('work-mode')) return canSpeak()?'Send to everyone, or @mention an AI for a reply here. Tasks can follow from the conversation.':'View-only — read the room chat and shared results.';
   if(!canSpeak()) return 'View-only table — you can watch and read the canvas.';
   if(state.hostOnlySpend && !state.isHost) return 'Only the host can put agents to work here.';
   if(!state.agents.length) return 'No agents at the table — /agent Name: brief invites one.';
@@ -954,7 +989,7 @@ function setAccess(tier, hostOnlySpend){
   contextUI.update();tasksUI.update();
   $('chat-text').disabled = mute;
   $('btn-send').style.display = mute ? 'none' : '';
-  $('chat-text').placeholder = mute ? 'View-only — the host is speaking' : 'Message the table…';
+  $('chat-text').placeholder = mute ? 'View-only — the host is speaking' : 'Message the room or @mention an AI…';
   if(!document.body.classList.contains('offline')) $('hint').textContent = hintText();
   // Keep the share sheet honest if it's open.
   document.querySelectorAll('#share .tier').forEach(t => {
@@ -1035,6 +1070,8 @@ function onMessage(ev){
     case 'workspaces': workspaceUI.update(m.work,m.connections,m.workspaceRoster || m.connections);tasksUI.update(m); break;
     case 'workspace_progress': workspaceUI.progress(m.id,m.message);tasksUI.update(); break;
     case 'workspace_pair': workspaceUI.pair(m.token); break;
+    case 'workspace_native_pair': workspaceUI.nativePair(m.token); break;
+    case 'workspace_native_disconnected': workspaceUI.nativeDisconnected(); break;
     case 'auto': setAuto(m.on); break;
     case 'access': setAccess(m.access, m.hostOnlySpend); break;
     case 'preview': showArrival(m); break;
@@ -1224,7 +1261,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString([], {hour:'2-digit', 
 // Highlight @mentions of agents (escape first, then wrap tokens).
 function richText(text){
   return esc(text).replace(/@([\w-]+)/g, (m, name) =>
-    (name.toLowerCase() === 'agent' || state.agents.some(a => a.name.toLowerCase() === name.toLowerCase()))
+    (name.toLowerCase() === 'agent' || state.agents.some(a => a.name.toLowerCase() === name.toLowerCase()) || workspaceUI.isAgentHandle(name))
       ? `<span class="mention">${m}</span>` : m);
 }
 
@@ -1315,36 +1352,49 @@ function addSystem(text, linkRoom){
   m.innerHTML = `<div class="text">${esc(text)}${linkRoom ? ` <a class="roomlink" href="/s/${esc(linkRoom)}">open&nbsp;→</a>` : ''}</div>`;
   appendMsg(m);
 }
-function sendChat(){
+function sendChat(handle){
   const t = $('chat-text');
-  const text = t.value.trim();
+  let text = t.value.trim();
   if(!text) return;
+  if(handle && !new RegExp('(^|\\s)@'+handle+'(?=$|[^a-z0-9_-])','i').test(text))text='@'+handle+' '+text;
+  if(text.length>2000){$('hint').textContent='Keep your message under 2,000 characters, including the @mention.';return;}
   if(!send({t:'chat', text})) return; // offline: keep the draft, banner explains
   t.value = '';
+  t.style.height='42px';workspaceUI.draftChanged();
   $('btn-send').classList.remove('ready');
 }
-$('btn-send').addEventListener('click', sendChat);
+$('btn-send').addEventListener('click',()=>sendChat());
 $('chat-text').addEventListener('keydown', e => {
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }
+  if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); sendChat(); }
 });
 $('chat-text').addEventListener('input', () => {
   $('btn-send').classList.toggle('ready', !!$('chat-text').value.trim());
+  $('chat-text').style.height='42px';$('chat-text').style.height=Math.min(120,$('chat-text').scrollHeight)+'px';
+  workspaceUI.draftChanged();
 });
 
 /* ---------------- Doc panel ---------------- */
-const docOpenDefault = matchMedia('(min-width: 861px)').matches;
-$('doc').classList.toggle('closed', !docOpenDefault);
-$('btn-workspaces').classList.toggle('open', docOpenDefault);
-let activePanel='work';
+let activePanel='chat';
+function panelNavigation(panel){
+  for(const [name,id] of Object.entries({chat:'btn-chat',work:'btn-workspaces',canvas:'btn-doc',context:'btn-context',tasks:'btn-tasks'})){
+    const selected=name===panel;$(id).classList.toggle('open',selected);$(id).setAttribute('aria-pressed',String(selected));
+  }
+}
+function showChat(){
+  activePanel='chat';$('doc').classList.add('closed');document.body.classList.add('work-mode');
+  for(const id of ['tasks-panel','workspace-panel','canvas-panel','context-panel'])$(id).hidden=true;
+  $('conversation-setup').open=false;panelNavigation('chat');$('hint').textContent=hintText();
+}
 function showPanel(panel){
   const closed=$('doc').classList.contains('closed');
-  if(activePanel===panel && !closed){$('doc').classList.add('closed');for(const id of ['btn-workspaces','btn-doc','btn-context','btn-tasks'])$(id).classList.remove('open');return;}
+  if(activePanel===panel && !closed){showChat();return;}
   activePanel=panel;document.body.classList.toggle('work-mode',panel!=='canvas');
   $('hint').textContent=hintText();$('panel-heading').textContent={work:'Workspaces',canvas:'Canvas',context:'Context',tasks:'Tasks'}[panel];
   $('tasks-panel').hidden=panel!=='tasks';$('workspace-panel').hidden=panel!=='work';$('canvas-panel').hidden=panel!=='canvas';$('context-panel').hidden=panel!=='context';
   $('doc').classList.remove('closed');
-  $('btn-workspaces').classList.toggle('open',panel==='work');$('btn-doc').classList.toggle('open',panel==='canvas');$('btn-context').classList.toggle('open',panel==='context');$('btn-tasks').classList.toggle('open',panel==='tasks');
+  panelNavigation(panel);
 }
+$('btn-chat').addEventListener('click',showChat);
 $('btn-doc').addEventListener('click',()=>showPanel('canvas'));
 $('btn-workspaces').addEventListener('click',()=>showPanel('work'));
 $('btn-tasks').addEventListener('click',()=>showPanel('tasks'));

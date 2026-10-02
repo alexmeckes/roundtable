@@ -1,0 +1,41 @@
+# Private Sites trial
+
+These notes describe the original trial. The later [Codex trial](codex-trial.md) runs separately; its Site source is tracked in [`sites/roundtable`](../sites/roundtable).
+
+The shared room is hosted at https://roundtable-plugin-trial.ameckes.chatgpt.site/s/sites-trial. Sites supplies sign-in and a generated MCP plugin. Its Node backend runs in the dedicated Railway trial environment with a persistent `/data` volume. The Site remains owner-private: one allowed account, no external visitors or groups. No participants have been invited.
+
+## Connect a real local AI
+
+Run `npm run connect` from the Roundtable checkout on each participant's computer. In the hosted room, select **Connect my AI → Continue with ChatGPT**, confirm the room in the local connector, and click **Connect with ChatGPT**. Eligible ChatGPT-plan sign-in is handled locally; saved credentials stay on that computer. **Use Codex login** instead uses the ChatGPT account already signed into the installed Codex CLI. API-key accounts are rejected by this connection flow.
+
+The connector starts Roundtable's actual Codex app-server bridge. The Site grants a five-minute, one-use pairing token to its signed-in member; successful attachment exchanges that grant for a private runtime session. The room shows Connected only after the bridge is accepted and ready. Pairing tokens, session credentials, local account identifiers, and private app-server thread IDs never appear in model content or room snapshots. Disconnect revokes that member's runtime and pending grants. A process restart requires a fresh pairing grant, while saved conversation state remains available.
+
+**My AI** reads the latest 40 human/AI room messages and accepted context and answers in the same room. The backend retains 400 total messages, including system messages; the isolated agent can search and paginate retained history through a read-only tool. Save durable decisions in Context. Each owner has a persisted local conversation scoped to the backend, room, owner, project, and authentication account. This does not import private ChatGPT or Codex chats. Discussion turns have read-only permissions and explicitly disable inherited apps, plugins, MCP servers, shell tools, and other external-action tools. Selected Roundtable context-reading and proposal tools remain available. Loaded conversations unsubscribe before resume so the installed app-server applies refreshed isolation settings.
+
+Tasks are a separate action. **Work with my AI** starts an assigned task in the selected local folder and returns its result for human review. The default connector creates a dedicated per-room folder under `~/Documents/Roundtable`. Stop revokes publication authority and interrupts the owner's run. Shared discussions do not silently inspect or modify that folder. ChatGPT-plan tasks disable native subagent delegation because the current preview rejects the new agent-message input format; local file tools and separate Roundtable specialists remain available.
+
+Each additional participant needs Site access, Node.js and Codex installed, their own connector, and their own ChatGPT account. The generated MCP plugin is optional for the browser/app-server flow and is available for native room tools. The connector now has an npm executable and an installable archive; a graphical installer and a second-person trial on another computer remain outstanding.
+
+## Deployment and auth boundary
+
+Sites source lives in the separately managed, root-ignored `sites-trial/` checkout. `.openai/hosting.json` records project `appgprj_6abee94c4c8c81918ab8e3e95a2d8cfd`. Runtime values and gateway credentials are managed in Sites and Railway, not source configuration.
+
+Railway project `ba09436d-3b78-4ddb-a262-bbd1b3005a63`, environment `8929c108-f9fa-4d4e-ad82-d5dc74375fcf` (`private-hybrid-trial`), service `e10aa868-58d3-42a9-8968-c6615a5cf85e` (`private-hybrid-backend`), volume `a6157ce6-c293-474d-9289-5d7132763991`. Curated source in ignored `.deployment/railway-trial/` excludes local room data and credentials. The existing production service and volume were not changed.
+
+The backend accepts only `sites-trial` through a service-authenticated Sites gateway. Enrollment maps each trusted Site-scoped identity to a distinct member. Browser calls require the authenticated Site principal, exact same-origin JSON, and an explicit fourteen-action allowlist. Four app-only runtime actions pair, disconnect, start a task, and stop it. Pairing secrets use private UI metadata. The loopback connector pins allowed backend/room origins and protects mutations with an HttpOnly cookie, exact Origin, and CSRF. Native tools use managed OAuth at `/mcp`; result downloads use the authenticated Site proxy. Both legacy MCP and MCP 2.0 remain supported.
+
+The previous app-server connection publication succeeded on 2026-10-01 (America/New_York), with runtime environment revision 1 and MCP enabled. Source commit: `c91080376778ba92e26c9cdbe9b6f16fdeb441a6`. Saved version: `appgprj_6abee94c4c8c81918ab8e3e95a2d8cfd~appgver_61d7fb37478881918f331d6beeafb67a`; deployment: `appgdep_6abf15ae9a4081919d9620590c10c99b`. Railway deployment `1198bf38-438f-4bb8-952b-df99cee581fa` succeeded. Provisioned plugin remains `plugin_asdk_app_sites_11481df3bb648191b5f1bbbcc4c381f6`.
+
+## Validation
+
+All 163 backend/runtime tests passed, including pairing expiry/consumption, expected-owner checks, private reconnect tokens, ChatGPT-only Codex preflight, task permissions and stop, companion cookies/CSRF, conversation isolation, restart persistence, and the previous native/events/room integration. TypeScript and the production Site build passed. Built-Worker/D1 protocol QA passed legacy and modern discovery, two synthetic principal isolation, runtime pair/session exchange, room-context dispatch, inline publication, disconnect, claims/submission/review, protected downloads, token redaction, and origin/body limits. Synthetic protocol checks do not establish real model inference or two-account collaboration.
+
+The real owner trial connected with ChatGPT-plan sign-in, read the earlier shared discussion, answered inline, restored one saved conversation after disconnect/reconnect, and produced a 242-byte task deliverable for human review. The authenticated download matched the local file. Evidence and the preview compatibility repair are recorded in `docs/evidence/sites-hosted-trial/runtime-connection.md`. No second-person collaboration is claimed.
+
+The previous native plugin OAuth trial read and posted as Alex Meckes, created/claimed task `8w5e8qciYd3RJy9P`, and submitted `plan.md` through run `UuifChHnZyQpXQ0eLRdhA9Q0mDLnZB3t`. The 676-byte fictional plan comparison is retained in `docs/evidence/sites-hosted-trial/plan.md`. That historical task remains **Needs review**. Its existence does not establish the new local app-server connection. Screenshots `result.jpg` and `multiplayer-dots.jpg` document the earlier native trial and room UI.
+
+## Optional events and native integration
+
+Native room tools and MCP Events remain available for advanced host integration. They do not drive the main Connect my AI flow. Event subscriptions use verified public HTTPS callbacks, Standard Webhooks signatures, private durable subscriptions/outbox, finite grants, bounded retries, and identity/access checks. Only explicit human requests addressed to that principal generate events. Acknowledged delivery is not evidence of agent execution. Request ownership, retry deduplication, cancellation, and publication remain checked on the server.
+
+A real Dot/Work Cloud callback remains unverified. Plugin installation does not start monitoring, and there is no verified public API to attach an existing Dot silently. Room-side monitoring disconnect fences refresh and cancels deliveries. An immediate cross-platform OAuth/Site-access revocation notification is not available. App-server access is bounded to a five-minute lease renewed only through authenticated Site requests; keep the room open. Expiry rejects reads, results, and reconnects, and interrupts active work. A backend restart requires fresh Site authorization before an old runtime session is accepted.
